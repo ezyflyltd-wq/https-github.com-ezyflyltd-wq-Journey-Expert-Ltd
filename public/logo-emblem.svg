@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <radialGradient id="jelRedGradEmblem" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FF1A1A"/>
+      <stop offset="45%" stop-color="#E60000"/>
+      <stop offset="80%" stop-color="#B30000"/>
+      <stop offset="100%" stop-color="#7A0000"/>
+    </radialGradient>
+    <linearGradient id="jelShadeEmblem" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#400000" stop-opacity="0.5"/>
+      <stop offset="60%" stop-color="#800000" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#FF3333" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(250, 250)">
+    <circle cx="0" cy="0" r="235" fill="url(#jelRedGradEmblem)"/>
+    <path d="M 0 -235 A 235 235 0 0 1 235 0 A 235 235 0 0 1 -170 225 C -15 195 195 98 195 -15 C 195 -130 98 -210 0 -235 Z" fill="url(#jelShadeEmblem)"/>
+    <path d="M -165 20
+             C -90 -16 -8 -56 40 -84
+             C 62 -105 78 -121 84 -126
+             C 97 -129 126 -129 178 -128
+             C 105 -24 24 73 -35 170
+             C -61 210 -77 246 -79 247
+             C -68 202 -32 138 13 73
+             C 73 -19 138 -97 178 -128
+             C 116 -128 73 -105 29 -77
+             C -52 -32 -130 0 -165 20 Z"
+          fill="#FFFFFF"/>
+  </g>
+</svg>
