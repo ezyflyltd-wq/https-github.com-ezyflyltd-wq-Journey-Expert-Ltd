@@ -1,0 +1,261 @@
+import React from 'react';
+import {
+  Plane,
+  MapPin,
+  Phone,
+  Mail,
+  ShieldCheck,
+  Award,
+  Globe,
+  ExternalLink,
+  Lock,
+} from 'lucide-react';
+import { PortalType, MainViewModule } from '../types';
+
+interface FooterProps {
+  onPortalChange: (portal: PortalType) => void;
+  onModuleChange: (module: MainViewModule) => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }) => {
+  return (
+    <footer className="bg-[#F8FAF9] text-[#666666] border-t border-[#ECECEC] text-sm font-sans">
+      {/* Top Value Proposition Strip */}
+      <div className="bg-white border-b border-[#ECECEC] py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="flex items-start space-x-3.5">
+            <div className="p-3 bg-[#F8FAF9] border border-[#ECECEC] rounded-2xl text-[#0B6B53] shrink-0">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-[#093F31] font-extrabold text-sm font-serif">Multi-GDS Fare Engine</h4>
+              <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
+                Direct connections to Sabre, Amadeus & Travelport Galileo for lowest fare search.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start space-x-3.5">
+            <div className="p-3 bg-[#F8FAF9] border border-[#ECECEC] rounded-2xl text-[#C7A44D] shrink-0">
+              <Award className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-[#093F31] font-extrabold text-sm font-serif">99.2% Visa Success Rate</h4>
+              <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
+                Expert visa documentation team for UK, USA, Canada, Schengen & Saudi Arabia.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start space-x-3.5">
+            <div className="p-3 bg-[#F8FAF9] border border-[#ECECEC] rounded-2xl text-[#0B6B53] shrink-0">
+              <Globe className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-[#093F31] font-extrabold text-sm font-serif">JEL Study Abroad Portal</h4>
+              <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
+                500+ Top partner universities in UK, Canada, Australia, USA & Malaysia.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start space-x-3.5">
+            <div className="p-3 bg-[#F8FAF9] border border-[#ECECEC] rounded-2xl text-[#C7A44D] shrink-0">
+              <Lock className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-[#093F31] font-extrabold text-sm font-serif">Instant Local Payments</h4>
+              <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
+                bKash, Nagad, SSLCommerz, Bank Transfers & International Credit Cards.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Footer Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+        {/* Brand & Corporate Overview */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#093F31] p-0.5 shadow-md flex items-center justify-center">
+              <Plane className="w-5 h-5 text-[#C7A44D] transform -rotate-45" />
+            </div>
+            <div>
+              <span className="text-lg font-black text-[#093F31] tracking-tight font-serif block">
+                JOURNEY EXPERT LTD.
+              </span>
+              <p className="text-[11px] font-extrabold text-[#0B6B53]">Bangladesh's AI Travel & Global Mobility Ecosystem</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-[#666666] leading-relaxed font-medium">
+            Journey Expert Ltd. (JEL) is a next-generation travel technology and global mobility platform.
+            Integrating GDS APIs, AI itinerary assistance, university admissions, and business advisory services
+            under one unified digital umbrella.
+          </p>
+
+          <div className="space-y-2 text-xs font-medium">
+            <div className="flex items-start space-x-2 text-[#111111]">
+              <MapPin className="w-4 h-4 text-[#0B6B53] shrink-0 mt-0.5" />
+              <span>Headquarters: Level 8, Concord Tower, Gulshan Avenue, Gulshan-2, Dhaka 1212, Bangladesh</span>
+            </div>
+            <div className="flex items-center space-x-2 text-[#111111]">
+              <Phone className="w-4 h-4 text-[#0B6B53] shrink-0" />
+              <span>Hotline: +880 9612-535359 | +880 1700-000000</span>
+            </div>
+            <div className="flex items-center space-x-2 text-[#111111]">
+              <Mail className="w-4 h-4 text-[#0B6B53] shrink-0" />
+              <span>info@journeyexpert.com.bd | support@journeyexpert.com.bd</span>
+            </div>
+          </div>
+
+          <div className="pt-2 flex items-center space-x-2">
+            <span className="text-[10px] uppercase font-bold text-[#666666] tracking-wider">Accreditations:</span>
+            <span className="bg-white border border-[#ECECEC] text-[#0B6B53] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-xs">
+              IATA Accredited
+            </span>
+            <span className="bg-white border border-[#ECECEC] text-[#C7A44D] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-xs">
+              ATAB Member
+            </span>
+            <span className="bg-white border border-[#ECECEC] text-[#093F31] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-xs">
+              TOAB Certified
+            </span>
+          </div>
+        </div>
+
+        {/* Quick Travel Links */}
+        <div>
+          <h4 className="text-[#093F31] font-black text-sm mb-4 font-serif border-b border-[#ECECEC] pb-2">
+            OTA Modules
+          </h4>
+          <ul className="space-y-2.5 text-xs font-medium">
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('flights'); }} className="hover:text-[#0B6B53] transition-colors">
+                Flight Booking (Sabre / Amadeus)
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('hotels'); }} className="hover:text-[#0B6B53] transition-colors">
+                Hotel Reservations
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('packages'); }} className="hover:text-[#0B6B53] transition-colors">
+                Executive Umrah Packages
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('packages'); }} className="hover:text-[#0B6B53] transition-colors">
+                Medical Tourism Packages
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('visa'); }} className="hover:text-[#0B6B53] transition-colors">
+                Visa Requirement Portal
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('visa'); }} className="hover:text-[#0B6B53] transition-colors">
+                Online Visa Application Tracking
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        {/* Global Mobility & Study Abroad */}
+        <div>
+          <h4 className="text-[#093F31] font-black text-sm mb-4 font-serif border-b border-[#ECECEC] pb-2">
+            JEL Study Abroad
+          </h4>
+          <ul className="space-y-2.5 text-xs font-medium">
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('study-abroad'); }} className="hover:text-[#0B6B53] transition-colors">
+                UK University Search
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('study-abroad'); }} className="hover:text-[#0B6B53] transition-colors">
+                Canada Student Visa Guide
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('study-abroad'); }} className="hover:text-[#0B6B53] transition-colors">
+                Australia Course Finder
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('study-abroad'); }} className="hover:text-[#0B6B53] transition-colors">
+                Scholarship Matching Engine
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('study-abroad'); }} className="hover:text-[#0B6B53] transition-colors">
+                Profile Assessment Tool
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        {/* Business Units & Portals */}
+        <div>
+          <h4 className="text-[#093F31] font-black text-sm mb-4 font-serif border-b border-[#ECECEC] pb-2">
+            Ecosystem & Enterprise
+          </h4>
+          <ul className="space-y-2.5 text-xs font-medium">
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('business-units'); }} className="hover:text-[#0B6B53] transition-colors">
+                JEL Meet & Greet Airport VIP
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('business-units'); }} className="hover:text-[#0B6B53] transition-colors">
+                JEL Compliance & Advisory
+              </button>
+            </li>
+            <li>
+              <button onClick={() => { onPortalChange('main'); onModuleChange('business-units'); }} className="hover:text-[#0B6B53] transition-colors">
+                Craft Bangla Marketplace
+              </button>
+            </li>
+            <li>
+              <button onClick={() => onPortalChange('customer')} className="hover:text-[#0B6B53] transition-colors font-extrabold text-[#0B6B53]">
+                Customer Portal Login
+              </button>
+            </li>
+            <li>
+              <button onClick={() => onPortalChange('agent')} className="hover:text-[#0B6B53] transition-colors font-extrabold text-[#093F31]">
+                B2B Agent Portal
+              </button>
+            </li>
+            <li>
+              <button onClick={() => onPortalChange('architecture')} className="hover:text-[#0B6B53] transition-colors font-extrabold text-[#C7A44D] flex items-center">
+                <span>Database Schema & API Specs</span>
+                <ExternalLink className="w-3 h-3 ml-1" />
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Payment Partners & Bottom Bar */}
+      <div className="bg-white py-6 px-4 border-t border-[#ECECEC] text-xs font-medium">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold text-[#666666]">Supported Payment Gateways:</span>
+            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">bKash</span>
+            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">Nagad</span>
+            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">SSLCommerz</span>
+            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">VISA</span>
+            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">MasterCard</span>
+            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">Stripe</span>
+          </div>
+
+          <div className="text-[#666666] text-[11px] text-center md:text-right font-medium">
+            © {new Date().getFullYear()} Journey Expert Ltd. (JEL). All rights reserved. Built for Bangladesh Global Mobility.
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+};

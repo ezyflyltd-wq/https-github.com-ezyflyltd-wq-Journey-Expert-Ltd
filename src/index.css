@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary-emerald: #0B6B53;
+    --dark-forest: #093F31;
+    --luxury-gold: #C7A44D;
+    --bg-white: #FFFFFF;
+    --bg-secondary: #F8FAF9;
+    --card-white: #FFFFFF;
+    --text-primary: #111111;
+    --text-secondary: #666666;
+    --border-light: #ECECEC;
+  }
+
+  body {
+    background-color: #FFFFFF;
+    color: #111111;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom Utilities for Luxury & AI Aesthetics */
+.bg-emerald-deep {
+  background-color: #0B6B53;
+}
+
+.text-emerald-deep {
+  color: #0B6B53;
+}
+
+.border-emerald-deep {
+  border-color: #0B6B53;
+}
+
+.bg-forest-dark {
+  background-color: #093F31;
+}
+
+.text-forest-dark {
+  color: #093F31;
+}
+
+.bg-gold-luxury {
+  background-color: #C7A44D;
+}
+
+.text-gold-luxury {
+  color: #C7A44D;
+}
+
+.border-gold-luxury {
+  border-color: #C7A44D;
+}
+
+.bg-surface-light {
+  background-color: #F8FAF9;
+}
+
+.border-light-custom {
+  border-color: #ECECEC;
+}
+
+/* Glassmorphism & Soft Shadows */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(236, 236, 236, 0.8);
+}
+
+.glass-card-dark {
+  background: rgba(9, 63, 49, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(199, 164, 77, 0.25);
+}
+
+.luxury-card {
+  background: #FFFFFF;
+  border: 1px solid #ECECEC;
+  box-shadow: 0 4px 20px -2px rgba(11, 107, 83, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.luxury-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px -4px rgba(11, 107, 83, 0.12), 0 4px 12px -2px rgba(199, 164, 77, 0.15);
+  border-color: rgba(11, 107, 83, 0.25);
+}
+
+.luxury-shadow {
+  box-shadow: 0 10px 40px -10px rgba(11, 107, 83, 0.08);
+}
+
+.gold-glow {
+  box-shadow: 0 0 25px -5px rgba(199, 164, 77, 0.35);
+}
+
+/* Shimmer and Subtle Animations */
+@keyframes goldShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.gold-shimmer-text {
+  background: linear-gradient(90deg, #0B6B53 0%, #C7A44D 50%, #0B6B53 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: goldShimmer 6s linear infinite;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #F8FAF9;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #0B6B53;
+}
