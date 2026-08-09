@@ -1,21 +1,36 @@
-# JOURNEY EXPERT LTD. — RECRUITMENT PARTNER & UNIVERSITY MODEL
-**Part 52 Execution • Autonomous Engineering System**
+# JOURNEY EXPERT LTD. — PARTNER ONBOARDING & KYB VERIFICATION MODEL
+**Part 58 Execution • Autonomous Engineering System**
 
 ---
 
-## 1. Recruitment Partner Ecosystem
-The JEL Partner Engine connects sub-agents, education consultants, university representatives, and institutional sponsors:
+## 1. Partner Onboarding & KYB Architecture
+Manages business verification (KYB/KYC) for travel agencies and partners submitting trade licenses, tax identification numbers, and owner identification.
 
 ---
 
-## 2. Partner Categories
-1. **Direct University Partners**: Higher education institutions with direct representation agreements.
-2. **Education Sub-Agents / Franchisees**: Local educational agencies submitting student applications via the JEL Partner Portal.
-3. **Scholarship & Financial Sponsors**: Government bodies, corporate sponsors, and banking partners providing student education loans.
+## 2. Verification Workflow
+```
++-------------------------------------------------------------------+
+|               Partner Submits Application & Documents             |
+|   (Trade License, Tax Certificate, Owner Passport, Bank Data)     |
++-------------------------------------------------------------------+
+                                  |
+                                  v
++-------------------------------------------------------------------+
+|               Compliance Review & Document Verification           |
+| (Check Trade License Validity, Civil Registry & Fraud Screening)  |
++-------------------------------------------------------------------+
+                                  |
+            +---------------------+---------------------+
+            | (Verification Passed)                     | (Incomplete / Failed)
+            v                                           v
++-----------------------------------+       +-----------------------+
+|  Generate Digital B2B Contract    |       | Request Resubmission  |
+|  & Activate Wallet / Credit Line  |       | or Reject Application |
++-----------------------------------+       +-----------------------+
+```
 
 ---
 
-## 3. Commission & Settlement Lifecycle
-- **Commission Calculation**: Commission rules defined by university contract (e.g. 10% - 18% of first-year tuition fee).
-- **Sub-Agent Split**: Automated revenue sharing between JEL and submitting sub-agents upon student enrollment confirmation.
-- **Commission Ledger States**: `EXPECTED` -> `PENDING_INVOICE` -> `INVOICED` -> `RECEIVED` -> `SUB_AGENT_PAYABLE` -> `SETTLED`.
+## 3. Contract Tracking
+- **Contract Schema**: Tracks contract start/end dates, agreed commission splits, markup rules, credit limits, payment terms, and cancellation policies.
