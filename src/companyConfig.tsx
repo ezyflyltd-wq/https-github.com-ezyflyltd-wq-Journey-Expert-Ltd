@@ -91,12 +91,7 @@ export const COMPANY_CONFIG: CompanyConfig = {
     darkBackground: '#081C15',
     text: '#1A1A1A',
   },
-  accreditations: [
-    'IATA Accredited #91280',
-    'ATAB Member',
-    'TOAB Certified',
-    'Civil Aviation Licensed',
-  ],
+  accreditations: [],
 };
 
 export const COMPANY_INFO = COMPANY_CONFIG;

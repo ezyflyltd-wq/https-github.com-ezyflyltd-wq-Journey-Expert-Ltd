@@ -86,9 +86,11 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Accreditation Badge */}
-            <span className="hidden sm:inline bg-[#C7A44D]/20 text-[#C7A44D] px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-[#C7A44D]/40">
-              {COMPANY_CONFIG.accreditations[0]}
-            </span>
+            {COMPANY_CONFIG.accreditations && COMPANY_CONFIG.accreditations.length > 0 && (
+              <span className="hidden sm:inline bg-[#C7A44D]/20 text-[#C7A44D] px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-[#C7A44D]/40">
+                {COMPANY_CONFIG.accreditations[0]}
+              </span>
+            )}
           </div>
         </div>
       </div>

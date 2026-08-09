@@ -119,17 +119,19 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
             </div>
           </div>
 
-          <div className="pt-2 flex items-center space-x-2 flex-wrap gap-y-1">
-            <span className="text-[10px] uppercase font-bold text-[#666666] tracking-wider">Accreditations:</span>
-            {COMPANY_CONFIG.accreditations.map((acc, idx) => (
-              <span
-                key={idx}
-                className="bg-white border border-[#ECECEC] text-[#0B5D3B] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-xs"
-              >
-                {acc}
-              </span>
-            ))}
-          </div>
+          {COMPANY_CONFIG.accreditations && COMPANY_CONFIG.accreditations.length > 0 && (
+            <div className="pt-2 flex items-center space-x-2 flex-wrap gap-y-1">
+              <span className="text-[10px] uppercase font-bold text-[#666666] tracking-wider">Accreditations:</span>
+              {COMPANY_CONFIG.accreditations.map((acc, idx) => (
+                <span
+                  key={idx}
+                  className="bg-white border border-[#ECECEC] text-[#0B5D3B] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-xs"
+                >
+                  {acc}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Quick Travel Links */}
