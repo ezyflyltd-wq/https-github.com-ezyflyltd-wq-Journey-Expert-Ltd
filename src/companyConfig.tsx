@@ -1,5 +1,6 @@
 import React from 'react';
 import { COMPANY_INFO, COMPANY_CONFIG } from './config/companyConfig';
+import logoEmblem from './assets/images/regenerated_image_1786276256064.jpg';
 export type { CompanyAddress, CompanyPhones as CompanyPhone, CompanyEmails as CompanyEmail, BrandColors as CompanyBrandColors, CompanyInfo as CompanyConfig } from './config/companyConfig';
 
 export { COMPANY_INFO, COMPANY_CONFIG };
@@ -32,9 +33,9 @@ export const OfficialLogo: React.FC<{
       {/* Official Red Soaring Emblem Icon */}
       <div className={`relative ${iconSizes[size]} shrink-0 drop-shadow-sm`}>
         <img
-          src="/logo-emblem.svg"
+          src={logoEmblem}
           alt="Journey Expert Ltd. Logo Emblem"
-          className="w-full h-full object-contain"
+          className="w-full h-full object-contain rounded-md"
         />
       </div>
 
