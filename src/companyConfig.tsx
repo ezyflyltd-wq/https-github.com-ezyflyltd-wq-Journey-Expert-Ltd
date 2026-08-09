@@ -99,6 +99,8 @@ export const COMPANY_CONFIG: CompanyConfig = {
   ],
 };
 
+export const COMPANY_INFO = COMPANY_CONFIG;
+
 /**
  * Reusable Official Journey Expert Ltd. Primary Logo Component
  */
