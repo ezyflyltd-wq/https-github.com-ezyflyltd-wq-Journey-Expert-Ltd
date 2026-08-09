@@ -11,6 +11,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { PortalType, MainViewModule } from '../types';
+import { COMPANY_CONFIG, OfficialLogo } from '../companyConfig';
 
 interface FooterProps {
   onPortalChange: (portal: PortalType) => void;
@@ -77,50 +78,57 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
         {/* Brand & Corporate Overview */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#093F31] p-0.5 shadow-md flex items-center justify-center">
-              <Plane className="w-5 h-5 text-[#C7A44D] transform -rotate-45" />
-            </div>
-            <div>
-              <span className="text-lg font-black text-[#093F31] tracking-tight font-serif block">
-                JOURNEY EXPERT LTD.
-              </span>
-              <p className="text-[11px] font-extrabold text-[#0B6B53]">Bangladesh's AI Travel & Global Mobility Ecosystem</p>
-            </div>
-          </div>
+          <OfficialLogo />
 
           <p className="text-xs text-[#666666] leading-relaxed font-medium">
-            Journey Expert Ltd. (JEL) is a next-generation travel technology and global mobility platform.
-            Integrating GDS APIs, AI itinerary assistance, university admissions, and business advisory services
-            under one unified digital umbrella.
+            {COMPANY_CONFIG.description}
           </p>
 
           <div className="space-y-2 text-xs font-medium">
             <div className="flex items-start space-x-2 text-[#111111]">
-              <MapPin className="w-4 h-4 text-[#0B6B53] shrink-0 mt-0.5" />
-              <span>Headquarters: Level 8, Concord Tower, Gulshan Avenue, Gulshan-2, Dhaka 1212, Bangladesh</span>
+              <MapPin className="w-4 h-4 text-[#0B5D3B] shrink-0 mt-0.5" />
+              <span>
+                <strong>Headquarters:</strong> {COMPANY_CONFIG.address.fullAddress}
+              </span>
             </div>
             <div className="flex items-center space-x-2 text-[#111111]">
-              <Phone className="w-4 h-4 text-[#0B6B53] shrink-0" />
-              <span>Hotline: +880 9612-535359 | +880 1700-000000</span>
+              <Phone className="w-4 h-4 text-[#0B5D3B] shrink-0" />
+              <span>
+                <strong>Phone:</strong> {COMPANY_CONFIG.phone.primary} ({COMPANY_CONFIG.phone.international}) | Office: {COMPANY_CONFIG.phone.office}
+              </span>
             </div>
             <div className="flex items-center space-x-2 text-[#111111]">
-              <Mail className="w-4 h-4 text-[#0B6B53] shrink-0" />
-              <span>info@journeyexpert.com.bd | support@journeyexpert.com.bd</span>
+              <Mail className="w-4 h-4 text-[#0B5D3B] shrink-0" />
+              <span>
+                <strong>Email:</strong> {COMPANY_CONFIG.email.primary} | {COMPANY_CONFIG.email.secondary}
+              </span>
+            </div>
+            <div className="flex items-center space-x-2 text-[#111111]">
+              <Globe className="w-4 h-4 text-[#0B5D3B] shrink-0" />
+              <span>
+                <strong>Official Website:</strong>{' '}
+                <a
+                  href={COMPANY_CONFIG.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#0B5D3B] hover:underline font-bold"
+                >
+                  {COMPANY_CONFIG.domain}
+                </a>
+              </span>
             </div>
           </div>
 
-          <div className="pt-2 flex items-center space-x-2">
+          <div className="pt-2 flex items-center space-x-2 flex-wrap gap-y-1">
             <span className="text-[10px] uppercase font-bold text-[#666666] tracking-wider">Accreditations:</span>
-            <span className="bg-white border border-[#ECECEC] text-[#0B6B53] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-xs">
-              IATA Accredited
-            </span>
-            <span className="bg-white border border-[#ECECEC] text-[#C7A44D] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-xs">
-              ATAB Member
-            </span>
-            <span className="bg-white border border-[#ECECEC] text-[#093F31] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-xs">
-              TOAB Certified
-            </span>
+            {COMPANY_CONFIG.accreditations.map((acc, idx) => (
+              <span
+                key={idx}
+                className="bg-white border border-[#ECECEC] text-[#0B5D3B] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-xs"
+              >
+                {acc}
+              </span>
+            ))}
           </div>
         </div>
 

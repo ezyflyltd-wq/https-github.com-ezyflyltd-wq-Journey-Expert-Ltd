@@ -21,6 +21,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { PortalType, MainViewModule } from '../types';
+import { COMPANY_CONFIG, OfficialLogo } from '../companyConfig';
 
 interface HeaderProps {
   activePortal?: PortalType;
@@ -51,16 +52,16 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-4">
             <span className="inline-flex items-center text-[#C7A44D] font-medium tracking-wide">
               <Sparkles className="w-3.5 h-3.5 mr-1.5 animate-pulse text-[#C7A44D]" />
-              Bangladesh's Premier AI-Powered OTA & Global Mobility Ecosystem
+              {COMPANY_CONFIG.tagline}
             </span>
             <span className="hidden md:inline text-emerald-800">|</span>
             <span className="hidden md:flex items-center text-emerald-100/80">
               <Phone className="w-3 h-3 mr-1.5 text-[#C7A44D]" />
-              24/7 Concierge: +880 9612-JEL-FLY (+880 9612-535359)
+              24/7 Helpline: {COMPANY_CONFIG.phone.formattedPrimary}
             </span>
             <span className="hidden lg:flex items-center text-emerald-100/80">
               <Mail className="w-3 h-3 mr-1.5 text-[#C7A44D]" />
-              support@journeyexpert.com.bd
+              {COMPANY_CONFIG.email.primary}
             </span>
           </div>
 
@@ -86,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Accreditation Badge */}
             <span className="hidden sm:inline bg-[#C7A44D]/20 text-[#C7A44D] px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-[#C7A44D]/40">
-              IATA Accredited #91280
+              {COMPANY_CONFIG.accreditations[0]}
             </span>
           </div>
         </div>
@@ -96,30 +97,13 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
         {/* Brand Logo & Name */}
         <div
-          className="flex items-center space-x-3.5 cursor-pointer group"
+          className="cursor-pointer group"
           onClick={() => {
             onPortalChange('main');
             onModuleChange('flights');
           }}
         >
-          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#0B6B53] to-[#093F31] p-0.5 shadow-md group-hover:shadow-lg transition-all duration-300">
-            <div className="w-full h-full bg-[#093F31] rounded-[10px] flex items-center justify-center">
-              <Plane className="w-5 h-5 text-[#C7A44D] transform -rotate-45 group-hover:scale-110 transition-transform duration-300" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="text-xl font-black tracking-tight text-[#093F31] font-serif">
-                JOURNEY EXPERT
-              </span>
-              <span className="bg-[#C7A44D] text-[#093F31] text-[10px] font-black px-1.5 py-0.5 rounded tracking-widest shadow-xs">
-                LTD.
-              </span>
-            </div>
-            <p className="text-[10px] text-[#0B6B53] font-semibold tracking-wider hidden sm:block">
-              AI OTA • GLOBAL MOBILITY • STUDY ABROAD
-            </p>
-          </div>
+          <OfficialLogo />
         </div>
 
         {/* Desktop Main Navigation Links */}

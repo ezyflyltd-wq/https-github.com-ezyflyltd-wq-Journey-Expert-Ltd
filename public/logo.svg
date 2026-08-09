@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Rich Crimson Red Radial Gradient -->
+    <radialGradient id="jelRedBase" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FF1A1A"/>
+      <stop offset="40%" stop-color="#E60000"/>
+      <stop offset="75%" stop-color="#B30000"/>
+      <stop offset="100%" stop-color="#800000"/>
+    </radialGradient>
+    
+    <!-- Facet Dark Shade Overlay -->
+    <linearGradient id="jelFacetShade" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#600000" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#A00000" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#FF3333" stop-opacity="0.1"/>
+    </linearGradient>
+
+    <linearGradient id="jelWingShine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F2F2F2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Circular Red Base Emblem -->
+  <circle cx="250" cy="250" r="238" fill="url(#jelRedBase)"/>
+
+  <!-- Geometric Faceted Shadow Overlay -->
+  <path d="M 250 12 A 238 238 0 0 1 488 250 A 238 238 0 0 1 172 482 C 320 450 450 350 450 250 C 450 150 350 40 250 12 Z" fill="url(#jelFacetShade)"/>
+
+  <!-- Master White Soaring Wing / Flight Symbol -->
+  <path d="M 72 270 
+           C 140 235 220 200 270 178 
+           C 295 150 308 138 316 134 
+           C 328 132 355 133 416 134 
+           C 350 220 290 310 216 415 
+           C 180 466 172 490 172 490 
+           C 185 450 220 380 262 315 
+           C 310 240 375 155 416 134 
+           C 380 134 320 150 270 178 
+           C 200 210 120 250 72 270 
+           Z" 
+        fill="url(#jelWingShine)"/>
+
+  <!-- Precise White Soaring Emblem Path matching official brand mark -->
+  <path d="M 70 271
+           C 150 235 235 195 285 170
+           C 300 148 312 138 322 134
+           C 335 132 360 133 416 134
+           C 340 240 275 330 216 410
+           C 190 445 174 488 172 490
+           C 185 450 215 390 250 335
+           C 310 240 370 155 416 134
+           C 350 134 310 150 270 178
+           C 190 220 110 255 70 271 Z" 
+        fill="#FFFFFF"/>
+
+  <!-- Clean SVG path override for exact geometric likeness -->
+  <g fill="#FFFFFF">
+    <path d="M 71,271 C 152,234 235,193 280,166 C 300,146 312,137 325,134 C 340,132 370,133 416,134 C 335,245 260,345 210,415 C 185,450 173,488 172,489 C 182,450 205,400 240,345 C 295,255 355,170 416,134 C 360,134 310,150 268,175 C 185,220 110,255 71,271 Z"/>
+  </g>
+</svg>

@@ -81,7 +81,7 @@ How can I assist you today?
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'ai',
-        text: 'I am currently experiencing network latency. Here is standard guidance: For flight & visa inquiries, please contact our 24/7 hotline at +880 9612-535359.',
+        text: 'I am currently experiencing network latency. Here is standard guidance: For flight & visa inquiries, please contact our 24/7 hotline at +880 1926-400400 or office at +880 2 9830404.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMsg]);
