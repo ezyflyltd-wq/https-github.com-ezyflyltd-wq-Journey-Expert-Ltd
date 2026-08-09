@@ -441,10 +441,10 @@ export const InvestorDeckView: React.FC = () => {
             </div>
 
             <div className="bg-[#F8FAF9] p-5 rounded-2xl border border-[#ECECEC] space-y-2">
-              <strong className="text-sm font-bold text-[#081C15] font-serif block">IATA & Regulatory Licensing (10%)</strong>
+              <strong className="text-sm font-bold text-[#081C15] font-serif block">Regulatory & Operational Licensing (10%)</strong>
               <span className="text-lg font-black text-[#0B5D3B] font-mono block">$350,000 USD</span>
               <p className="text-xs text-[#666666]">
-                Global IATA direct ticketing accreditation, PCI-DSS Level 1 compliance & CAAB Bangladesh licensing.
+                Direct supplier API integrations, PCI-DSS Level 1 compliance & official business registration.
               </p>
             </div>
 

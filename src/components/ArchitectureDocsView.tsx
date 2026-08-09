@@ -43,7 +43,7 @@ export const ArchitectureDocsView: React.FC = () => {
 
         <div className="relative z-10 flex items-center space-x-2 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 text-xs text-white font-bold">
           <CheckCircle2 className="w-4 h-4 text-[#C7A44D]" />
-          <span>ISO/IEC 27001 & IATA NDC Certified</span>
+          <span>Enterprise API & Cloud Architecture</span>
         </div>
       </div>
 
@@ -750,7 +750,7 @@ CREATE TABLE craft_products (
             <div className="bg-[#F8FAF9] p-5 rounded-2xl border border-[#ECECEC] space-y-2">
               <span className="font-extrabold text-[#093F31] text-sm block">1. Agent Verification & Onboarding</span>
               <p className="text-[#666666] font-medium leading-relaxed">
-                Automated trade license, CAAB civil aviation, and IATA PCC verification pipeline for agency account activation and credit limit assignment.
+                Automated trade license and business identification verification pipeline for agency account activation and credit limit assignment.
               </p>
             </div>
 

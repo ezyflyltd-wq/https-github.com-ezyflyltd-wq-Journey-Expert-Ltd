@@ -528,13 +528,13 @@ export const HrManagementView: React.FC = () => {
               Skill Development & Career Growth
             </span>
             <h3 className="text-xl font-black text-[#081C15] font-serif mt-0.5">
-              IATA Certifications & Quarterly KPI Reviews
+              GDS Certifications & Quarterly KPI Reviews
             </h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-[#F8FAF9] p-5 rounded-2xl border border-[#ECECEC] space-y-3">
-              <strong className="text-sm font-bold text-[#081C15] font-serif block">IATA & GDS Certification Tracker</strong>
+              <strong className="text-sm font-bold text-[#081C15] font-serif block">GDS & Systems Certification Tracker</strong>
               <p className="text-[11px] text-[#666666]">
                 412 staff certifications completed across Sabre GDS, Amadeus Ticketing & UK Study Abroad Compliance.
               </p>

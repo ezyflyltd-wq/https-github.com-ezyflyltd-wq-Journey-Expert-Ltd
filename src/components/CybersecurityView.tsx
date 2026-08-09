@@ -81,7 +81,7 @@ export const CybersecurityView: React.FC = () => {
               </span>
               <span className="bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-3 py-0.5 rounded-full flex items-center space-x-1">
                 <ShieldCheck className="w-3 h-3 text-[#C8A14A]" />
-                <span>PCI-DSS v4.0 LEVEL 1 • ISO 27001 COMPLIANT</span>
+                <span>PCI-DSS v4.0 LEVEL 1 • ZERO-TRUST ARCHITECTURE</span>
               </span>
             </div>
 

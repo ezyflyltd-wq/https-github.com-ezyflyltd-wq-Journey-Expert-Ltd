@@ -512,7 +512,7 @@ export const ProductRoadmapView: React.FC = () => {
                   <span className="font-mono font-black text-[#0B5D3B]">15%</span>
                 </li>
                 <li className="flex justify-between items-center bg-white p-3 rounded-xl border border-[#ECECEC]">
-                  <span className="font-bold text-[#081C15]">Legal Compliance, IATA & Security Audits</span>
+                  <span className="font-bold text-[#081C15]">Legal Compliance & Security Audits</span>
                   <span className="font-mono font-black text-[#0B5D3B]">10%</span>
                 </li>
                 <li className="flex justify-between items-center bg-white p-3 rounded-xl border border-[#ECECEC]">

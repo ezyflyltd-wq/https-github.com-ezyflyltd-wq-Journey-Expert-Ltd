@@ -197,8 +197,8 @@ export const EnterpriseBlueprintView: React.FC = () => {
           </div>
 
           <div className="bg-white/5 p-3 rounded-2xl border border-white/10 flex flex-col">
-            <span className="text-[10px] text-emerald-300 uppercase font-bold">Industry Accreditations</span>
-            <strong className="text-white font-mono text-xs mt-0.5">IATA • PCI-DSS • ISO 27001</strong>
+            <span className="text-[10px] text-emerald-300 uppercase font-bold">Security Compliance</span>
+            <strong className="text-white font-mono text-xs mt-0.5">PCI-DSS • SSL • GDPR READY</strong>
           </div>
 
           <div className="bg-white/5 p-3 rounded-2xl border border-white/10 flex flex-col">
@@ -355,16 +355,16 @@ export const EnterpriseBlueprintView: React.FC = () => {
               Certifications & Defense
             </span>
             <h3 className="text-xl font-black text-[#081C15] font-serif mt-0.5">
-              Zero-Trust Security, PCI-DSS, GDPR & ISO 27001 Accreditations
+              Zero-Trust Security, PCI-DSS & GDPR Compliance
             </h3>
           </div>
 
           <div className="bg-emerald-950 text-white p-6 rounded-2xl border border-emerald-500/40 space-y-3 font-mono">
             <strong className="text-[#C8A14A] font-serif text-base font-bold block">
-              Official Enterprise Certifications & Compliance Status:
+              Official Enterprise Compliance Status:
             </strong>
             <p className="text-emerald-100 text-xs leading-relaxed">
-              {blueprintData?.systemCertification || 'IATA Certified OTA • Civil Aviation Approved • PCI-DSS Compliant • ISO 27001 Certified • GDPR Ready'}
+              {blueprintData?.systemCertification || 'Enterprise OTA • PCI-DSS Compliant • GDPR Ready • 256-Bit SSL Encrypted'}
             </p>
           </div>
         </div>

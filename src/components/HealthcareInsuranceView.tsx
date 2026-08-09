@@ -96,7 +96,7 @@ export const HealthcareInsuranceView: React.FC = () => {
         timestamp: new Date().toLocaleTimeString(),
         modelUsed: 'Gemini 2.5 Flash Healthcare & Medical Tourism Optimizer',
         recommendedHospital: 'Apollo Hospitals International, Chennai, India',
-        jciStatus: 'JCI & NABH Accredited (Gold Standard)',
+        jciStatus: 'Verified Global Partner Hospital',
         estimatedProcedureCostUSD: 4500,
         estimatedCostSavingsVsUS: '84% Savings ($4,500 vs $28,000 in USA)',
         leadSurgeon: 'Dr. K. M. Cherian (40+ Years Experience, 25,000+ Cardiac Surgeries)',
@@ -125,7 +125,7 @@ export const HealthcareInsuranceView: React.FC = () => {
               </span>
               <span className="bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-3 py-0.5 rounded-full flex items-center space-x-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Allianz • MetLife • JCI Accredited Hospitals • 24/7 Air Ambulance</span>
+                <span>Allianz • MetLife • Premier Global Hospitals • 24/7 Air Ambulance</span>
               </span>
             </div>
 
@@ -134,7 +134,7 @@ export const HealthcareInsuranceView: React.FC = () => {
             </h1>
 
             <p className="text-xs sm:text-sm text-emerald-100 font-medium leading-relaxed">
-              Global InsurTech Travel Coverage, Schengen Visa Certificate Generation, JCI-Accredited Hospital Booking across India, Thailand, Singapore & Turkey, and Gemini AI Treatment Recommendation.
+              Global InsurTech Travel Coverage, Schengen Visa Certificate Generation, Global Partner Hospital Booking across India, Thailand, Singapore & Turkey, and Gemini AI Treatment Recommendation.
             </p>
           </div>
 
@@ -157,7 +157,7 @@ export const HealthcareInsuranceView: React.FC = () => {
             <div className="flex items-center justify-between text-xs font-bold text-emerald-200">
               <span>Partner Hospitals:</span>
               <span className="text-emerald-300 font-mono font-black text-sm">
-                {healthcareData?.medicalTourismKpis?.partnerHospitalsCount || 185} JCI Accredited
+                {healthcareData?.medicalTourismKpis?.partnerHospitalsCount || 185} Global Hubs
               </span>
             </div>
 
@@ -202,7 +202,7 @@ export const HealthcareInsuranceView: React.FC = () => {
           </div>
 
           <div className="bg-white/5 p-3 rounded-2xl border border-white/10">
-            <span className="text-[10px] font-bold text-emerald-300 uppercase block">JCI Accreditation Ratio</span>
+            <span className="text-[10px] font-bold text-emerald-300 uppercase block">Certified Partner Ratio</span>
             <span className="text-lg font-black text-emerald-300 font-mono">
               {healthcareData?.medicalTourismKpis?.jciAccreditedRatioPercent || 96}%
             </span>
@@ -252,7 +252,7 @@ export const HealthcareInsuranceView: React.FC = () => {
           }`}
         >
           <Building2 className="w-4 h-4 text-[#C8A14A]" />
-          <span>3. JCI Hospitals & Doctors</span>
+          <span>3. Partner Hospitals & Doctors</span>
         </button>
 
         <button
@@ -489,7 +489,7 @@ export const HealthcareInsuranceView: React.FC = () => {
         <div className="bg-white border border-[#ECECEC] rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm text-xs text-[#111111]">
           <div className="border-b border-[#ECECEC] pb-4">
             <span className="text-xs font-bold text-[#0B5D3B] uppercase tracking-wider block">
-              JCI & NABH Gold Standard Healthcare Partners
+              Gold Standard Healthcare Partners
             </span>
             <h3 className="text-xl font-black text-[#081C15] font-serif mt-0.5">
               Verified International Hospital Profiles & Direct Teleconsultation Booking

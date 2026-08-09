@@ -86,7 +86,7 @@ export const AgentPortal: React.FC = () => {
         <div className="space-y-2 z-10">
           <div className="flex items-center space-x-2">
             <span className="bg-[#C7A44D] text-[#093F31] font-black text-[10px] px-3 py-0.5 rounded-full uppercase tracking-wider">
-              {b2bData?.agentProfile?.tierLevel || 'PLATINUM IATA AGENT'}
+              {b2bData?.agentProfile?.tierLevel || 'PLATINUM B2B AGENT'}
             </span>
             <span className="text-xs font-mono text-emerald-200">
               Agent ID: {b2bData?.agentProfile?.agentCode || 'AG-78901'}
@@ -424,7 +424,7 @@ export const AgentPortal: React.FC = () => {
               <div className="space-y-2 text-xs">
                 <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex justify-between">
                   <span>Standard Flight Base Commission</span>
-                  <strong className="text-[#C7A44D]">7.0% IATA Gross</strong>
+                  <strong className="text-[#C7A44D]">7.0% Flight Gross</strong>
                 </div>
                 <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex justify-between">
                   <span>Platinum Tier Override Bonus</span>
