@@ -1,0 +1,425 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with tier status, wallet balance, and contact credentials",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID matching document ID",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User full name",
+          "maxLength": 120
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User avatar photo URL",
+          "maxLength": 512
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number",
+          "maxLength": 32
+        },
+        "passportNo": {
+          "type": "string",
+          "description": "User passport number for instant bookings",
+          "maxLength": 32
+        },
+        "loyaltyTier": {
+          "type": "string",
+          "description": "Loyalty tier status",
+          "enum": ["Bronze", "Silver", "Gold", "Platinum", "VIP JEL CLUB"]
+        },
+        "loyaltyPoints": {
+          "type": "number",
+          "description": "Accumulated reward points"
+        },
+        "walletBalanceBDT": {
+          "type": "number",
+          "description": "Prepaid wallet balance in BDT"
+        },
+        "role": {
+          "type": "string",
+          "description": "Access control role",
+          "enum": ["customer", "agent", "corporate", "admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the profile was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the profile was last updated"
+        }
+      },
+      "required": ["userId", "email", "displayName", "role"]
+    },
+    "Booking": {
+      "title": "Booking Order",
+      "description": "Confirmed or pending reservation across flights, hotels, packages, visas, or tours",
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "description": "Unique booking reservation code",
+          "maxLength": 64
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the user who booked",
+          "maxLength": 128
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Email of the booker",
+          "maxLength": 256
+        },
+        "serviceType": {
+          "type": "string",
+          "description": "Type of travel service booked",
+          "enum": ["flight", "hotel", "package", "tour", "visa", "study-abroad", "hajj-umrah", "medical-tourism"]
+        },
+        "title": {
+          "type": "string",
+          "description": "Booking title or package name",
+          "maxLength": 200
+        },
+        "routeOrDetails": {
+          "type": "string",
+          "description": "Route, room type, or package breakdown",
+          "maxLength": 500
+        },
+        "travelDate": {
+          "type": "string",
+          "description": "Departure or check-in date",
+          "maxLength": 64
+        },
+        "status": {
+          "type": "string",
+          "description": "Current lifecycle status",
+          "enum": ["Pending", "Confirmed", "In Review", "Issued", "Cancelled", "Completed"]
+        },
+        "amountBDT": {
+          "type": "number",
+          "description": "Total booking value in BDT"
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "Payment settlement status",
+          "enum": ["Pending", "Paid", "Refunded", "Failed"]
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment gateway or method used",
+          "maxLength": 64
+        },
+        "pnrOrReference": {
+          "type": "string",
+          "description": "Airline PNR or supplier confirmation code",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Booking creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["bookingId", "userId", "userEmail", "serviceType", "title", "status", "amountBDT"]
+    },
+    "VisaApplication": {
+      "title": "Visa Application",
+      "description": "Visa processing application submitted by a client or agency",
+      "type": "object",
+      "properties": {
+        "applicationId": {
+          "type": "string",
+          "description": "Application tracking reference",
+          "maxLength": 64
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the applicant user",
+          "maxLength": 128
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Applicant email address",
+          "maxLength": 256
+        },
+        "applicantName": {
+          "type": "string",
+          "description": "Full name as in passport",
+          "maxLength": 120
+        },
+        "passportNo": {
+          "type": "string",
+          "description": "Passport number",
+          "maxLength": 32
+        },
+        "country": {
+          "type": "string",
+          "description": "Destination country",
+          "maxLength": 64
+        },
+        "visaType": {
+          "type": "string",
+          "description": "Type of visa requested",
+          "maxLength": 64
+        },
+        "submissionDate": {
+          "type": "string",
+          "description": "Submission date string",
+          "maxLength": 64
+        },
+        "status": {
+          "type": "string",
+          "description": "Embassy processing status",
+          "enum": ["Submitted", "Documents Under Review", "Embassy Appointment Scheduled", "Visa Approved & Stamped", "Rejected"]
+        },
+        "documentsCount": {
+          "type": "number",
+          "description": "Number of verified documents"
+        },
+        "feeBDT": {
+          "type": "number",
+          "description": "Total visa processing fee in BDT"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Counselor notes or instructions",
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["applicationId", "userId", "userEmail", "applicantName", "country", "visaType", "status"]
+    },
+    "InquiryLead": {
+      "title": "Inquiry Lead",
+      "description": "Customer inquiry for bespoke trips, corporate travel, visa, or study abroad",
+      "type": "object",
+      "properties": {
+        "inquiryId": {
+          "type": "string",
+          "description": "Inquiry identifier",
+          "maxLength": 64
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID if authenticated or guest ID",
+          "maxLength": 128
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Client full name",
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "description": "Client contact email",
+          "maxLength": 256
+        },
+        "phone": {
+          "type": "string",
+          "description": "Client phone or WhatsApp",
+          "maxLength": 32
+        },
+        "serviceType": {
+          "type": "string",
+          "description": "Service category inquired about",
+          "maxLength": 64
+        },
+        "destination": {
+          "type": "string",
+          "description": "Target destination",
+          "maxLength": 120
+        },
+        "budgetBDT": {
+          "type": "number",
+          "description": "Estimated budget in BDT"
+        },
+        "travelersCount": {
+          "type": "number",
+          "description": "Total passenger count"
+        },
+        "message": {
+          "type": "string",
+          "description": "Custom requirements and notes",
+          "maxLength": 2000
+        },
+        "status": {
+          "type": "string",
+          "description": "Lead CRM status",
+          "enum": ["New", "In Discussion", "Proposal Sent", "Converted", "Closed"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["inquiryId", "fullName", "email", "serviceType", "status"]
+    },
+    "SupportTicket": {
+      "title": "Support Ticket",
+      "description": "Customer service request or inquiry ticket",
+      "type": "object",
+      "properties": {
+        "ticketId": {
+          "type": "string",
+          "description": "Support ticket reference number",
+          "maxLength": 64
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the ticket owner",
+          "maxLength": 128
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Owner email address",
+          "maxLength": 256
+        },
+        "subject": {
+          "type": "string",
+          "description": "Ticket subject line",
+          "maxLength": 200
+        },
+        "category": {
+          "type": "string",
+          "description": "Support issue category",
+          "enum": ["Booking & Ticketing", "Visa Consultation", "Payment & Refund", "Study Abroad Advisory", "Corporate Travel", "Technical Issue"]
+        },
+        "priority": {
+          "type": "string",
+          "description": "Urgency priority level",
+          "enum": ["Low", "Normal", "High", "Critical VIP"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Ticket lifecycle status",
+          "enum": ["Open", "In Progress", "Waiting on Customer", "Resolved", "Closed"]
+        },
+        "lastMessage": {
+          "type": "string",
+          "description": "Last response snippet",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Ticket creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Ticket last update timestamp"
+        }
+      },
+      "required": ["ticketId", "userId", "userEmail", "subject", "category", "priority", "status"]
+    },
+    "WalletTransaction": {
+      "title": "Wallet Transaction",
+      "description": "Ledger entry for customer or corporate wallet deposits and booking debits",
+      "type": "object",
+      "properties": {
+        "transactionId": {
+          "type": "string",
+          "description": "Transaction reference code",
+          "maxLength": 64
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the wallet owner",
+          "maxLength": 128
+        },
+        "type": {
+          "type": "string",
+          "description": "Deposit, Booking Payment, Cashback, or Refund",
+          "enum": ["Deposit", "Payment", "Refund", "Reward Cashback"]
+        },
+        "amountBDT": {
+          "type": "number",
+          "description": "Transaction amount in BDT"
+        },
+        "method": {
+          "type": "string",
+          "description": "Payment channel",
+          "enum": ["bKash", "Nagad", "Rocket", "Stripe", "SSLCommerz", "Bank Transfer", "Wallet"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Settlement state",
+          "enum": ["Completed", "Pending", "Failed"]
+        },
+        "reference": {
+          "type": "string",
+          "description": "Bank / MFS gateway reference",
+          "maxLength": 128
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the transaction",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Transaction creation timestamp"
+        }
+      },
+      "required": ["transactionId", "userId", "type", "amountBDT", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Authenticated user profile documents"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Travel, flight, hotel, and visa booking orders"
+    },
+    "/visa_applications/{applicationId}": {
+      "schema": "VisaApplication",
+      "description": "Customer visa applications and document records"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "InquiryLead",
+      "description": "Inquiries, customized quote requests, and leads"
+    },
+    "/support_tickets/{ticketId}": {
+      "schema": "SupportTicket",
+      "description": "Support tickets and customer service threads"
+    },
+    "/wallet_transactions/{transactionId}": {
+      "schema": "WalletTransaction",
+      "description": "Financial ledger transactions for user wallet accounts"
+    }
+  }
+}

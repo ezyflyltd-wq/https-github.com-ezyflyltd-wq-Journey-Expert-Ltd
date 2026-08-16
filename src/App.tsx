@@ -82,6 +82,68 @@ export default function App() {
   const [activeMainModule, setActiveMainModule] = useState<MainViewModule>('flights');
   const [isAIModalOpen, setIsAIModalOpen] = useState<boolean>(false);
 
+  // Deep-linking and URL Hash synchronization
+  React.useEffect(() => {
+    const handleHashSync = () => {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (!hash) return;
+
+      // Check for system portals
+      if (['customer', 'agent', 'admin', 'architecture'].includes(hash)) {
+        setActivePortal(hash as PortalType);
+        return;
+      }
+
+      // Check for main modules
+      const validModules: MainViewModule[] = [
+        'flights',
+        'hotels',
+        'packages',
+        'visa',
+        'study-abroad',
+        'business-units',
+        'craft-bangla',
+        'corporate',
+        'ai-engine',
+        'mobile',
+        'growth-seo',
+        'bi-analytics',
+        'healthcare',
+        'hajj-umrah',
+        'concierge',
+        'dmc-marketplace',
+        'api-gateway',
+        'customer-loyalty',
+        'enterprise-design-system',
+        'enterprise-cms',
+        'crm-sales',
+        'erp-finance',
+        'hr-management',
+        'ai-agent-ecosystem',
+        'product-roadmap',
+        'investor-deck',
+        'cybersecurity-infrastructure',
+        'data-platform',
+        'mobile-superapp',
+        'b2b-marketplace',
+        'growth-marketing',
+        'customer-support',
+        'international-expansion',
+        'innovation-lab',
+        'enterprise-blueprint',
+      ];
+
+      if (validModules.includes(hash as MainViewModule)) {
+        setActivePortal('main');
+        setActiveMainModule(hash as MainViewModule);
+      }
+    };
+
+    handleHashSync();
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
+
   // Search parameters passed from Hero to Flight view
   const [flightSearchOrigin, setFlightSearchOrigin] = useState('Dhaka (DAC)');
   const [flightSearchDestination, setFlightSearchDestination] = useState('London Heathrow (LHR)');
@@ -119,7 +181,7 @@ export default function App() {
             />
 
             {/* Quick Service Module Bar */}
-            <div className="bg-white/90 backdrop-blur-md border-y border-[#ECECEC] py-3.5 px-4 sticky top-[69px] z-40 shadow-xs">
+            <div className="bg-white/95 backdrop-blur-md border-y border-[#ECECEC] py-3.5 px-4 shadow-xs">
               <div className="max-w-7xl mx-auto flex items-center justify-center flex-wrap gap-2 sm:gap-4 text-xs font-bold">
                 <button
                   onClick={() => setActiveMainModule('flights')}

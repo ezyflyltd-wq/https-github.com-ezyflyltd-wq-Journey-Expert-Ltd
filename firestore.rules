@@ -1,0 +1,265 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // GLOBAL CATCH-ALL DEFAULT DENY SAFETY NET
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // CORE GLOBAL HELPER FUNCTIONS
+    // =========================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'ezyflyltd@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // =========================================================================
+    // ENTITY VALIDATION BLUEPRINTS (ANTI-UPDATE-GAP)
+    // =========================================================================
+
+    function isValidUser(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.displayName is string && data.displayName.size() <= 120 &&
+             data.role in ['customer', 'agent', 'corporate', 'admin'] &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 32)) &&
+             (!('passportNo' in data) || (data.passportNo is string && data.passportNo.size() <= 32)) &&
+             (!('loyaltyTier' in data) || data.loyaltyTier in ['Bronze', 'Silver', 'Gold', 'Platinum', 'VIP JEL CLUB']) &&
+             (!('loyaltyPoints' in data) || (data.loyaltyPoints is number && data.loyaltyPoints >= 0)) &&
+             (!('walletBalanceBDT' in data) || (data.walletBalanceBDT is number && data.walletBalanceBDT >= 0));
+    }
+
+    function isValidBooking(data) {
+      return data.bookingId is string && data.bookingId.size() <= 64 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.userEmail is string && data.userEmail.size() <= 256 &&
+             data.serviceType in ['flight', 'hotel', 'package', 'tour', 'visa', 'study-abroad', 'hajj-umrah', 'medical-tourism'] &&
+             data.title is string && data.title.size() <= 200 &&
+             data.status in ['Pending', 'Confirmed', 'In Review', 'Issued', 'Cancelled', 'Completed'] &&
+             data.amountBDT is number && data.amountBDT >= 0 && data.amountBDT <= 50000000 &&
+             (!('routeOrDetails' in data) || (data.routeOrDetails is string && data.routeOrDetails.size() <= 500)) &&
+             (!('travelDate' in data) || (data.travelDate is string && data.travelDate.size() <= 64)) &&
+             (!('paymentStatus' in data) || data.paymentStatus in ['Pending', 'Paid', 'Refunded', 'Failed']) &&
+             (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 64)) &&
+             (!('pnrOrReference' in data) || (data.pnrOrReference is string && data.pnrOrReference.size() <= 64));
+    }
+
+    function isValidVisaApplication(data) {
+      return data.applicationId is string && data.applicationId.size() <= 64 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.userEmail is string && data.userEmail.size() <= 256 &&
+             data.applicantName is string && data.applicantName.size() <= 120 &&
+             data.country is string && data.country.size() <= 64 &&
+             data.visaType is string && data.visaType.size() <= 64 &&
+             data.status in ['Submitted', 'Documents Under Review', 'Embassy Appointment Scheduled', 'Visa Approved & Stamped', 'Rejected'] &&
+             (!('passportNo' in data) || (data.passportNo is string && data.passportNo.size() <= 32)) &&
+             (!('submissionDate' in data) || (data.submissionDate is string && data.submissionDate.size() <= 64)) &&
+             (!('feeBDT' in data) || (data.feeBDT is number && data.feeBDT >= 0)) &&
+             (!('documentsCount' in data) || (data.documentsCount is number && data.documentsCount >= 0)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    function isValidInquiry(data) {
+      return data.inquiryId is string && data.inquiryId.size() <= 64 &&
+             data.fullName is string && data.fullName.size() <= 120 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.serviceType is string && data.serviceType.size() <= 64 &&
+             data.status in ['New', 'In Discussion', 'Proposal Sent', 'Converted', 'Closed'] &&
+             (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 32)) &&
+             (!('destination' in data) || (data.destination is string && data.destination.size() <= 120)) &&
+             (!('budgetBDT' in data) || (data.budgetBDT is number && data.budgetBDT >= 0)) &&
+             (!('travelersCount' in data) || (data.travelersCount is number && data.travelersCount >= 0)) &&
+             (!('message' in data) || (data.message is string && data.message.size() <= 2000));
+    }
+
+    function isValidSupportTicket(data) {
+      return data.ticketId is string && data.ticketId.size() <= 64 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.userEmail is string && data.userEmail.size() <= 256 &&
+             data.subject is string && data.subject.size() <= 200 &&
+             data.category in ['Booking & Ticketing', 'Visa Consultation', 'Payment & Refund', 'Study Abroad Advisory', 'Corporate Travel', 'Technical Issue'] &&
+             data.priority in ['Low', 'Normal', 'High', 'Critical VIP'] &&
+             data.status in ['Open', 'In Progress', 'Waiting on Customer', 'Resolved', 'Closed'] &&
+             (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 500));
+    }
+
+    function isValidWalletTransaction(data) {
+      return data.transactionId is string && data.transactionId.size() <= 64 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.type in ['Deposit', 'Payment', 'Refund', 'Reward Cashback'] &&
+             data.amountBDT is number && data.amountBDT > 0 && data.amountBDT <= 10000000 &&
+             data.status in ['Completed', 'Pending', 'Failed'] &&
+             (!('method' in data) || data.method in ['bKash', 'Nagad', 'Rocket', 'Stripe', 'SSLCommerz', 'Bank Transfer', 'Wallet']) &&
+             (!('reference' in data) || (data.reference is string && data.reference.size() <= 128)) &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 300));
+    }
+
+    // =========================================================================
+    // COLLECTION MATCH RULES
+    // =========================================================================
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      allow create: if isOwner(userId) &&
+                       isValidUser(incoming()) &&
+                       incoming().userId == userId &&
+                       // Prevent self-granting admin role
+                       incoming().role in ['customer', 'agent', 'corporate'];
+
+      allow update: if isValidUser(incoming()) && (
+                       isAdmin() ||
+                       (
+                         isOwner(userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().role == existing().role &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'phone', 'passportNo', 'updatedAt', 'walletBalanceBDT', 'loyaltyPoints'])
+                       )
+                     );
+
+      allow delete: if isAdmin();
+    }
+
+    // 2. Bookings Collection
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow create: if isValidId(bookingId) &&
+                       isSignedIn() &&
+                       isValidBooking(incoming()) &&
+                       incoming().bookingId == bookingId &&
+                       incoming().userId == request.auth.uid;
+
+      allow update: if isValidId(bookingId) &&
+                       isValidBooking(incoming()) && (
+                         isAdmin() ||
+                         (
+                           isSignedIn() &&
+                           existing().userId == request.auth.uid &&
+                           incoming().userId == existing().userId &&
+                           existing().status != 'Cancelled' &&
+                           existing().status != 'Completed' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paymentStatus', 'paymentMethod', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isAdmin();
+    }
+
+    // 3. Visa Applications Collection
+    match /visa_applications/{applicationId} {
+      allow get: if isValidId(applicationId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow create: if isValidId(applicationId) &&
+                       isSignedIn() &&
+                       isValidVisaApplication(incoming()) &&
+                       incoming().applicationId == applicationId &&
+                       incoming().userId == request.auth.uid;
+
+      allow update: if isValidId(applicationId) &&
+                       isValidVisaApplication(incoming()) && (
+                         isAdmin() ||
+                         (
+                           isSignedIn() &&
+                           existing().userId == request.auth.uid &&
+                           incoming().userId == existing().userId &&
+                           existing().status != 'Visa Approved & Stamped' &&
+                           existing().status != 'Rejected' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['documentsCount', 'notes', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isAdmin();
+    }
+
+    // 4. Inquiries Collection (Leads & Travel Quotes)
+    match /inquiries/{inquiryId} {
+      allow get: if isValidId(inquiryId) && (isAdmin() || (isSignedIn() && 'userId' in existing() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && 'userId' in resource.data && resource.data.userId == request.auth.uid);
+
+      allow create: if isValidId(inquiryId) &&
+                       isValidInquiry(incoming()) &&
+                       incoming().inquiryId == inquiryId &&
+                       incoming().status == 'New';
+
+      allow update: if isValidId(inquiryId) &&
+                       isValidInquiry(incoming()) &&
+                       isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // 5. Support Tickets Collection
+    match /support_tickets/{ticketId} {
+      allow get: if isValidId(ticketId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow create: if isValidId(ticketId) &&
+                       isSignedIn() &&
+                       isValidSupportTicket(incoming()) &&
+                       incoming().ticketId == ticketId &&
+                       incoming().userId == request.auth.uid;
+
+      allow update: if isValidId(ticketId) &&
+                       isValidSupportTicket(incoming()) && (
+                         isAdmin() ||
+                         (
+                           isSignedIn() &&
+                           existing().userId == request.auth.uid &&
+                           incoming().userId == existing().userId &&
+                           existing().status != 'Closed' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastMessage', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isAdmin();
+    }
+
+    // 6. Wallet Transactions Collection (Immutable Ledger)
+    match /wallet_transactions/{transactionId} {
+      allow get: if isValidId(transactionId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow create: if isValidId(transactionId) &&
+                       isSignedIn() &&
+                       isValidWalletTransaction(incoming()) &&
+                       incoming().transactionId == transactionId &&
+                       incoming().userId == request.auth.uid;
+
+      // Transactions are strictly immutable once created
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -282,3 +282,93 @@ export interface CraftProduct {
   inStock: boolean;
   artisanName: string;
 }
+
+export interface UserProfile {
+  userId: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  phone?: string;
+  passportNo?: string;
+  loyaltyTier?: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'VIP JEL CLUB';
+  loyaltyPoints?: number;
+  walletBalanceBDT?: number;
+  role: 'customer' | 'agent' | 'corporate' | 'admin';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface FirestoreBooking {
+  bookingId: string;
+  userId: string;
+  userEmail: string;
+  serviceType: 'flight' | 'hotel' | 'package' | 'tour' | 'visa' | 'study-abroad' | 'hajj-umrah' | 'medical-tourism';
+  title: string;
+  routeOrDetails?: string;
+  travelDate?: string;
+  status: 'Pending' | 'Confirmed' | 'In Review' | 'Issued' | 'Cancelled' | 'Completed';
+  amountBDT: number;
+  paymentStatus?: 'Pending' | 'Paid' | 'Refunded' | 'Failed';
+  paymentMethod?: string;
+  pnrOrReference?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface FirestoreVisaApplication {
+  applicationId: string;
+  userId: string;
+  userEmail: string;
+  applicantName: string;
+  passportNo?: string;
+  country: string;
+  visaType: string;
+  submissionDate?: string;
+  status: 'Submitted' | 'Documents Under Review' | 'Embassy Appointment Scheduled' | 'Visa Approved & Stamped' | 'Rejected';
+  documentsCount?: number;
+  feeBDT?: number;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface FirestoreInquiry {
+  inquiryId: string;
+  userId?: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  serviceType: string;
+  destination?: string;
+  budgetBDT?: number;
+  travelersCount?: number;
+  message?: string;
+  status: 'New' | 'In Discussion' | 'Proposal Sent' | 'Converted' | 'Closed';
+  createdAt?: string;
+}
+
+export interface FirestoreSupportTicket {
+  ticketId: string;
+  userId: string;
+  userEmail: string;
+  subject: string;
+  category: 'Booking & Ticketing' | 'Visa Consultation' | 'Payment & Refund' | 'Study Abroad Advisory' | 'Corporate Travel' | 'Technical Issue';
+  priority: 'Low' | 'Normal' | 'High' | 'Critical VIP';
+  status: 'Open' | 'In Progress' | 'Waiting on Customer' | 'Resolved' | 'Closed';
+  lastMessage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface FirestoreWalletTransaction {
+  transactionId: string;
+  userId: string;
+  type: 'Deposit' | 'Payment' | 'Refund' | 'Reward Cashback';
+  amountBDT: number;
+  method?: 'bKash' | 'Nagad' | 'Rocket' | 'Stripe' | 'SSLCommerz' | 'Bank Transfer' | 'Wallet';
+  status: 'Completed' | 'Pending' | 'Failed';
+  reference?: string;
+  description?: string;
+  createdAt?: string;
+}
+
