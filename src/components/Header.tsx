@@ -124,33 +124,33 @@ export const Header: React.FC<HeaderProps> = ({
   });
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-[#ECECEC] text-[#111111] transition-all duration-300 shadow-xs">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-[#ECECEC] text-[#111111] transition-all duration-300 shadow-xs w-full max-w-full overflow-x-hidden">
       {/* Top Utility Luxury Announcement Bar */}
-      <div className="bg-[#093F31] py-1.5 px-4 text-xs text-emerald-100/90 border-b border-[#0B6B53]">
-        <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
-          <div className="flex items-center space-x-4">
-            <span className="inline-flex items-center text-[#C7A44D] font-medium tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 mr-1.5 animate-pulse text-[#C7A44D]" />
+      <div className="bg-[#093F31] py-1.5 px-3 sm:px-4 text-xs text-emerald-100/90 border-b border-[#0B6B53] w-full overflow-hidden">
+        <div className="max-w-[1400px] w-[calc(100%-24px)] sm:w-[calc(100%-32px)] mx-auto flex flex-wrap justify-between items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
+            <span className="inline-flex items-center text-[#C7A44D] font-medium tracking-wide truncate text-[11px] sm:text-xs">
+              <Sparkles className="w-3.5 h-3.5 mr-1.5 animate-pulse text-[#C7A44D] shrink-0" />
               {COMPANY_CONFIG.tagline}
             </span>
             <span className="hidden md:inline text-emerald-800">|</span>
-            <span className="hidden md:flex items-center text-emerald-100/80">
-              <Phone className="w-3 h-3 mr-1.5 text-[#C7A44D]" />
-              24/7 Helpline: {COMPANY_CONFIG.phone.formattedPrimary}
+            <span className="hidden md:flex items-center text-emerald-100/80 truncate text-[11px] sm:text-xs">
+              <Phone className="w-3 h-3 mr-1 text-[#C7A44D] shrink-0" />
+              24/7: {COMPANY_CONFIG.phone.formattedPrimary}
             </span>
-            <span className="hidden lg:flex items-center text-emerald-100/80">
-              <Mail className="w-3 h-3 mr-1.5 text-[#C7A44D]" />
+            <span className="hidden lg:flex items-center text-emerald-100/80 truncate text-[11px] sm:text-xs">
+              <Mail className="w-3 h-3 mr-1 text-[#C7A44D] shrink-0" />
               {COMPANY_CONFIG.email.primary}
             </span>
           </div>
 
-          <div className="flex items-center space-x-3 text-xs">
+          <div className="flex items-center space-x-2 sm:space-x-3 text-xs shrink-0">
             {/* Currency Selector */}
-            <div className="flex items-center space-x-1.5 bg-[#0B6B53]/50 px-2.5 py-0.5 rounded-full border border-[#C7A44D]/30">
-              <span className="text-emerald-200/70 text-[11px]">Currency:</span>
+            <div className="flex items-center space-x-1 bg-[#0B6B53]/50 px-2 py-0.5 rounded-full border border-[#C7A44D]/30">
+              <span className="text-emerald-200/70 text-[10px] sm:text-[11px]">Cur:</span>
               <button
                 onClick={() => setCurrency(currency === 'BDT' ? 'USD' : 'BDT')}
-                className="font-bold text-[#C7A44D] hover:text-amber-300 transition-colors"
+                className="font-bold text-[#C7A44D] hover:text-amber-300 transition-colors text-[11px] sm:text-xs cursor-pointer"
                 title="Toggle Currency"
               >
                 {currency} ({currency === 'BDT' ? '৳' : '$'})
@@ -158,8 +158,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Language Badge */}
-            <div className="flex items-center space-x-1 text-emerald-200/80">
-              <Globe className="w-3 h-3 text-[#C7A44D]" />
+            <div className="flex items-center space-x-1 text-emerald-200/80 text-[11px] sm:text-xs">
+              <Globe className="w-3 h-3 text-[#C7A44D] shrink-0" />
               <span className="text-[#C7A44D] font-semibold">EN</span>
               <span className="text-emerald-700">/</span>
               <span className="hover:text-white cursor-pointer transition-colors">BN</span>
@@ -167,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Accreditation Badge */}
             {COMPANY_CONFIG.accreditations && COMPANY_CONFIG.accreditations.length > 0 && (
-              <span className="hidden sm:inline bg-[#C7A44D]/20 text-[#C7A44D] px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-[#C7A44D]/40">
+              <span className="hidden xl:inline bg-[#C7A44D]/20 text-[#C7A44D] px-2 py-0.5 rounded-full text-[10px] font-semibold border border-[#C7A44D]/40">
                 {COMPANY_CONFIG.accreditations[0]}
               </span>
             )}
@@ -176,21 +176,38 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Navigation Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+      <div className="max-w-[1400px] w-[calc(100%-24px)] sm:w-[calc(100%-32px)] mx-auto py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4 min-w-0">
         {/* Brand Logo & Name */}
         <div
-          className="cursor-pointer group shrink-0"
+          className="cursor-pointer group shrink-0 min-w-0"
           onClick={() => {
             onPortalChange('main');
-            onModuleChange('flights');
-            if (typeof window !== 'undefined') window.location.hash = 'flights';
+            onModuleChange('home');
+            if (typeof window !== 'undefined') window.location.hash = 'home';
           }}
         >
           <OfficialLogo />
         </div>
 
-        {/* Desktop Main Navigation Links */}
-        <nav className="hidden xl:flex items-center space-x-1 bg-[#F8FAF9] p-1.5 rounded-2xl border border-[#ECECEC] shadow-inner">
+        {/* Desktop Main Navigation Links (2XL: Full 8 Modules + Mega Portals) */}
+        <nav className="hidden 2xl:flex items-center space-x-1 bg-[#F8FAF9] p-1.5 rounded-2xl border border-[#ECECEC] shadow-inner shrink-0">
+          <button
+            onClick={() => {
+              onPortalChange('main');
+              onModuleChange('home');
+              setIsMegaMenuOpen(false);
+              if (typeof window !== 'undefined') window.location.hash = 'home';
+            }}
+            className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+              portal === 'main' && activeModule === 'home'
+                ? 'bg-[#0B6B53] text-white shadow-md'
+                : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
+            Home (3D)
+          </button>
+
           <button
             onClick={() => {
               onPortalChange('main');
@@ -198,13 +215,13 @@ export const Header: React.FC<HeaderProps> = ({
               setIsMegaMenuOpen(false);
               if (typeof window !== 'undefined') window.location.hash = 'flights';
             }}
-            className={`flex items-center px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
+            className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'flights'
                 ? 'bg-[#0B6B53] text-white shadow-md'
                 : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
             }`}
           >
-            <Plane className="w-3.5 h-3.5 mr-1.5 text-[#C7A44D]" />
+            <Plane className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
             Flights
           </button>
 
@@ -215,13 +232,13 @@ export const Header: React.FC<HeaderProps> = ({
               setIsMegaMenuOpen(false);
               if (typeof window !== 'undefined') window.location.hash = 'hotels';
             }}
-            className={`flex items-center px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
+            className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'hotels'
                 ? 'bg-[#0B6B53] text-white shadow-md'
                 : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
             }`}
           >
-            <Building2 className="w-3.5 h-3.5 mr-1.5 text-[#C7A44D]" />
+            <Building2 className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
             Hotels
           </button>
 
@@ -232,14 +249,14 @@ export const Header: React.FC<HeaderProps> = ({
               setIsMegaMenuOpen(false);
               if (typeof window !== 'undefined') window.location.hash = 'packages';
             }}
-            className={`flex items-center px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
+            className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'packages'
                 ? 'bg-[#0B6B53] text-white shadow-md'
                 : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
             }`}
           >
-            <Compass className="w-3.5 h-3.5 mr-1.5 text-[#C7A44D]" />
-            Packages
+            <Compass className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
+            Tours
           </button>
 
           <button
@@ -249,13 +266,13 @@ export const Header: React.FC<HeaderProps> = ({
               setIsMegaMenuOpen(false);
               if (typeof window !== 'undefined') window.location.hash = 'visa';
             }}
-            className={`flex items-center px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
+            className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'visa'
                 ? 'bg-[#0B6B53] text-white shadow-md'
                 : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
             }`}
           >
-            <FileCheck2 className="w-3.5 h-3.5 mr-1.5 text-[#C7A44D]" />
+            <FileCheck2 className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
             Visa
           </button>
 
@@ -266,48 +283,48 @@ export const Header: React.FC<HeaderProps> = ({
               setIsMegaMenuOpen(false);
               if (typeof window !== 'undefined') window.location.hash = 'study-abroad';
             }}
-            className={`flex items-center px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
+            className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'study-abroad'
                 ? 'bg-[#0B6B53] text-white shadow-md'
                 : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
             }`}
           >
-            <GraduationCap className="w-3.5 h-3.5 mr-1.5 text-[#C7A44D]" />
+            <GraduationCap className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
             Study Abroad
           </button>
 
           <button
             onClick={() => {
               onPortalChange('main');
-              onModuleChange('corporate');
+              onModuleChange('hajj-umrah');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'corporate';
+              if (typeof window !== 'undefined') window.location.hash = 'hajj-umrah';
             }}
-            className={`flex items-center px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
-              portal === 'main' && activeModule === 'corporate'
+            className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+              portal === 'main' && activeModule === 'hajj-umrah'
                 ? 'bg-[#0B6B53] text-white shadow-md'
                 : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
             }`}
           >
-            <Briefcase className="w-3.5 h-3.5 mr-1.5 text-[#C7A44D]" />
-            Corporate
+            <Sparkles className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
+            Hajj & Umrah
           </button>
 
           <button
             onClick={() => {
               onPortalChange('main');
-              onModuleChange('craft-bangla');
+              onModuleChange('business-units');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'craft-bangla';
+              if (typeof window !== 'undefined') window.location.hash = 'business-units';
             }}
-            className={`flex items-center px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
-              portal === 'main' && activeModule === 'craft-bangla'
+            className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+              portal === 'main' && activeModule === 'business-units'
                 ? 'bg-[#0B6B53] text-white shadow-md'
                 : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
             }`}
           >
-            <ShoppingBag className="w-3.5 h-3.5 mr-1.5 text-[#C7A44D]" />
-            Craft Bangla
+            <Building className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
+            About JEL
           </button>
 
           {/* Dedicated Ecosystem Portals Mega Menu Trigger */}
@@ -316,15 +333,15 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
             aria-expanded={isMegaMenuOpen}
             aria-haspopup="true"
-            className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-extrabold tracking-wide transition-all duration-200 shadow-xs border ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold tracking-wide transition-all duration-200 shadow-xs border cursor-pointer ${
               isMegaMenuOpen
                 ? 'bg-[#093F31] text-white border-[#C7A44D]'
                 : 'bg-gradient-to-r from-emerald-50 to-amber-50 text-[#093F31] border-[#C7A44D]/50 hover:bg-emerald-100/70'
             }`}
           >
             <Grid className="w-3.5 h-3.5 text-[#C7A44D]" />
-            <span>Ecosystem Portals</span>
-            <span className="bg-[#C7A44D] text-[#093F31] text-[10px] font-black px-1.5 py-0.2 rounded-md ml-1">
+            <span>Portals</span>
+            <span className="bg-[#C7A44D] text-[#093F31] text-[10px] font-black px-1.5 py-0.2 rounded-md ml-0.5">
               23
             </span>
             <ChevronDown
@@ -335,29 +352,138 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </nav>
 
-        {/* Action Buttons: AI Assistant & Portal Switcher */}
-        <div className="hidden lg:flex items-center space-x-2.5">
+        {/* Laptop Main Navigation Links (XL to 2XL: Compact Core Modules) */}
+        <nav className="hidden xl:flex 2xl:hidden items-center space-x-1 bg-[#F8FAF9] p-1 rounded-2xl border border-[#ECECEC] shadow-inner shrink-0">
+          <button
+            onClick={() => {
+              onPortalChange('main');
+              onModuleChange('home');
+              setIsMegaMenuOpen(false);
+              if (typeof window !== 'undefined') window.location.hash = 'home';
+            }}
+            className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
+              portal === 'main' && activeModule === 'home'
+                ? 'bg-[#0B6B53] text-white shadow-md'
+                : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
+            Home
+          </button>
+
+          <button
+            onClick={() => {
+              onPortalChange('main');
+              onModuleChange('flights');
+              setIsMegaMenuOpen(false);
+              if (typeof window !== 'undefined') window.location.hash = 'flights';
+            }}
+            className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
+              portal === 'main' && activeModule === 'flights'
+                ? 'bg-[#0B6B53] text-white shadow-md'
+                : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
+            }`}
+          >
+            <Plane className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
+            Flights
+          </button>
+
+          <button
+            onClick={() => {
+              onPortalChange('main');
+              onModuleChange('hotels');
+              setIsMegaMenuOpen(false);
+              if (typeof window !== 'undefined') window.location.hash = 'hotels';
+            }}
+            className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
+              portal === 'main' && activeModule === 'hotels'
+                ? 'bg-[#0B6B53] text-white shadow-md'
+                : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
+            Hotels
+          </button>
+
+          <button
+            onClick={() => {
+              onPortalChange('main');
+              onModuleChange('visa');
+              setIsMegaMenuOpen(false);
+              if (typeof window !== 'undefined') window.location.hash = 'visa';
+            }}
+            className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
+              portal === 'main' && activeModule === 'visa'
+                ? 'bg-[#0B6B53] text-white shadow-md'
+                : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
+            }`}
+          >
+            <FileCheck2 className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
+            Visa
+          </button>
+
+          <button
+            onClick={() => {
+              onPortalChange('main');
+              onModuleChange('study-abroad');
+              setIsMegaMenuOpen(false);
+              if (typeof window !== 'undefined') window.location.hash = 'study-abroad';
+            }}
+            className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
+              portal === 'main' && activeModule === 'study-abroad'
+                ? 'bg-[#0B6B53] text-white shadow-md'
+                : 'text-[#666666] hover:text-[#093F31] hover:bg-white'
+            }`}
+          >
+            <GraduationCap className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
+            Study Abroad
+          </button>
+
+          <button
+            onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
+            className="flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-emerald-50 to-amber-50 text-[#093F31] border border-[#C7A44D]/50 hover:bg-emerald-100/70"
+          >
+            <Grid className="w-3.5 h-3.5 text-[#C7A44D]" />
+            <span>Portals (23)</span>
+          </button>
+        </nav>
+
+        {/* Action Buttons: Start Your Journey, AI Assistant & Portal Switcher */}
+        <div className="hidden lg:flex items-center space-x-2 shrink-0">
+          {/* Start Your Journey CTA */}
+          <button
+            onClick={() => {
+              onPortalChange('main');
+              onModuleChange('flights');
+              if (typeof window !== 'undefined') window.location.hash = 'flights';
+            }}
+            className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-[#C8A14A] to-[#E6CA65] hover:from-[#E6CA65] hover:to-[#C8A14A] text-[#081C15] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer shrink-0"
+          >
+            <span className="hidden xl:inline">Start Your Journey</span>
+            <span className="xl:hidden">Book Now</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#081C15]" />
+          </button>
+
           {/* AI Travel Assistant Button */}
           <button
             onClick={onOpenAIModal}
-            className="flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-[#093F31] via-[#0B6B53] to-[#093F31] text-white shadow-md hover:shadow-lg hover:brightness-110 transition-all transform hover:-translate-y-0.5 border border-[#C7A44D]/40 shrink-0"
+            className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-[#093F31] via-[#0B6B53] to-[#093F31] text-white shadow-md hover:shadow-lg hover:brightness-110 transition-all transform hover:-translate-y-0.5 border border-[#C7A44D]/40 shrink-0 cursor-pointer"
           >
             <Sparkles
               className="w-3.5 h-3.5 text-[#C7A44D] animate-spin"
               style={{ animationDuration: '4s' }}
             />
-            <span>AI Assistant</span>
+            <span>Ask JEL AI</span>
           </button>
 
           {/* Ecosystem Portals Button (for viewports between lg and xl) */}
           <div className="xl:hidden">
             <button
               onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
-              className="flex items-center space-x-1 px-3 py-2 bg-emerald-50 text-[#093F31] border border-[#C7A44D]/40 rounded-xl text-xs font-bold"
+              className="flex items-center space-x-1 px-2.5 py-2 bg-emerald-50 text-[#093F31] border border-[#C7A44D]/40 rounded-xl text-xs font-bold cursor-pointer"
             >
               <Grid className="w-3.5 h-3.5 text-[#C7A44D]" />
               <span>Portals</span>
-              <ChevronDown className="w-3 h-3 text-[#666666]" />
             </button>
           </div>
 
@@ -365,10 +491,10 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative" ref={portalSwitcherRef}>
             <button
               onClick={() => setIsPortalSwitcherOpen(!isPortalSwitcherOpen)}
-              className="flex items-center space-x-2 px-3.5 py-2 bg-white hover:bg-[#F8FAF9] border border-[#ECECEC] rounded-xl text-xs font-bold text-[#111111] shadow-xs transition-all"
+              className="flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-[#F8FAF9] border border-[#ECECEC] rounded-xl text-xs font-bold text-[#111111] shadow-xs transition-all cursor-pointer"
             >
               <User className="w-3.5 h-3.5 text-[#0B6B53]" />
-              <span className="hidden sm:inline">
+              <span className="hidden 2xl:inline">
                 {portal === 'main' && 'System Portals'}
                 {portal === 'customer' && 'Customer Portal'}
                 {portal === 'agent' && 'B2B Agent Portal'}
@@ -383,7 +509,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {isPortalSwitcherOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white border border-[#ECECEC] rounded-2xl shadow-2xl p-2.5 z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white border border-[#ECECEC] rounded-2xl shadow-2xl p-2.5 z-[70] animate-in fade-in slide-in-from-top-2 duration-200">
                 <p className="px-3 py-1.5 text-[10px] font-black uppercase text-[#666666] tracking-widest border-b border-[#ECECEC] mb-1">
                   Enterprise Platform Portals
                 </p>
@@ -399,20 +525,20 @@ export const Header: React.FC<HeaderProps> = ({
                         setIsPortalSwitcherOpen(false);
                         if (typeof window !== 'undefined') window.location.hash = sys.id;
                       }}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium flex items-center space-x-3 transition-all ${
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center space-x-3 transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-[#F8FAF9] text-[#093F31] font-bold border border-[#0B6B53]/20 shadow-xs'
                           : 'text-[#111111] hover:bg-[#F8FAF9]'
                       }`}
                     >
                       <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${sys.colorClass}`}
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${sys.colorClass}`}
                       >
-                        <SysIcon className="w-4 h-4" />
+                        <SysIcon className="w-3.5 h-3.5" />
                       </div>
-                      <div>
-                        <div className="font-bold text-[#111111]">{sys.title}</div>
-                        <div className="text-[10px] text-[#666666] leading-tight">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-[#111111] text-xs truncate">{sys.title}</div>
+                        <div className="text-[10px] text-[#666666] leading-tight truncate">
                           {sys.subtitle}
                         </div>
                       </div>
@@ -430,13 +556,13 @@ export const Header: React.FC<HeaderProps> = ({
                 onPortalChange('customer');
                 if (typeof window !== 'undefined') window.location.hash = 'customer';
               }}
-              className="flex items-center space-x-2 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200 rounded-xl text-xs font-bold text-[#093F31] shadow-xs transition-all cursor-pointer"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200 rounded-xl text-xs font-bold text-[#093F31] shadow-xs transition-all cursor-pointer"
               title="Open Customer Dashboard"
             >
               <div className="w-6 h-6 rounded-full bg-[#093F31] text-[#C7A44D] flex items-center justify-center text-[10px] font-black shrink-0">
                 {(userProfile?.displayName || user.displayName || 'U').substring(0, 1).toUpperCase()}
               </div>
-              <span className="max-w-[90px] truncate hidden xl:inline">
+              <span className="max-w-[80px] truncate hidden 2xl:inline">
                 {userProfile?.displayName || user.displayName?.split(' ')[0] || 'Account'}
               </span>
             </button>
@@ -444,7 +570,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={signInWithGoogle}
               disabled={authLoading}
-              className="flex items-center space-x-1.5 px-3 py-2 bg-[#093F31] hover:bg-[#0B6B53] text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer border border-[#C7A44D]/30"
+              className="flex items-center space-x-1.5 px-3 py-2 bg-[#093F31] hover:bg-[#0B6B53] text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer border border-[#C7A44D]/30 shrink-0"
               title="Sign In with Google"
             >
               <LogIn className="w-3.5 h-3.5 text-[#C7A44D]" />
@@ -454,17 +580,18 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile menu and AI button */}
-        <div className="lg:hidden flex items-center space-x-2">
+        <div className="lg:hidden flex items-center space-x-2 shrink-0">
           <button
             onClick={onOpenAIModal}
-            className="px-3 py-2 bg-[#093F31] text-white rounded-xl text-xs font-bold flex items-center space-x-1 shadow-sm border border-[#C7A44D]/30"
+            className="px-3 py-2 bg-[#093F31] text-white rounded-xl text-xs font-bold flex items-center space-x-1 shadow-sm border border-[#C7A44D]/30 cursor-pointer"
             title="Open AI Travel Assistant"
           >
             <Sparkles className="w-4 h-4 text-[#C7A44D]" />
+            <span className="text-[11px] font-bold hidden sm:inline">Ask AI</span>
           </button>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 bg-[#F8FAF9] border border-[#ECECEC] text-[#111111] rounded-xl hover:bg-white transition-colors"
+            className="p-2 bg-[#F8FAF9] border border-[#ECECEC] text-[#111111] rounded-xl hover:bg-white transition-colors cursor-pointer"
             aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

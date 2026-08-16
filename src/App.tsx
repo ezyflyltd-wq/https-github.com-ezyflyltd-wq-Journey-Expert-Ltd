@@ -43,6 +43,7 @@ import { InnovationLabView } from './components/InnovationLabView';
 import { EnterpriseBlueprintView } from './components/EnterpriseBlueprintView';
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { MainViewModule, PortalType } from './types';
+import { Home3DExperience } from './components/home3d/Home3DExperience';
 import {
   Plane,
   Building2,
@@ -79,7 +80,7 @@ import {
 
 export default function App() {
   const [activePortal, setActivePortal] = useState<PortalType>('main');
-  const [activeMainModule, setActiveMainModule] = useState<MainViewModule>('flights');
+  const [activeMainModule, setActiveMainModule] = useState<MainViewModule>('home');
   const [isAIModalOpen, setIsAIModalOpen] = useState<boolean>(false);
 
   // Deep-linking and URL Hash synchronization
@@ -96,6 +97,7 @@ export default function App() {
 
       // Check for main modules
       const validModules: MainViewModule[] = [
+        'home',
         'flights',
         'hotels',
         'packages',
@@ -172,13 +174,25 @@ export default function App() {
         {/* MAIN CONSUMER & PUBLIC OTA PORTAL */}
         {activePortal === 'main' && (
           <div>
-            {/* Hero Section with Search Engine & AI Prompt Box */}
-            <HeroSearch
-              activeModule={activeMainModule}
-              onModuleChange={setActiveMainModule}
-              onOpenAIModal={() => setIsAIModalOpen(true)}
-              onSearchFlights={handleHeroFlightSearch}
-            />
+            {/* If on Home, Render the Master 3D Travel Universe Experience */}
+            {activeMainModule === 'home' ? (
+              <Home3DExperience
+                onNavigateToModule={(mod) => {
+                  setActiveMainModule(mod);
+                  if (typeof window !== 'undefined') window.location.hash = mod;
+                }}
+                onOpenAIModal={() => setIsAIModalOpen(true)}
+                onSearchFlights={handleHeroFlightSearch}
+              />
+            ) : (
+              <div>
+                {/* Hero Section with Search Engine & AI Prompt Box */}
+                <HeroSearch
+                  activeModule={activeMainModule}
+                  onModuleChange={setActiveMainModule}
+                  onOpenAIModal={() => setIsAIModalOpen(true)}
+                  onSearchFlights={handleHeroFlightSearch}
+                />
 
             {/* Quick Service Module Bar */}
             <div className="bg-white/95 backdrop-blur-md border-y border-[#ECECEC] py-3.5 px-4 shadow-xs">
@@ -730,6 +744,8 @@ export default function App() {
                 </div>
               </div>
             </section>
+              </div>
+            )}
           </div>
         )}
 
