@@ -5,7 +5,7 @@ import { GoogleGenAI } from '@google/genai';
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number.parseInt(process.env.PORT || '3000', 10);
 
   app.use(express.json());
 
@@ -247,8 +247,8 @@ async function startServer() {
         monthlyVisitorCount: 14200,
       },
       apiDistributionKeys: [
-        { keyName: 'Production Flight Search API', apiKey: 'jel_live_ak_984102938471203', rateLimitPerMin: 1200, status: 'ACTIVE' },
-        { keyName: 'Hotel Booking Webhook API', apiKey: 'jel_live_ak_119283746501928', rateLimitPerMin: 600, status: 'ACTIVE' },
+        { keyName: 'Production Flight Search API', apiKey: '••••••••••••••••••••', rateLimitPerMin: 1200, status: 'ACTIVE' },
+        { keyName: 'Hotel Booking Webhook API', apiKey: '••••••••••••••••••••', rateLimitPerMin: 600, status: 'ACTIVE' },
       ],
       aiB2BAssistant: {
         fareYieldPrediction: 'Air Arabia (G9) fares to Sharjah expected to increase 14% on Thursday. Recommend ticketing pending PNRs before 18:00.',
@@ -1159,10 +1159,10 @@ async function startServer() {
     res.json({
       timestamp: new Date().toISOString(),
       customer360: {
-        customerId: 'JEL-CUST-884910',
-        fullName: 'Engr. Tanvir Ahmed',
-        email: 'tanvir.ahmed@beximco.com',
-        phone: '+880 1711 998877',
+        customerId: 'DEMO-CUSTOMER-001',
+        fullName: 'Demo Customer',
+        email: 'demo@example.com',
+        phone: '+880 1000 000000',
         membershipTier: 'JOURNEY ELITE',
         loyaltyPoints: 142500,
         walletBalanceBDT: 45000,
@@ -1643,10 +1643,10 @@ async function startServer() {
         ddosMitigationCapacityGbps: '1,200 Gbps'
       },
       socRealtimeAlerts: [
-        { id: 'SEC-8912', event: 'WAF SQL Injection Vector Blocked', severity: 'MEDIUM', sourceIp: '185.220.101.4', timestamp: '10 mins ago', status: 'MITIGATED' },
-        { id: 'SEC-8913', event: 'Gemini AI Prompt Injection Attempt Isolated', severity: 'HIGH', sourceIp: '103.112.54.12', timestamp: '24 mins ago', status: 'QUARANTINED' },
-        { id: 'SEC-8914', event: 'GDS API Rate Limit Exceeded - Token Throttled', severity: 'LOW', sourceIp: '194.26.29.110', timestamp: '1 hr ago', status: 'RESOLVED' },
-        { id: 'SEC-8915', event: 'Privileged Admin Login with Hardware YubiKey 2FA', severity: 'INFO', sourceIp: '103.205.180.2', timestamp: '2 hrs ago', status: 'VERIFIED' }
+        { id: 'SEC-8912', event: 'WAF SQL Injection Vector Blocked', severity: 'MEDIUM', sourceIp: 'REDACTED', timestamp: '10 mins ago', status: 'MITIGATED' },
+        { id: 'SEC-8913', event: 'Gemini AI Prompt Injection Attempt Isolated', severity: 'HIGH', sourceIp: 'REDACTED', timestamp: '24 mins ago', status: 'QUARANTINED' },
+        { id: 'SEC-8914', event: 'GDS API Rate Limit Exceeded - Token Throttled', severity: 'LOW', sourceIp: 'REDACTED', timestamp: '1 hr ago', status: 'RESOLVED' },
+        { id: 'SEC-8915', event: 'Privileged Admin Login with Hardware YubiKey 2FA', severity: 'INFO', sourceIp: 'REDACTED', timestamp: '2 hrs ago', status: 'VERIFIED' }
       ],
       rbacRolesConfigured: [
         { role: 'Customer / Traveler', permissions: 'View Bookings, Edit Profile, Apply Visas, Submit Applications', dataMasking: 'AES-256 PII Encrypted' },
