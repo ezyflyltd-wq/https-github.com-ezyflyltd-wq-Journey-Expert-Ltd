@@ -1,10 +1,11 @@
 # Journey Expert Ltd. — Cloudflare Pages routing
-# Rules are evaluated top-to-bottom. Fragments such as #flights are browser-only.
+# Clean routes are emitted as extensionless HTML documents by the Pages build.
+# Fragments such as #flights are browser-only and cannot be redirected at the edge.
 
 # Canonical host.
 https://www.journeyexpertltd.com/* https://journeyexpertltd.com/:splat 301
 
-# Canonicalize trailing slashes for public routes.
+# Canonicalize trailing slashes for clean routes.
 /flights/ /flights 301
 /hotels/ /hotels 301
 /packages/ /packages 301
@@ -40,55 +41,7 @@ https://www.journeyexpertltd.com/* https://journeyexpertltd.com/:splat 301
 /international-expansion/ /international-expansion 301
 /innovation-lab/ /innovation-lab 301
 /enterprise/blueprint/ /enterprise/blueprint 301
-/enterprise/design-system/ /enterprise/design-system 301
-/enterprise/cms-knowledge/ /enterprise/cms-knowledge 301
-
-# Public BrowserRouter route fallback.
-/ /index.html 200
-/flights /index.html 200
-/hotels /index.html 200
-/packages /index.html 200
-/visa /index.html 200
-/study-abroad /index.html 200
-/business-units /index.html 200
-/craft-bangla /index.html 200
-/corporate-travel /index.html 200
-/ai/travel-planner /index.html 200
-/mobile-apps /index.html 200
-/seo-growth /index.html 200
-/analytics /index.html 200
-/healthcare-insurance /index.html 200
-/hajj-umrah /index.html 200
-/concierge /index.html 200
-/dmc-marketplace /index.html 200
-/developer /index.html 200
-/customer/loyalty /index.html 200
-/enterprise/design-system /index.html 200
-/enterprise/cms-knowledge /index.html 200
-/business/crm /index.html 200
-/business/finance /index.html 200
-/business/hr /index.html 200
-/ai-agent-ecosystem /index.html 200
-/roadmap /index.html 200
-/investors /index.html 200
-/security /index.html 200
-/data-platform /index.html 200
-/mobile-superapp /index.html 200
-/b2b-marketplace /index.html 200
-/growth-marketing /index.html 200
-/customer-support /index.html 200
-/international-expansion /index.html 200
-/innovation-lab /index.html 200
-/enterprise/blueprint /index.html 200
-/about /index.html 200
-/portals /index.html 200
-/ai/* /index.html 200
-/portals/* /index.html 200
-
-# Authenticated and internal application fallbacks. These are not public SEO pages.
-/customer/* /index.html 200
-/agent/* /index.html 200
-/admin/* /index.html 200
-/architecture/* /index.html 200
-/business/* /index.html 200
-/enterprise/* /index.html 200
+/customer/ /customer 301
+/agent/ /agent 301
+/admin/ /admin 301
+/architecture/ /architecture 301
