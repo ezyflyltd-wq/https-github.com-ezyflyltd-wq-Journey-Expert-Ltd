@@ -1,0 +1,17 @@
+{
+  "name": "Journey Expert Ltd.",
+  "short_name": "Journey Expert",
+  "description": "AI-assisted travel, visa, study-abroad, corporate travel, and global mobility services.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#081C15",
+  "theme_color": "#081C15",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

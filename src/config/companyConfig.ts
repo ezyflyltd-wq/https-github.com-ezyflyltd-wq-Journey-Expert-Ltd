@@ -98,8 +98,8 @@ export const COMPANY_INFO: CompanyInfo = {
     support: 'journeyexpertltd@gmail.com',
     info: 'journeyexpertltd@gmail.com',
   },
-  website: 'https://journeyexpertbd.com/',
-  domain: 'journeyexpertbd.com',
+  website: 'https://journeyexpertltd.com/',
+  domain: 'journeyexpertltd.com',
   colors: {
     primary: '#0B5D3B',
     secondary: '#C8A14A',
