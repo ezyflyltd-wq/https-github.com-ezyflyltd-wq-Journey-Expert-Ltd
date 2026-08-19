@@ -70,3 +70,19 @@ jobs:
           test -f dist/_headers
           test -f dist/_redirects
           test -f functions/api/[[path]].ts
+
+  promote:
+    name: Promote validated source to Cloudflare release branch
+    needs: [sync-guard, validate]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout validated main commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update release branch
+        run: git push origin HEAD:refs/heads/release
