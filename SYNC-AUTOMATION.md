@@ -8,7 +8,7 @@ A change is blocked automatically when it contains a deleted file, or when it ch
 
 ## What this protects
 
-The gate never writes to Firebase or Firestore and never modifies customer, booking, wallet, payment, finance, authentication, or other runtime data. It protects the repository and deployment path only. Cloudflare can publish only after the guard and validation jobs pass under the protected `main` branch.
+The gate never writes to Firebase or Firestore and never modifies customer, booking, wallet, payment, finance, authentication, or other runtime data. It protects the repository and deployment path only. The protected `main` branch is the review/source branch. After the guard and validation jobs pass, the workflow promotes the exact validated commit to `release`; Cloudflare Pages production deploys only from `release`.
 
 ## Routine AI Studio change
 
@@ -17,7 +17,11 @@ The gate never writes to Firebase or Firestore and never modifies customer, book
 3. Review the changed-file list. If the list contains an unexpected file, a deletion, `audit-notes.md`, SEO assets, secrets, Firebase/Firestore rules, server files, package files, or workflow files, do not push. Restore/cancel the AI Studio checkpoint and investigate.
 4. If the changed files are expected, use **Push changes to GitHub**. Do not push a failed or canceled checkpoint.
 5. GitHub Actions runs **Sync safety gate** first. It then runs type-check, the Pages build, and required asset checks.
-6. Cloudflare Pages deploys only the approved `main` result. Verify `https://journeyexpertltd.com/`, `/api/health`, `/robots.txt`, and `/sitemap.xml`.
+6. The successful workflow promotes the approved `main` result to `release`, and Cloudflare Pages deploys only from `release`. Verify `https://journeyexpertltd.com/`, `/api/health`, `/robots.txt`, and `/sitemap.xml`.
+
+## Release promotion path
+
+The live Cloudflare Pages project is configured to use the `release` branch for Production. Direct changes to `main` are protected by the required **Sync safety gate** and **Type-check and Pages build** checks. Only the workflow's `promote` job, which runs after both checks succeed on a push to `main`, updates `release`. A failed AI Studio checkpoint therefore cannot reach the live site merely by appearing in GitHub.
 
 ## Protected-change review
 
