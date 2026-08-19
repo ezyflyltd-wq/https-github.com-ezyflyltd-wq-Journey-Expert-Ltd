@@ -1,52 +1,52 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HeroSearch } from './components/HeroSearch';
-import { FlightBookingView } from './components/FlightBookingView';
-import { HotelBookingView } from './components/HotelBookingView';
-import { PackagesView } from './components/PackagesView';
-import { VisaPortalView } from './components/VisaPortalView';
-import { StudyAbroadView } from './components/StudyAbroadView';
-import { BusinessUnitsView } from './components/BusinessUnitsView';
-import { CustomerDashboard } from './components/CustomerDashboard';
-import { AgentPortal } from './components/AgentPortal';
-import { AdminDashboard } from './components/AdminDashboard';
-import { ArchitectureDocsView } from './components/ArchitectureDocsView';
-import { CraftBanglaView } from './components/CraftBanglaView';
-import { CorporateTravelView } from './components/CorporateTravelView';
-import { AIEngineView } from './components/AIEngineView';
-import { MobileEcosystemView } from './components/MobileEcosystemView';
-import { GrowthSeoView } from './components/GrowthSeoView';
-import { BiAnalyticsView } from './components/BiAnalyticsView';
-import { HealthcareInsuranceView } from './components/HealthcareInsuranceView';
-import { HajjUmrahView } from './components/HajjUmrahView';
-import { ConciergeView } from './components/ConciergeView';
-import { DmcMarketplaceView } from './components/DmcMarketplaceView';
-import { ApiGatewayView } from './components/ApiGatewayView';
-import { CustomerLoyaltyView } from './components/CustomerLoyaltyView';
-import { EnterpriseWebsiteView } from './components/EnterpriseWebsiteView';
-import { CmsKnowledgeView } from './components/CmsKnowledgeView';
-import { CrmSalesView } from './components/CrmSalesView';
-import { ErpFinanceView } from './components/ErpFinanceView';
-import { HrManagementView } from './components/HrManagementView';
-import { AiAgentEcosystemView } from './components/AiAgentEcosystemView';
-import { ProductRoadmapView } from './components/ProductRoadmapView';
-import { InvestorDeckView } from './components/InvestorDeckView';
-import { CybersecurityView } from './components/CybersecurityView';
-import { DataPlatformView } from './components/DataPlatformView';
-import { MobileSuperAppView } from './components/MobileSuperAppView';
-import { B2bMarketplaceView } from './components/B2bMarketplaceView';
-import { GrowthMarketingView } from './components/GrowthMarketingView';
-import { CustomerSupportView } from './components/CustomerSupportView';
-import { InternationalExpansionView } from './components/InternationalExpansionView';
-import { InnovationLabView } from './components/InnovationLabView';
-import { EnterpriseBlueprintView } from './components/EnterpriseBlueprintView';
+const FlightBookingView = lazy(() => import('./components/FlightBookingView').then(({ FlightBookingView }) => ({ default: FlightBookingView })));
+const HotelBookingView = lazy(() => import('./components/HotelBookingView').then(({ HotelBookingView }) => ({ default: HotelBookingView })));
+const PackagesView = lazy(() => import('./components/PackagesView').then(({ PackagesView }) => ({ default: PackagesView })));
+const VisaPortalView = lazy(() => import('./components/VisaPortalView').then(({ VisaPortalView }) => ({ default: VisaPortalView })));
+const StudyAbroadView = lazy(() => import('./components/StudyAbroadView').then(({ StudyAbroadView }) => ({ default: StudyAbroadView })));
+const BusinessUnitsView = lazy(() => import('./components/BusinessUnitsView').then(({ BusinessUnitsView }) => ({ default: BusinessUnitsView })));
+const CustomerDashboard = lazy(() => import('./components/CustomerDashboard').then(({ CustomerDashboard }) => ({ default: CustomerDashboard })));
+const AgentPortal = lazy(() => import('./components/AgentPortal').then(({ AgentPortal }) => ({ default: AgentPortal })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(({ AdminDashboard }) => ({ default: AdminDashboard })));
+const ArchitectureDocsView = lazy(() => import('./components/ArchitectureDocsView').then(({ ArchitectureDocsView }) => ({ default: ArchitectureDocsView })));
+const CraftBanglaView = lazy(() => import('./components/CraftBanglaView').then(({ CraftBanglaView }) => ({ default: CraftBanglaView })));
+const CorporateTravelView = lazy(() => import('./components/CorporateTravelView').then(({ CorporateTravelView }) => ({ default: CorporateTravelView })));
+const AIEngineView = lazy(() => import('./components/AIEngineView').then(({ AIEngineView }) => ({ default: AIEngineView })));
+const MobileEcosystemView = lazy(() => import('./components/MobileEcosystemView').then(({ MobileEcosystemView }) => ({ default: MobileEcosystemView })));
+const GrowthSeoView = lazy(() => import('./components/GrowthSeoView').then(({ GrowthSeoView }) => ({ default: GrowthSeoView })));
+const BiAnalyticsView = lazy(() => import('./components/BiAnalyticsView').then(({ BiAnalyticsView }) => ({ default: BiAnalyticsView })));
+const HealthcareInsuranceView = lazy(() => import('./components/HealthcareInsuranceView').then(({ HealthcareInsuranceView }) => ({ default: HealthcareInsuranceView })));
+const HajjUmrahView = lazy(() => import('./components/HajjUmrahView').then(({ HajjUmrahView }) => ({ default: HajjUmrahView })));
+const ConciergeView = lazy(() => import('./components/ConciergeView').then(({ ConciergeView }) => ({ default: ConciergeView })));
+const DmcMarketplaceView = lazy(() => import('./components/DmcMarketplaceView').then(({ DmcMarketplaceView }) => ({ default: DmcMarketplaceView })));
+const ApiGatewayView = lazy(() => import('./components/ApiGatewayView').then(({ ApiGatewayView }) => ({ default: ApiGatewayView })));
+const CustomerLoyaltyView = lazy(() => import('./components/CustomerLoyaltyView').then(({ CustomerLoyaltyView }) => ({ default: CustomerLoyaltyView })));
+const EnterpriseWebsiteView = lazy(() => import('./components/EnterpriseWebsiteView').then(({ EnterpriseWebsiteView }) => ({ default: EnterpriseWebsiteView })));
+const CmsKnowledgeView = lazy(() => import('./components/CmsKnowledgeView').then(({ CmsKnowledgeView }) => ({ default: CmsKnowledgeView })));
+const CrmSalesView = lazy(() => import('./components/CrmSalesView').then(({ CrmSalesView }) => ({ default: CrmSalesView })));
+const ErpFinanceView = lazy(() => import('./components/ErpFinanceView').then(({ ErpFinanceView }) => ({ default: ErpFinanceView })));
+const HrManagementView = lazy(() => import('./components/HrManagementView').then(({ HrManagementView }) => ({ default: HrManagementView })));
+const AiAgentEcosystemView = lazy(() => import('./components/AiAgentEcosystemView').then(({ AiAgentEcosystemView }) => ({ default: AiAgentEcosystemView })));
+const ProductRoadmapView = lazy(() => import('./components/ProductRoadmapView').then(({ ProductRoadmapView }) => ({ default: ProductRoadmapView })));
+const InvestorDeckView = lazy(() => import('./components/InvestorDeckView').then(({ InvestorDeckView }) => ({ default: InvestorDeckView })));
+const CybersecurityView = lazy(() => import('./components/CybersecurityView').then(({ CybersecurityView }) => ({ default: CybersecurityView })));
+const DataPlatformView = lazy(() => import('./components/DataPlatformView').then(({ DataPlatformView }) => ({ default: DataPlatformView })));
+const MobileSuperAppView = lazy(() => import('./components/MobileSuperAppView').then(({ MobileSuperAppView }) => ({ default: MobileSuperAppView })));
+const B2bMarketplaceView = lazy(() => import('./components/B2bMarketplaceView').then(({ B2bMarketplaceView }) => ({ default: B2bMarketplaceView })));
+const GrowthMarketingView = lazy(() => import('./components/GrowthMarketingView').then(({ GrowthMarketingView }) => ({ default: GrowthMarketingView })));
+const CustomerSupportView = lazy(() => import('./components/CustomerSupportView').then(({ CustomerSupportView }) => ({ default: CustomerSupportView })));
+const InternationalExpansionView = lazy(() => import('./components/InternationalExpansionView').then(({ InternationalExpansionView }) => ({ default: InternationalExpansionView })));
+const InnovationLabView = lazy(() => import('./components/InnovationLabView').then(({ InnovationLabView }) => ({ default: InnovationLabView })));
+const EnterpriseBlueprintView = lazy(() => import('./components/EnterpriseBlueprintView').then(({ EnterpriseBlueprintView }) => ({ default: EnterpriseBlueprintView })));
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { MainViewModule, PortalType } from './types';
 import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
 import { RouteMetadata } from './seo/RouteMetadata';
-import { Home3DExperience } from './components/home3d/Home3DExperience';
+const Home3DExperience = lazy(() => import('./components/home3d/Home3DExperience').then(({ Home3DExperience }) => ({ default: Home3DExperience })));
 import {
   Plane,
   Building2,
@@ -114,7 +114,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAF9] text-[#111111] flex flex-col font-sans selection:bg-[#0B6B53] selection:text-white">
+    <Suspense fallback={<div className="min-h-screen bg-[#F8FAF9] text-[#093F31] flex items-center justify-center font-sans">Loading Journey Expert…</div>}>
+      <div className="min-h-screen bg-[#F8FAF9] text-[#111111] flex flex-col font-sans selection:bg-[#0B6B53] selection:text-white">
       <RouteMetadata />
       {/* Global Navigation Header */}
       <Header
@@ -726,6 +727,7 @@ export default function App() {
 
       {/* Global Footer */}
       <Footer onModuleChange={navigateToModule} />
-    </div>
+      </div>
+    </Suspense>
   );
 }
