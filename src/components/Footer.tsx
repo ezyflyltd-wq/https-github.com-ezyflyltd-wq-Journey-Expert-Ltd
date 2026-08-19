@@ -246,6 +246,20 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
             </li>
           </ul>
         </div>
+        {/* Crawlable public SEO routes */}
+        <nav aria-label="Public SEO pages" className="lg:col-span-5 border-t border-[#ECECEC] pt-6">
+          <h4 className="text-[#093F31] font-black text-sm mb-3 font-serif">Explore Journey Expert Services</h4>
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold">
+            <a href="/flights" className="hover:text-[#0B6B53] transition-colors">Flight Search</a>
+            <a href="/hotels" className="hover:text-[#0B6B53] transition-colors">Halal Hotels</a>
+            <a href="/packages" className="hover:text-[#0B6B53] transition-colors">Tour Packages</a>
+            <a href="/visa" className="hover:text-[#0B6B53] transition-colors">Visa Support</a>
+            <a href="/study-abroad" className="hover:text-[#0B6B53] transition-colors">Study Abroad</a>
+            <a href="/hajj-umrah" className="hover:text-[#0B6B53] transition-colors">Hajj & Umrah</a>
+            <a href="/corporate-travel" className="hover:text-[#0B6B53] transition-colors">Corporate Travel</a>
+            <a href="/portals" className="hover:text-[#0B6B53] transition-colors">All Portals</a>
+          </div>
+        </nav>
       </div>
 
       {/* Payment Partners & Bottom Bar */}

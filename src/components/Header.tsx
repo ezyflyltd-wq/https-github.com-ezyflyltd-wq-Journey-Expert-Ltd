@@ -109,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
     setMobileMenuOpen(false);
     // Update hash for deep linking
     if (typeof window !== 'undefined') {
-      window.location.hash = item.hash;
+
     }
   };
 
@@ -183,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => {
             onPortalChange('main');
             onModuleChange('home');
-            if (typeof window !== 'undefined') window.location.hash = 'home';
+
           }}
         >
           <OfficialLogo />
@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('home');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'home';
+
             }}
             className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'home'
@@ -213,7 +213,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('flights');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'flights';
+
             }}
             className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'flights'
@@ -230,7 +230,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('hotels');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'hotels';
+
             }}
             className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'hotels'
@@ -247,7 +247,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('packages');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'packages';
+
             }}
             className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'packages'
@@ -264,7 +264,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('visa');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'visa';
+
             }}
             className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'visa'
@@ -281,7 +281,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('study-abroad');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'study-abroad';
+
             }}
             className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'study-abroad'
@@ -298,7 +298,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('hajj-umrah');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'hajj-umrah';
+
             }}
             className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'hajj-umrah'
@@ -315,7 +315,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('business-units');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'business-units';
+
             }}
             className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'business-units'
@@ -359,7 +359,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('home');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'home';
+
             }}
             className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
               portal === 'main' && activeModule === 'home'
@@ -376,7 +376,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('flights');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'flights';
+
             }}
             className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
               portal === 'main' && activeModule === 'flights'
@@ -393,7 +393,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('hotels');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'hotels';
+
             }}
             className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
               portal === 'main' && activeModule === 'hotels'
@@ -410,7 +410,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('visa');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'visa';
+
             }}
             className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
               portal === 'main' && activeModule === 'visa'
@@ -427,7 +427,7 @@ export const Header: React.FC<HeaderProps> = ({
               onPortalChange('main');
               onModuleChange('study-abroad');
               setIsMegaMenuOpen(false);
-              if (typeof window !== 'undefined') window.location.hash = 'study-abroad';
+
             }}
             className={`flex items-center px-2.5 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all ${
               portal === 'main' && activeModule === 'study-abroad'
@@ -455,7 +455,7 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => {
               onPortalChange('main');
               onModuleChange('flights');
-              if (typeof window !== 'undefined') window.location.hash = 'flights';
+
             }}
             className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-[#C8A14A] to-[#E6CA65] hover:from-[#E6CA65] hover:to-[#C8A14A] text-[#081C15] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer shrink-0"
           >
@@ -523,7 +523,7 @@ export const Header: React.FC<HeaderProps> = ({
                       onClick={() => {
                         onPortalChange(sys.id);
                         setIsPortalSwitcherOpen(false);
-                        if (typeof window !== 'undefined') window.location.hash = sys.id;
+
                       }}
                       className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center space-x-3 transition-all cursor-pointer ${
                         isSelected
@@ -554,7 +554,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => {
                 onPortalChange('customer');
-                if (typeof window !== 'undefined') window.location.hash = 'customer';
+
               }}
               className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200 rounded-xl text-xs font-bold text-[#093F31] shadow-xs transition-all cursor-pointer"
               title="Open Customer Dashboard"
