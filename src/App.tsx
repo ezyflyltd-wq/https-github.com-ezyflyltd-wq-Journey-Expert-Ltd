@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HeroSearch } from './components/HeroSearch';
@@ -43,6 +44,8 @@ import { InnovationLabView } from './components/InnovationLabView';
 import { EnterpriseBlueprintView } from './components/EnterpriseBlueprintView';
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { MainViewModule, PortalType } from './types';
+import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
+import { RouteMetadata } from './seo/RouteMetadata';
 import { Home3DExperience } from './components/home3d/Home3DExperience';
 import {
   Plane,
@@ -79,72 +82,24 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [activePortal, setActivePortal] = useState<PortalType>('main');
-  const [activeMainModule, setActiveMainModule] = useState<MainViewModule>('home');
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isAIModalOpen, setIsAIModalOpen] = useState<boolean>(false);
 
-  // Deep-linking and URL Hash synchronization
   React.useEffect(() => {
-    const handleHashSync = () => {
-      const hash = window.location.hash.replace('#', '').trim();
-      if (!hash) return;
-
-      // Check for system portals
-      if (['customer', 'agent', 'admin', 'architecture'].includes(hash)) {
-        setActivePortal(hash as PortalType);
-        return;
-      }
-
-      // Check for main modules
-      const validModules: MainViewModule[] = [
-        'home',
-        'flights',
-        'hotels',
-        'packages',
-        'visa',
-        'study-abroad',
-        'business-units',
-        'craft-bangla',
-        'corporate',
-        'ai-engine',
-        'mobile',
-        'growth-seo',
-        'bi-analytics',
-        'healthcare',
-        'hajj-umrah',
-        'concierge',
-        'dmc-marketplace',
-        'api-gateway',
-        'customer-loyalty',
-        'enterprise-design-system',
-        'enterprise-cms',
-        'crm-sales',
-        'erp-finance',
-        'hr-management',
-        'ai-agent-ecosystem',
-        'product-roadmap',
-        'investor-deck',
-        'cybersecurity-infrastructure',
-        'data-platform',
-        'mobile-superapp',
-        'b2b-marketplace',
-        'growth-marketing',
-        'customer-support',
-        'international-expansion',
-        'innovation-lab',
-        'enterprise-blueprint',
-      ];
-
-      if (validModules.includes(hash as MainViewModule)) {
-        setActivePortal('main');
-        setActiveMainModule(hash as MainViewModule);
-      }
-    };
-
-    handleHashSync();
-    window.addEventListener('hashchange', handleHashSync);
-    return () => window.removeEventListener('hashchange', handleHashSync);
+    migrateLegacyHash();
   }, []);
+
+  const activePortal: PortalType = getPortalForPath(location.pathname);
+  const activeMainModule: MainViewModule = getModuleForPath(location.pathname) || 'home';
+
+  const navigateToModule = (module: MainViewModule) => {
+    navigate(getPathForModule(module));
+  };
+
+  const navigateToPortal = (portal: PortalType) => {
+    navigate(getPathForPortal(portal));
+  };
 
   // Search parameters passed from Hero to Flight view
   const [flightSearchOrigin, setFlightSearchOrigin] = useState('Dhaka (DAC)');
@@ -155,17 +110,18 @@ export default function App() {
     setFlightSearchOrigin(origin);
     setFlightSearchDestination(destination);
     setFlightSearchGDS(gds);
-    setActiveMainModule('flights');
+    navigateToModule('flights');
   };
 
   return (
     <div className="min-h-screen bg-[#F8FAF9] text-[#111111] flex flex-col font-sans selection:bg-[#0B6B53] selection:text-white">
+      <RouteMetadata />
       {/* Global Navigation Header */}
       <Header
         activePortal={activePortal}
-        onPortalChange={setActivePortal}
+        onPortalChange={navigateToPortal}
         activeModule={activeMainModule}
-        onModuleChange={setActiveMainModule}
+        onModuleChange={navigateToModule}
         onOpenAIModal={() => setIsAIModalOpen(true)}
       />
 
@@ -178,8 +134,8 @@ export default function App() {
             {activeMainModule === 'home' ? (
               <Home3DExperience
                 onNavigateToModule={(mod) => {
-                  setActiveMainModule(mod);
-                  if (typeof window !== 'undefined') window.location.hash = mod;
+                  navigateToModule(mod);
+
                 }}
                 onOpenAIModal={() => setIsAIModalOpen(true)}
                 onSearchFlights={handleHeroFlightSearch}
@@ -189,7 +145,7 @@ export default function App() {
                 {/* Hero Section with Search Engine & AI Prompt Box */}
                 <HeroSearch
                   activeModule={activeMainModule}
-                  onModuleChange={setActiveMainModule}
+                  onModuleChange={navigateToModule}
                   onOpenAIModal={() => setIsAIModalOpen(true)}
                   onSearchFlights={handleHeroFlightSearch}
                 />
@@ -198,7 +154,7 @@ export default function App() {
             <div className="bg-white/95 backdrop-blur-md border-y border-[#ECECEC] py-3.5 px-4 shadow-xs">
               <div className="max-w-7xl mx-auto flex items-center justify-center flex-wrap gap-2 sm:gap-4 text-xs font-bold">
                 <button
-                  onClick={() => setActiveMainModule('flights')}
+                  onClick={() => navigateToModule('flights')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'flights'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -210,7 +166,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('hotels')}
+                  onClick={() => navigateToModule('hotels')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'hotels'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -222,7 +178,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('packages')}
+                  onClick={() => navigateToModule('packages')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'packages'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -234,7 +190,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('visa')}
+                  onClick={() => navigateToModule('visa')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'visa'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -246,7 +202,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('study-abroad')}
+                  onClick={() => navigateToModule('study-abroad')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'study-abroad'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -258,7 +214,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('business-units')}
+                  onClick={() => navigateToModule('business-units')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'business-units'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -270,7 +226,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('craft-bangla')}
+                  onClick={() => navigateToModule('craft-bangla')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'craft-bangla'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -282,7 +238,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('corporate')}
+                  onClick={() => navigateToModule('corporate')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'corporate'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -294,7 +250,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('ai-engine')}
+                  onClick={() => navigateToModule('ai-engine')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'ai-engine'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -306,7 +262,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('mobile')}
+                  onClick={() => navigateToModule('mobile')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'mobile'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -318,7 +274,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('growth-seo')}
+                  onClick={() => navigateToModule('growth-seo')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'growth-seo'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -330,7 +286,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('bi-analytics')}
+                  onClick={() => navigateToModule('bi-analytics')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'bi-analytics'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -342,7 +298,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('healthcare')}
+                  onClick={() => navigateToModule('healthcare')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'healthcare'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -354,7 +310,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('hajj-umrah')}
+                  onClick={() => navigateToModule('hajj-umrah')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'hajj-umrah'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -366,7 +322,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('concierge')}
+                  onClick={() => navigateToModule('concierge')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'concierge'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -378,7 +334,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('dmc-marketplace')}
+                  onClick={() => navigateToModule('dmc-marketplace')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'dmc-marketplace'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -390,7 +346,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('api-gateway')}
+                  onClick={() => navigateToModule('api-gateway')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'api-gateway'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -402,7 +358,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('customer-loyalty')}
+                  onClick={() => navigateToModule('customer-loyalty')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'customer-loyalty'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -414,7 +370,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('enterprise-design-system')}
+                  onClick={() => navigateToModule('enterprise-design-system')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'enterprise-design-system'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -426,7 +382,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('enterprise-cms')}
+                  onClick={() => navigateToModule('enterprise-cms')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'enterprise-cms'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -438,7 +394,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('crm-sales')}
+                  onClick={() => navigateToModule('crm-sales')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'crm-sales'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -450,7 +406,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('erp-finance')}
+                  onClick={() => navigateToModule('erp-finance')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'erp-finance'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -462,7 +418,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('hr-management')}
+                  onClick={() => navigateToModule('hr-management')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'hr-management'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -474,7 +430,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('ai-agent-ecosystem')}
+                  onClick={() => navigateToModule('ai-agent-ecosystem')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'ai-agent-ecosystem'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -486,7 +442,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('product-roadmap')}
+                  onClick={() => navigateToModule('product-roadmap')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'product-roadmap'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -498,7 +454,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('investor-deck')}
+                  onClick={() => navigateToModule('investor-deck')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'investor-deck'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -510,7 +466,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('cybersecurity-infrastructure')}
+                  onClick={() => navigateToModule('cybersecurity-infrastructure')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'cybersecurity-infrastructure'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -522,7 +478,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('data-platform')}
+                  onClick={() => navigateToModule('data-platform')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'data-platform'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -534,7 +490,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('mobile-superapp')}
+                  onClick={() => navigateToModule('mobile-superapp')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'mobile-superapp'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -546,7 +502,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('b2b-marketplace')}
+                  onClick={() => navigateToModule('b2b-marketplace')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'b2b-marketplace'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -558,7 +514,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('growth-marketing')}
+                  onClick={() => navigateToModule('growth-marketing')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'growth-marketing'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -570,7 +526,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('customer-support')}
+                  onClick={() => navigateToModule('customer-support')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'customer-support'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -582,7 +538,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('international-expansion')}
+                  onClick={() => navigateToModule('international-expansion')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'international-expansion'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -594,7 +550,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('innovation-lab')}
+                  onClick={() => navigateToModule('innovation-lab')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'innovation-lab'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -606,7 +562,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => setActiveMainModule('enterprise-blueprint')}
+                  onClick={() => navigateToModule('enterprise-blueprint')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                     activeMainModule === 'enterprise-blueprint'
                       ? 'bg-[#093F31] text-white shadow-md border border-[#C7A44D]/30'
@@ -769,7 +725,7 @@ export default function App() {
       />
 
       {/* Global Footer */}
-      <Footer onModuleChange={(module) => { setActivePortal('main'); setActiveMainModule(module); }} />
+      <Footer onModuleChange={navigateToModule} />
     </div>
   );
 }
