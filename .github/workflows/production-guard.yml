@@ -10,8 +10,33 @@ permissions:
   contents: read
 
 jobs:
+  sync-guard:
+    name: Sync safety gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITHUB_COMMIT_MESSAGE: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
+      GITHUB_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run automated sync guard
+        run: node scripts/sync-guard.mjs
+
+      - name: Upload safety report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-guard-report
+          path: sync-guard-report.md
+          if-no-files-found: ignore
+
   validate:
     name: Type-check and Pages build
+    needs: sync-guard
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -27,6 +52,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
