@@ -104,3 +104,9 @@ This design is safer than allowing concurrent, invisible writes. It prevents a l
 [3]: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches "GitHub protected branches documentation"
 
 [4]: https://developers.cloudflare.com/pages/configuration/git-integration/ "Cloudflare Pages Git integration documentation"
+
+## 9. Latest verified release
+
+The synchronization guard was added in commit `439b66c67a3d3ff1e28276d2ba8c944cd9e39330`. Its GitHub Actions run completed with `success`. The protected `main` branch has administrator enforcement enabled, force-push disabled, and deletion disabled. The AI Studio panel subsequently reported that GitHub and Google AI Studio are currently in sync.
+
+Post-release probes returned HTTP 200 for the apex site, `www` site, `/api/health`, `/robots.txt`, and `/sitemap.xml`. The pre-sync rollback tag and backup branch remain available.
