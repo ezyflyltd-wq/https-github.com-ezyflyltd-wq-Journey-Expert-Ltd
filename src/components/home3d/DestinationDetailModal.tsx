@@ -15,7 +15,7 @@ import {
   Send,
   Zap,
 } from 'lucide-react';
-import { DestinationPoint } from './InteractiveGlobe3D';
+import type { DestinationPoint } from './globeData';
 
 interface DestinationDetailModalProps {
   destination: DestinationPoint | null;

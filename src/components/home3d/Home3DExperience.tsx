@@ -9,7 +9,7 @@ import { TrustMetricsSection } from './TrustMetricsSection';
 import { WhyJourneyExpertSection } from './WhyJourneyExpertSection';
 import { CinematicCTASection } from './CinematicCTASection';
 import { DestinationDetailModal } from './DestinationDetailModal';
-import { DestinationPoint } from './InteractiveGlobe3D';
+import type { DestinationPoint } from './globeData';
 import { MainViewModule } from '../../types';
 
 interface Home3DExperienceProps {

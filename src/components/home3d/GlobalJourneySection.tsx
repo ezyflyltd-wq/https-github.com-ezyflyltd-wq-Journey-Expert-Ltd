@@ -13,7 +13,7 @@ import {
   ExternalLink,
   ShieldCheck,
 } from 'lucide-react';
-import { GLOBAL_DESTINATIONS, DestinationPoint } from './InteractiveGlobe3D';
+import { GLOBAL_DESTINATIONS, type DestinationPoint } from './globeData';
 
 interface GlobalJourneySectionProps {
   onSelectDestination: (dest: DestinationPoint) => void;

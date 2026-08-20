@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Sparkles,
   ArrowRight,
@@ -16,7 +16,13 @@ import {
   Zap,
   Globe2,
 } from 'lucide-react';
-import { InteractiveGlobe3D, DestinationPoint, GLOBAL_DESTINATIONS } from './InteractiveGlobe3D';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import type { DestinationPoint } from './globeData';
+import { GlobePoster } from './GlobePoster';
+
+const InteractiveGlobe3D = lazy(() =>
+  import('./InteractiveGlobe3D').then(({ InteractiveGlobe3D: Component }) => ({ default: Component })),
+);
 import { DestinationDetailModal } from './DestinationDetailModal';
 
 interface HeroSection3DProps {
@@ -34,6 +40,24 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
 }) => {
   const [selectedDestination, setSelectedDestination] = useState<DestinationPoint | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [interactiveGlobeEnabled, setInteractiveGlobeEnabled] = useState(false);
+
+  const prefersReducedMotion = typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isMobileViewport = typeof window !== 'undefined'
+    && window.matchMedia('(max-width: 767px)').matches;
+  const saveData = typeof navigator !== 'undefined'
+    && Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+
+  useEffect(() => {
+    if (prefersReducedMotion || isMobileViewport || saveData) return;
+
+    const activationTimer = window.setTimeout(() => {
+      setInteractiveGlobeEnabled(true);
+    }, 1200);
+
+    return () => window.clearTimeout(activationTimer);
+  }, [isMobileViewport, prefersReducedMotion, saveData]);
 
   // Quick Flight Search Form State
   const [origin, setOrigin] = useState('Dhaka (DAC)');
@@ -140,12 +164,18 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
             </div>
           </div>
 
-          {/* Right Column: 3D Interactive Globe Visualization */}
+          {/* Right Column: static-first globe with opt-in/lazy WebGL */}
           <div className="lg:col-span-6 xl:col-span-6 relative w-full min-w-0 flex items-center justify-center">
-            <InteractiveGlobe3D
-              onSelectDestination={handleGlobeDestinationSelect}
-              selectedDestinationId="lhr"
-            />
+            {interactiveGlobeEnabled ? (
+              <Suspense fallback={<GlobePoster />}>
+                <InteractiveGlobe3D
+                  onSelectDestination={handleGlobeDestinationSelect}
+                  selectedDestinationId="lhr"
+                />
+              </Suspense>
+            ) : (
+              <GlobePoster onEnableInteractive={() => setInteractiveGlobeEnabled(true)} />
+            )}
           </div>
         </div>
 
