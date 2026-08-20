@@ -46,6 +46,8 @@ import { AIAssistantModal } from './components/AIAssistantModal';
 import { MainViewModule, PortalType } from './types';
 import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
 import { RouteMetadata } from './seo/RouteMetadata';
+import { DeferredServiceWidget } from './components/seo/DeferredServiceWidget';
+import { ServiceRouteShell } from './components/seo/ServiceRouteShell';
 const Home3DExperience = lazy(() => import('./components/home3d/Home3DExperience').then(({ Home3DExperience }) => ({ default: Home3DExperience })));
 import {
   Plane,
@@ -143,13 +145,15 @@ export default function App() {
               />
             ) : (
               <div>
-                {/* Hero Section with Search Engine & AI Prompt Box */}
-                <HeroSearch
-                  activeModule={activeMainModule}
-                  onModuleChange={navigateToModule}
-                  onOpenAIModal={() => setIsAIModalOpen(true)}
-                  onSearchFlights={handleHeroFlightSearch}
-                />
+                {/* Keep the generic hero off service routes so the route-specific H1 becomes the first meaningful paint. */}
+                {activeMainModule !== 'flights' && activeMainModule !== 'visa' && (
+                  <HeroSearch
+                    activeModule={activeMainModule}
+                    onModuleChange={navigateToModule}
+                    onOpenAIModal={() => setIsAIModalOpen(true)}
+                    onSearchFlights={handleHeroFlightSearch}
+                  />
+                )}
 
             {/* Quick Service Module Bar */}
             <div className="bg-white/95 backdrop-blur-md border-y border-[#ECECEC] py-3.5 px-4 shadow-xs">
@@ -579,18 +583,32 @@ export default function App() {
             {/* Dynamic Service Module Display */}
             <div className="py-6">
               {activeMainModule === 'flights' && (
-                <FlightBookingView
-                  initialOrigin={flightSearchOrigin}
-                  initialDestination={flightSearchDestination}
-                  initialGDS={flightSearchGDS}
-                />
+                <ServiceRouteShell route="flights">
+                  <DeferredServiceWidget
+                    fallback={<div className="min-h-[520px] rounded-2xl bg-white/70" aria-hidden="true" />}
+                  >
+                    <FlightBookingView
+                      initialOrigin={flightSearchOrigin}
+                      initialDestination={flightSearchDestination}
+                      initialGDS={flightSearchGDS}
+                    />
+                  </DeferredServiceWidget>
+                </ServiceRouteShell>
               )}
 
               {activeMainModule === 'hotels' && <HotelBookingView />}
 
               {activeMainModule === 'packages' && <PackagesView />}
 
-              {activeMainModule === 'visa' && <VisaPortalView />}
+              {activeMainModule === 'visa' && (
+                <ServiceRouteShell route="visa">
+                  <DeferredServiceWidget
+                    fallback={<div className="min-h-[520px] rounded-2xl bg-white/70" aria-hidden="true" />}
+                  >
+                    <VisaPortalView />
+                  </DeferredServiceWidget>
+                </ServiceRouteShell>
+              )}
 
               {activeMainModule === 'study-abroad' && <StudyAbroadView />}
 
