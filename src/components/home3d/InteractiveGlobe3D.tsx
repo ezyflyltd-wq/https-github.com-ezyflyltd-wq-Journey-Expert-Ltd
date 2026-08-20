@@ -66,7 +66,11 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
     let lastFrameTime = 0;
 
     const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
-    const minFrameInterval = isMobileViewport ? 1000 / 30 : 1000 / 60;
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+    const isConstrainedDevice = isMobileViewport
+      || (navigator.hardwareConcurrency ?? 8) <= 4
+      || deviceMemory <= 4;
+    const minFrameInterval = isMobileViewport ? 1000 / 30 : 1000 / 45;
 
     const width = container.clientWidth || 600;
     const height = container.clientHeight || 500;
@@ -76,8 +80,8 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
       renderer = new THREE.WebGLRenderer({
         canvas: canvas,
         alpha: true,
-        antialias: true,
-        powerPreference: 'high-performance',
+        antialias: !isConstrainedDevice,
+        powerPreference: isConstrainedDevice ? 'low-power' : 'high-performance',
       });
       renderer.setSize(width, height, false);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobileViewport ? 1.25 : 1.5));
@@ -100,7 +104,8 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
     scene.add(globeGroup);
 
     // Inner Glow Core
-    const sphereGeometry = new THREE.SphereGeometry(GLOBE_RADIUS, 64, 64);
+    const sphereSegments = isConstrainedDevice ? 32 : 48;
+    const sphereGeometry = new THREE.SphereGeometry(GLOBE_RADIUS, sphereSegments, sphereSegments);
     const sphereMaterial = new THREE.MeshPhongMaterial({
       color: 0x052016,
       emissive: 0x03140e,
@@ -114,7 +119,7 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
     globeGroup.add(globeMesh);
 
     // 2. Graticule / Wireframe Latitude-Longitude Grid Rings
-    const wireframeGeo = new THREE.SphereGeometry(GLOBE_RADIUS + 0.3, 32, 24);
+    const wireframeGeo = new THREE.SphereGeometry(GLOBE_RADIUS + 0.3, isConstrainedDevice ? 16 : 24, isConstrainedDevice ? 12 : 18);
     const wireframeMat = new THREE.MeshBasicMaterial({
       color: 0x0f5132,
       wireframe: true,
@@ -125,7 +130,7 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
     globeGroup.add(wireframeMesh);
 
     // 3. Subtle Outer Atmospheric Glow Halo
-    const haloGeo = new THREE.SphereGeometry(GLOBE_RADIUS + 5, 32, 32);
+    const haloGeo = new THREE.SphereGeometry(GLOBE_RADIUS + 5, isConstrainedDevice ? 16 : 24, isConstrainedDevice ? 16 : 24);
     const haloMat = new THREE.ShaderMaterial({
       vertexShader: `
         varying vec3 vNormal;
@@ -149,7 +154,7 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
     globeGroup.add(haloMesh);
 
     // 4. Dot Grid Matrix of Continents (Simulated High-Tech Landmass)
-    const dotsCount = 1800;
+    const dotsCount = isConstrainedDevice ? 700 : 1200;
     const dotPositions = new Float32Array(dotsCount * 3);
     const dotColors = new Float32Array(dotsCount * 3);
 
@@ -247,7 +252,7 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
       midVec.normalize().multiplyScalar(altitude);
 
       const curve = new THREE.CatmullRomCurve3([dhakaVec, midVec, targetVec]);
-      const points = curve.getPoints(50);
+      const points = curve.getPoints(isConstrainedDevice ? 24 : 36);
       curvePointsList.push(points);
 
       // Curved Arc Line
@@ -262,7 +267,7 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
       globeGroup.add(arcLine);
 
       // Moving Aircraft / Data Stream Particle
-      const particleGeo = new THREE.SphereGeometry(1.2, 8, 8);
+      const particleGeo = new THREE.SphereGeometry(1.2, isConstrainedDevice ? 6 : 8, isConstrainedDevice ? 6 : 8);
       const particleMat = new THREE.MeshBasicMaterial({
         color: 0xffffff,
       });
