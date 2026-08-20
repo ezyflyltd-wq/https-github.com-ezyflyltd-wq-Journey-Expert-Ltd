@@ -44,20 +44,37 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
 
   const prefersReducedMotion = typeof window !== 'undefined'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const isMobileViewport = typeof window !== 'undefined'
-    && window.matchMedia('(max-width: 767px)').matches;
+  const isLargeViewport = typeof window !== 'undefined'
+    && window.matchMedia('(min-width: 1024px)').matches;
   const saveData = typeof navigator !== 'undefined'
     && Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
 
   useEffect(() => {
-    if (prefersReducedMotion || isMobileViewport || saveData) return;
+    if (prefersReducedMotion || !isLargeViewport || saveData) return;
 
-    const activationTimer = window.setTimeout(() => {
-      setInteractiveGlobeEnabled(true);
-    }, 1200);
+    let activationTimer: number | undefined;
+    let idleHandle: number | undefined;
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const scheduleIdle = () => {
+      const activate = () => setInteractiveGlobeEnabled(true);
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(activate, { timeout: 3500 });
+      } else {
+        activationTimer = window.setTimeout(activate, 0);
+      }
+    };
 
-    return () => window.clearTimeout(activationTimer);
-  }, [isMobileViewport, prefersReducedMotion, saveData]);
+    activationTimer = window.setTimeout(scheduleIdle, 2200);
+    return () => {
+      window.clearTimeout(activationTimer);
+      if (idleHandle !== undefined && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleHandle);
+      }
+    };
+  }, [isLargeViewport, prefersReducedMotion, saveData]);
 
   // Quick Flight Search Form State
   const [origin, setOrigin] = useState('Dhaka (DAC)');

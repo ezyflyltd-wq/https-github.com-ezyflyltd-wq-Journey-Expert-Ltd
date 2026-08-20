@@ -1,16 +1,10 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { HeroSection3D } from './HeroSection3D';
-import { AITravelAssistantSection } from './AITravelAssistantSection';
-import { CoreServicesSection } from './CoreServicesSection';
-import { GlobalJourneySection } from './GlobalJourneySection';
-import { StudyAbroad3DSection } from './StudyAbroad3DSection';
-import { VisaJourneySection } from './VisaJourneySection';
-import { TrustMetricsSection } from './TrustMetricsSection';
-import { WhyJourneyExpertSection } from './WhyJourneyExpertSection';
-import { CinematicCTASection } from './CinematicCTASection';
-import { DestinationDetailModal } from './DestinationDetailModal';
-import type { DestinationPoint } from './globeData';
 import { MainViewModule } from '../../types';
+
+const DeferredHomeSections = lazy(() =>
+  import('./DeferredHomeSections').then(({ DeferredHomeSections: Component }) => ({ default: Component })),
+);
 
 interface Home3DExperienceProps {
   onNavigateToModule: (module: MainViewModule) => void;
@@ -23,84 +17,74 @@ export const Home3DExperience: React.FC<Home3DExperienceProps> = ({
   onOpenAIModal,
   onSearchFlights,
 }) => {
-  const [selectedDestination, setSelectedDestination] = useState<DestinationPoint | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [belowFoldReady, setBelowFoldReady] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const pendingServicesScroll = useRef(false);
 
-  const handleOpenDestination = (dest: DestinationPoint) => {
-    setSelectedDestination(dest);
-    setIsDetailModalOpen(true);
-  };
+  useEffect(() => {
+    if (belowFoldReady) return;
+
+    const sentinel = sentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === 'undefined') {
+      setBelowFoldReady(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setBelowFoldReady(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '0px 0px -25% 0px' },
+    );
+    const fallbackTimer = window.setTimeout(() => setBelowFoldReady(true), 4500);
+
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(fallbackTimer);
+    };
+  }, [belowFoldReady]);
+
+  useEffect(() => {
+    if (!belowFoldReady || !pendingServicesScroll.current) return;
+
+    pendingServicesScroll.current = false;
+    window.requestAnimationFrame(() => {
+      document.getElementById('core-services-section')?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }, [belowFoldReady]);
 
   const handleScrollToServices = () => {
-    const el = document.getElementById('core-services-section');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      onNavigateToModule('flights');
-    }
+    pendingServicesScroll.current = true;
+    setBelowFoldReady(true);
   };
 
   return (
     <div className="bg-[#081C15] text-white selection:bg-[#0B5D3B] selection:text-white">
-      {/* 1. Cinematic 3D Hero Section */}
       <HeroSection3D
         onExploreJourney={handleScrollToServices}
         onOpenAIModal={onOpenAIModal}
-        onNavigateToModule={(mod) => onNavigateToModule(mod as MainViewModule)}
+        onNavigateToModule={(module) => onNavigateToModule(module as MainViewModule)}
         onSearchFlights={onSearchFlights}
       />
 
-      {/* 2. Interactive AI Travel Assistant Section */}
-      <AITravelAssistantSection
-        onOpenFullAIModal={onOpenAIModal}
-        onNavigateToModule={(mod) => onNavigateToModule(mod as MainViewModule)}
-      />
+      <div ref={sentinelRef} aria-hidden="true" className="h-px w-full" />
 
-      {/* 3. Core Services Section */}
-      <div id="core-services-section">
-        <CoreServicesSection
-          onSelectService={(mod) => onNavigateToModule(mod as MainViewModule)}
-        />
-      </div>
-
-      {/* 4. Global Journey Section (From Dhaka to the World) */}
-      <GlobalJourneySection
-        onSelectDestination={handleOpenDestination}
-        onNavigateToModule={(mod) => onNavigateToModule(mod as MainViewModule)}
-      />
-
-      {/* 5. Study Abroad 3D Section (Your Future Has No Border) */}
-      <StudyAbroad3DSection
-        onExploreStudyAbroad={() => onNavigateToModule('study-abroad')}
-        onTalkToCounselor={onOpenAIModal}
-      />
-
-      {/* 6. Visa Section (Visas Without The Confusion) */}
-      <VisaJourneySection
-        onCheckVisaOptions={() => onNavigateToModule('visa')}
-      />
-
-      {/* 7. Trust & Metrics Section */}
-      <TrustMetricsSection />
-
-      {/* 8. Why Journey Expert Section */}
-      <WhyJourneyExpertSection
-        onExplore={() => onNavigateToModule('business-units')}
-      />
-
-      {/* 9. Final Cinematic CTA Section */}
-      <CinematicCTASection
-        onStartJourney={() => onNavigateToModule('flights')}
-        onTalkToAI={onOpenAIModal}
-      />
-
-      {/* Global Destination Detail Modal */}
-      <DestinationDetailModal
-        destination={selectedDestination}
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        onNavigateToModule={(mod) => onNavigateToModule(mod as MainViewModule)}
-      />
+      {belowFoldReady ? (
+        <Suspense
+          fallback={
+            <div className="min-h-[240px] bg-[#081C15]" aria-label="Loading Journey Expert services" />
+          }
+        >
+          <DeferredHomeSections
+            onNavigateToModule={onNavigateToModule}
+            onOpenAIModal={onOpenAIModal}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 };

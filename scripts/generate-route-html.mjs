@@ -183,6 +183,34 @@ function metadataFor(route) {
   };
 }
 
+const relatedLinks = [
+  { href: '/', label: 'Journey Expert Ltd. home' },
+  { href: '/flights', label: 'Flight search from Bangladesh' },
+  { href: '/visa', label: 'Visa consultancy and application support' },
+  { href: '/study-abroad', label: 'Study abroad and university admissions' },
+  { href: '/hajj-umrah', label: 'Hajj and Umrah travel services' },
+];
+
+function staticContentFor(route, seo) {
+  if (seo.noindex) return '';
+
+  const heading = seo.title.split(' | ')[0];
+  const links = relatedLinks
+    .filter((link) => link.href !== route)
+    .slice(0, route === '/' ? 5 : 3)
+    .map((link) => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`)
+    .join('');
+
+  return `<main id="seo-static-content" class="seo-static-content">
+    <h1>${escapeHtml(heading)}</h1>
+    <p>${escapeHtml(seo.description)}</p>
+    <nav aria-label="Related Journey Expert services">
+      <h2>Explore Journey Expert services</h2>
+      <ul>${links}</ul>
+    </nav>
+  </main>`;
+}
+
 function renderRoute(route) {
   const seo = metadataFor(route);
   const canonical = `${siteUrl}${route}`;
@@ -202,6 +230,7 @@ function renderRoute(route) {
   });
 
   return shell
+    .replace('<div id="root"></div>', `<div id="root">${staticContentFor(route, seo)}</div>`)
     .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(seo.title)}</title>`)
     .replace(/<meta name="robots" content="[^"]*" \/>/, `<meta name="robots" content="${robots}" />`)
     .replace(/<meta\n\s+name="description"\n\s+content="[^"]*"\n\s+\/>/, `<meta name="description" content="${escapeHtml(seo.description)}" />`)
