@@ -13,178 +13,7 @@ import {
   Zap,
 } from 'lucide-react';
 
-export interface DestinationPoint {
-  id: string;
-  name: string;
-  country: string;
-  code: string;
-  lat: number;
-  lng: number;
-  category: 'Study' | 'Travel' | 'Hajj & Umrah' | 'Business' | 'Global Mobility';
-  flightHoursFromDhaka: string;
-  visaType: string;
-  description: string;
-  color: string;
-}
-
-export const GLOBAL_DESTINATIONS: DestinationPoint[] = [
-  {
-    id: 'dac',
-    name: 'Dhaka',
-    country: 'Bangladesh',
-    code: 'DAC',
-    lat: 23.8103,
-    lng: 90.4125,
-    category: 'Global Mobility',
-    flightHoursFromDhaka: 'Origin Hub',
-    visaType: 'Domestic Headquarters',
-    description: 'Central Aviation & AI Intelligence Operations Hub of Journey Expert Limited.',
-    color: '#10B981',
-  },
-  {
-    id: 'lhr',
-    name: 'London',
-    country: 'United Kingdom',
-    code: 'LHR',
-    lat: 51.5074,
-    lng: -0.1278,
-    category: 'Study',
-    flightHoursFromDhaka: '10h 30m direct',
-    visaType: 'Student Route & Standard Visitor',
-    description: 'Top destination for UK Russell Group universities, corporate finance, and European transit.',
-    color: '#38BDF8',
-  },
-  {
-    id: 'yyz',
-    name: 'Toronto',
-    country: 'Canada',
-    code: 'YYZ',
-    lat: 43.6532,
-    lng: -79.3832,
-    category: 'Global Mobility',
-    flightHoursFromDhaka: '16h 45m (1 stop)',
-    visaType: 'Study Permit & Express Entry Support',
-    description: 'Leading global mobility hub with world-class universities and permanent residency pathways.',
-    color: '#F43F5E',
-  },
-  {
-    id: 'dxb',
-    name: 'Dubai',
-    country: 'United Arab Emirates',
-    code: 'DXB',
-    lat: 25.2048,
-    lng: 55.2708,
-    category: 'Travel',
-    flightHoursFromDhaka: '5h 15m direct',
-    visaType: '30/60 Days E-Visa Instant',
-    description: 'Luxury shopping, global corporate expos, world-class theme parks and middle-east flight transit.',
-    color: '#F59E0B',
-  },
-  {
-    id: 'mel',
-    name: 'Melbourne',
-    country: 'Australia',
-    code: 'MEL',
-    lat: -37.8136,
-    lng: 144.9631,
-    category: 'Study',
-    flightHoursFromDhaka: '13h 20m (1 stop)',
-    visaType: 'Subclass 500 Student & Subclass 600',
-    description: 'Australia’s cultural capital featuring prestigious Group of Eight university admissions.',
-    color: '#818CF8',
-  },
-  {
-    id: 'syd',
-    name: 'Sydney',
-    country: 'Australia',
-    code: 'SYD',
-    lat: -33.8688,
-    lng: 151.2093,
-    category: 'Study',
-    flightHoursFromDhaka: '13h 45m (1 stop)',
-    visaType: 'Subclass 500 Student & Visitor Visa',
-    description: 'Iconic harbor destination, leading academic research centers, and global commerce hub.',
-    color: '#6366F1',
-  },
-  {
-    id: 'cul',
-    name: 'Kuala Lumpur',
-    country: 'Malaysia',
-    code: 'KUL',
-    lat: 3.139,
-    lng: 101.6869,
-    category: 'Travel',
-    flightHoursFromDhaka: '3h 45m direct',
-    visaType: 'MDAC E-Visa & EMGS Student Pass',
-    description: 'Affordable quality higher education, medical tourism, and tropical Southeast Asian holidays.',
-    color: '#EC4899',
-  },
-  {
-    id: 'sin',
-    name: 'Singapore',
-    country: 'Singapore',
-    code: 'SIN',
-    lat: 1.3521,
-    lng: 103.8198,
-    category: 'Business',
-    flightHoursFromDhaka: '4h 00m direct',
-    visaType: 'SG Arrival Card & Business Visa',
-    description: 'Asia’s premier financial hub, medical center, and Changi Jewel aviation gateway.',
-    color: '#06B6D4',
-  },
-  {
-    id: 'ist',
-    name: 'Istanbul',
-    country: 'Turkey',
-    code: 'IST',
-    lat: 41.0082,
-    lng: 28.9784,
-    category: 'Travel',
-    flightHoursFromDhaka: '7h 50m direct',
-    visaType: 'Turkish Sticker & E-Visa',
-    description: 'Historic crossroads of East and West, medical hair transplant hub, and Turkish Airlines mega-hub.',
-    color: '#EAB308',
-  },
-  {
-    id: 'jed',
-    name: 'Jeddah & Makkah',
-    country: 'Saudi Arabia',
-    code: 'JED',
-    lat: 21.4858,
-    lng: 39.1925,
-    category: 'Hajj & Umrah',
-    flightHoursFromDhaka: '6h 30m direct',
-    visaType: 'Nusuk Umrah & Tourist E-Visa',
-    description: 'Gateway to the Holy Harams with executive VIP clock-tower hotels and guided Ziyarat packages.',
-    color: '#C8A14A',
-  },
-  {
-    id: 'ruh',
-    name: 'Riyadh',
-    country: 'Saudi Arabia',
-    code: 'RUH',
-    lat: 24.7136,
-    lng: 46.6753,
-    category: 'Business',
-    flightHoursFromDhaka: '6h 00m direct',
-    visaType: 'Business & Tourist E-Visa',
-    description: 'Dynamic GCC economic capital, mega-infrastructure projects, and Saudi Vision 2030 hub.',
-    color: '#14B8A6',
-  },
-  {
-    id: 'jfk',
-    name: 'New York',
-    country: 'United States',
-    code: 'JFK',
-    lat: 40.7128,
-    lng: -74.006,
-    category: 'Study',
-    flightHoursFromDhaka: '18h 30m (1 stop)',
-    visaType: 'F-1 Student & B1/B2 Visitor',
-    description: 'Ivy League academic ecosystem, Wall Street finance, and premier global transit hub.',
-    color: '#3B82F6',
-  },
-];
+import { GLOBAL_DESTINATIONS, DestinationPoint } from './globeData';
 
 interface InteractiveGlobe3DProps {
   onSelectDestination?: (destination: DestinationPoint) => void;
@@ -229,10 +58,15 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
 
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
     let renderer: THREE.WebGLRenderer;
     let scene: THREE.Scene;
     let camera: THREE.PerspectiveCamera;
+    let isVisible = true;
+    let lastFrameTime = 0;
+
+    const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+    const minFrameInterval = isMobileViewport ? 1000 / 30 : 1000 / 60;
 
     const width = container.clientWidth || 600;
     const height = container.clientHeight || 500;
@@ -245,8 +79,8 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
         antialias: true,
         powerPreference: 'high-performance',
       });
-      renderer.setSize(width, height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(width, height, false);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobileViewport ? 1.25 : 1.5));
     } catch (err) {
       console.warn('WebGL initialization failed, falling back to 2D HUD radar display:', err);
       setWebglSupported(false);
@@ -558,16 +392,21 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
 
       camera.aspect = newWidth / newHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(newWidth, newHeight);
+      renderer.setSize(newWidth, newHeight, false);
     };
 
-    window.addEventListener('resize', handleResize);
+    // Animation Loop: render only while visible and throttle constrained devices.
+    const clock = new THREE.Clock();
 
-    // Animation Loop
-    let clock = new THREE.Clock();
+    const animate = (timestamp = performance.now()) => {
+      if (!isVisible || document.visibilityState === 'hidden') {
+        animationFrameId = null;
+        return;
+      }
 
-    const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
+      if (timestamp - lastFrameTime < minFrameInterval) return;
+      lastFrameTime = timestamp;
 
       // Smooth Rotation
       if (isRotatingRef.current && !isDragging) {
@@ -582,7 +421,7 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
       const scaleDhaka = 1.0 + Math.sin(time * 3) * 0.25;
       dhakaCore.scale.set(scaleDhaka, scaleDhaka, scaleDhaka);
 
-      // Animate Moving Aircraft Particles along curves
+      // Animate Moving Aircraft / Data Stream Particle
       movingParticles.forEach((p) => {
         p.progress += p.speed;
         if (p.progress > 1) p.progress = 0;
@@ -593,11 +432,41 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
       renderer.render(scene, camera);
     };
 
+    const resumeAnimation = () => {
+      if (isVisible && document.visibilityState === 'visible' && animationFrameId === null) {
+        animate();
+      }
+    };
+
+    const pauseAnimation = () => {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+    };
+
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      isVisible = entry.isIntersecting;
+      if (isVisible) resumeAnimation();
+      else pauseAnimation();
+    }, { threshold: 0.1 });
+
+    const onDocumentVisibilityChange = () => {
+      if (document.visibilityState === 'visible') resumeAnimation();
+      else pauseAnimation();
+    };
+
+    visibilityObserver.observe(container);
+    document.addEventListener('visibilitychange', onDocumentVisibilityChange);
+    window.addEventListener('resize', handleResize);
+
     animate();
     setGlobeReady(true);
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      pauseAnimation();
+      visibilityObserver.disconnect();
+      document.removeEventListener('visibilitychange', onDocumentVisibilityChange);
       canvas.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
@@ -606,7 +475,17 @@ export const InteractiveGlobe3D: React.FC<InteractiveGlobe3DProps> = ({
       window.removeEventListener('touchend', onTouchEnd);
       canvas.removeEventListener('click', onClick);
       window.removeEventListener('resize', handleResize);
+
+      scene.traverse((object) => {
+        const mesh = object as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const material = mesh.material;
+        if (Array.isArray(material)) material.forEach((item) => item.dispose());
+        else if (material) material.dispose();
+      });
+
       renderer.dispose();
+      renderer.forceContextLoss();
     };
   }, []);
 
