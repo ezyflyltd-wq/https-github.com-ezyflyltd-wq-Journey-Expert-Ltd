@@ -5,7 +5,7 @@ import {
   signInWithPopup,
   signOut as fbSignOut,
 } from 'firebase/auth';
-import { auth, googleProvider, testConnection } from './config';
+import { auth, googleProvider } from './config';
 import { getUserProfile, saveUserProfile } from './firestoreService';
 import { UserProfile } from '../types';
 
@@ -28,9 +28,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isConnected, setIsConnected] = useState<boolean>(true);
 
   useEffect(() => {
-    // Ping server connection on startup as mandated by Firebase Integration skill
-    testConnection().then((ok) => setIsConnected(ok));
-
+    // Do not ping Firestore on anonymous public-page startup. Protected flows
+    // can verify connectivity when a signed-in action actually needs it.
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {

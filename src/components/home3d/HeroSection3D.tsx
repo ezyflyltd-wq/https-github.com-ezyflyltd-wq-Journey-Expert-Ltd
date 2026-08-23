@@ -16,7 +16,7 @@ import {
   Zap,
   Globe2,
 } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { DestinationPoint } from './globeData';
 import { GlobePoster } from './GlobePoster';
 
@@ -49,32 +49,13 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
   const saveData = typeof navigator !== 'undefined'
     && Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
 
-  useEffect(() => {
-    if (prefersReducedMotion || !isLargeViewport || saveData) return;
+  const canUseInteractiveGlobe = isLargeViewport && !prefersReducedMotion && !saveData;
 
-    let activationTimer: number | undefined;
-    let idleHandle: number | undefined;
-    const idleWindow = window as Window & {
-      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-    const scheduleIdle = () => {
-      const activate = () => setInteractiveGlobeEnabled(true);
-      if (idleWindow.requestIdleCallback) {
-        idleHandle = idleWindow.requestIdleCallback(activate, { timeout: 3500 });
-      } else {
-        activationTimer = window.setTimeout(activate, 0);
-      }
-    };
-
-    activationTimer = window.setTimeout(scheduleIdle, 2200);
-    return () => {
-      window.clearTimeout(activationTimer);
-      if (idleHandle !== undefined && idleWindow.cancelIdleCallback) {
-        idleWindow.cancelIdleCallback(idleHandle);
-      }
-    };
-  }, [isLargeViewport, prefersReducedMotion, saveData]);
+  // WebGL is opt-in so it never competes with the first viewport or Lighthouse's
+  // initial interaction window. The static poster remains the default state.
+  const enableInteractiveGlobe = () => {
+    if (canUseInteractiveGlobe) setInteractiveGlobeEnabled(true);
+  };
 
   // Quick Flight Search Form State
   const [origin, setOrigin] = useState('Dhaka (DAC)');
@@ -98,15 +79,15 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
   };
 
   return (
-    <div className="relative min-h-[100svh] sm:min-h-[92vh] bg-gradient-to-b from-[#081C15] via-[#051711] to-[#040E0A] text-white overflow-hidden flex flex-col justify-between w-full max-w-full">
+    <div className="hero-3d-root relative min-h-[100svh] sm:min-h-[92vh] bg-gradient-to-b from-[#081C15] via-[#051711] to-[#040E0A] text-white overflow-hidden flex flex-col justify-between w-full max-w-full">
       {/* Ambient Aurora Glow Effects */}
-      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] max-w-full bg-[#0B5D3B]/20 rounded-full blur-[140px] pointer-events-none -translate-y-1/2" />
-      <div className="absolute bottom-10 right-10 w-[500px] h-[500px] max-w-full bg-[#C8A14A]/10 rounded-full blur-[130px] pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-[350px] h-[350px] max-w-full bg-[#10B981]/15 rounded-full blur-[120px] pointer-events-none" />
+      <div className="hero-ambient-glow absolute top-0 left-1/4 w-[600px] h-[600px] max-w-full bg-[#0B5D3B]/20 rounded-full blur-[140px] pointer-events-none -translate-y-1/2" />
+      <div className="hero-ambient-glow absolute bottom-10 right-10 w-[500px] h-[500px] max-w-full bg-[#C8A14A]/10 rounded-full blur-[130px] pointer-events-none" />
+      <div className="hero-ambient-glow absolute top-1/3 right-1/4 w-[350px] h-[350px] max-w-full bg-[#10B981]/15 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Grid Pattern Overlay */}
       <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        className="hero-grid-overlay absolute inset-0 opacity-[0.04] pointer-events-none"
         style={{
           backgroundImage: `radial-gradient(#10B981 1px, transparent 1px)`,
           backgroundSize: '32px 32px',
@@ -191,7 +172,7 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
                 />
               </Suspense>
             ) : (
-              <GlobePoster onEnableInteractive={() => setInteractiveGlobeEnabled(true)} />
+              <GlobePoster onEnableInteractive={canUseInteractiveGlobe ? enableInteractiveGlobe : undefined} />
             )}
           </div>
         </div>
@@ -200,7 +181,7 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
         <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-emerald-900/40 w-full min-w-0">
           <form
             onSubmit={handleQuickSearch}
-            className="bg-[#051A13]/95 backdrop-blur-xl border border-[#0B5D3B]/60 rounded-3xl p-4 sm:p-5 shadow-2xl shadow-black/80"
+            className="hero-translucent-panel bg-[#051A13]/95 backdrop-blur-xl border border-[#0B5D3B]/60 rounded-3xl p-4 sm:p-5 shadow-2xl shadow-black/80"
           >
             <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
               <div className="flex items-center space-x-2">
