@@ -1,3 +1,4 @@
+# Reviewed production policy path: changes require an explicit approval marker.
 name: Production Guard
 
 on:
