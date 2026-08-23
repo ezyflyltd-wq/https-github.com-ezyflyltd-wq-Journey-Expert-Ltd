@@ -2,7 +2,8 @@ import React, { lazy, Suspense, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
-import { HeroSearch } from './components/HeroSearch';
+const HeroSearch = lazy(() => import('./components/HeroSearch').then(({ HeroSearch: Component }) => ({ default: Component })));
+
 const FlightBookingView = lazy(() => import('./components/FlightBookingView').then(({ FlightBookingView }) => ({ default: FlightBookingView })));
 const HotelBookingView = lazy(() => import('./components/HotelBookingView').then(({ HotelBookingView }) => ({ default: HotelBookingView })));
 const PackagesView = lazy(() => import('./components/PackagesView').then(({ PackagesView }) => ({ default: PackagesView })));
@@ -42,7 +43,8 @@ const CustomerSupportView = lazy(() => import('./components/CustomerSupportView'
 const InternationalExpansionView = lazy(() => import('./components/InternationalExpansionView').then(({ InternationalExpansionView }) => ({ default: InternationalExpansionView })));
 const InnovationLabView = lazy(() => import('./components/InnovationLabView').then(({ InnovationLabView }) => ({ default: InnovationLabView })));
 const EnterpriseBlueprintView = lazy(() => import('./components/EnterpriseBlueprintView').then(({ EnterpriseBlueprintView }) => ({ default: EnterpriseBlueprintView })));
-import { AIAssistantModal } from './components/AIAssistantModal';
+const AIAssistantModal = lazy(() => import('./components/AIAssistantModal').then(({ AIAssistantModal: Component }) => ({ default: Component })));
+
 import { MainViewModule, PortalType } from './types';
 import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
 import { RouteMetadata } from './seo/RouteMetadata';
@@ -147,12 +149,14 @@ export default function App() {
               <div>
                 {/* Keep the generic hero off service routes so the route-specific H1 becomes the first meaningful paint. */}
                 {activeMainModule !== 'flights' && activeMainModule !== 'visa' && (
-                  <HeroSearch
-                    activeModule={activeMainModule}
-                    onModuleChange={navigateToModule}
-                    onOpenAIModal={() => setIsAIModalOpen(true)}
-                    onSearchFlights={handleHeroFlightSearch}
-                  />
+                  <Suspense fallback={null}>
+                    <HeroSearch
+                      activeModule={activeMainModule}
+                      onModuleChange={navigateToModule}
+                      onOpenAIModal={() => setIsAIModalOpen(true)}
+                      onSearchFlights={handleHeroFlightSearch}
+                    />
+                  </Suspense>
                 )}
 
             {/* Quick Service Module Bar */}
@@ -738,10 +742,14 @@ export default function App() {
       </main>
 
       {/* Global AI Assistant Modal */}
-      <AIAssistantModal
-        isOpen={isAIModalOpen}
-        onClose={() => setIsAIModalOpen(false)}
-      />
+      {isAIModalOpen && (
+        <Suspense fallback={null}>
+          <AIAssistantModal
+            isOpen={isAIModalOpen}
+            onClose={() => setIsAIModalOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Global Footer */}
       <Footer onModuleChange={navigateToModule} />

@@ -142,3 +142,26 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #0B6B53;
 }
+
+/* Homepage first-viewport performance guard. Keep the visual hierarchy while
+   avoiding large compositor surfaces on constrained/mobile viewports. */
+@media (max-width: 767px) {
+  .hero-3d-root .hero-ambient-glow {
+    display: none;
+  }
+
+  .hero-3d-root .hero-grid-overlay {
+    opacity: 0.025;
+  }
+
+  .hero-3d-root .hero-translucent-panel {
+    background: rgba(5, 26, 19, 0.96);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+.home-below-fold {
+  content-visibility: auto;
+  contain-intrinsic-size: 900px;
+}
