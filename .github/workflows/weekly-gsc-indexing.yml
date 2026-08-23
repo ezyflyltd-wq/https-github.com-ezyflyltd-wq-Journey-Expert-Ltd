@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: weekly-gsc-indexing
+  cancel-in-progress: false
+
 jobs:
   inspect-indexing:
     runs-on: ubuntu-latest
