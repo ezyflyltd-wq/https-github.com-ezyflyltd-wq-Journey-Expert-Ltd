@@ -14,9 +14,6 @@ jobs:
     name: Sync safety gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      GITHUB_COMMIT_MESSAGE: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
-      GITHUB_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message || github.event.pull_request.title || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
