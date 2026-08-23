@@ -23,6 +23,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Resolve reviewed commit message
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            reviewed_sha="${{ github.event.pull_request.head.sha }}"
+          else
+            reviewed_sha="$GITHUB_SHA"
+          fi
+          {
+            echo 'GITHUB_COMMIT_MESSAGE<<SYNC_COMMIT_MESSAGE'
+            git log -1 --format=%B "$reviewed_sha"
+            echo 'SYNC_COMMIT_MESSAGE'
+            echo 'GITHUB_HEAD_COMMIT_MESSAGE<<SYNC_HEAD_COMMIT_MESSAGE'
+            git log -1 --format=%B "$reviewed_sha"
+            echo 'SYNC_HEAD_COMMIT_MESSAGE'
+          } >> "$GITHUB_ENV"
+
       - name: Run automated sync guard
         run: node scripts/sync-guard.mjs
 
