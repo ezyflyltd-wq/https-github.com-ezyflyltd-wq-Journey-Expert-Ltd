@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from './components/Header';
-import { Footer } from './components/Footer';
+import { DeferredFooter } from './components/seo/DeferredFooter';
 const HeroSearch = lazy(() => import('./components/HeroSearch').then(({ HeroSearch: Component }) => ({ default: Component })));
 
 const FlightBookingView = lazy(() => import('./components/FlightBookingView').then(({ FlightBookingView }) => ({ default: FlightBookingView })));
@@ -148,7 +148,7 @@ export default function App() {
             ) : (
               <div>
                 {/* Keep the generic hero off service routes so the route-specific H1 becomes the first meaningful paint. */}
-                {activeMainModule !== 'flights' && activeMainModule !== 'visa' && (
+                {activeMainModule !== 'flights' && activeMainModule !== 'visa' && activeMainModule !== 'study-abroad' && (
                   <Suspense fallback={null}>
                     <HeroSearch
                       activeModule={activeMainModule}
@@ -614,7 +614,15 @@ export default function App() {
                 </ServiceRouteShell>
               )}
 
-              {activeMainModule === 'study-abroad' && <StudyAbroadView />}
+              {activeMainModule === 'study-abroad' && (
+                <ServiceRouteShell route="study-abroad">
+                  <DeferredServiceWidget
+                    fallback={<div className="min-h-[520px] rounded-2xl bg-white/70" aria-label="Loading study-abroad tools" />}
+                  >
+                    <StudyAbroadView />
+                  </DeferredServiceWidget>
+                </ServiceRouteShell>
+              )}
 
               {activeMainModule === 'business-units' && <BusinessUnitsView />}
 
@@ -678,7 +686,7 @@ export default function App() {
             </div>
 
             {/* Enterprise Ecosystem Value Propositions */}
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-[#ECECEC]">
+            <section className="[content-visibility:auto] [contain-intrinsic-size:0_520px] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-[#ECECEC]">
               <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
                 <span className="text-xs font-bold text-[#0B6B53] uppercase tracking-widest bg-[#0B6B53]/10 px-3 py-1 rounded-full border border-[#0B6B53]/20">
                   Why Leading Travelers Choose Journey Expert Ltd.
@@ -752,7 +760,7 @@ export default function App() {
       )}
 
       {/* Global Footer */}
-      <Footer onModuleChange={navigateToModule} />
+      <DeferredFooter onPortalChange={navigateToPortal} onModuleChange={navigateToModule} />
       </div>
     </Suspense>
   );

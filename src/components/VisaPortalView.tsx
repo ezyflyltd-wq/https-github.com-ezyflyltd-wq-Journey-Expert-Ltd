@@ -160,6 +160,8 @@ export const VisaPortalView: React.FC = () => {
       {/* TABS HEADER */}
       <div className="flex items-center space-x-2 border-b border-[#ECECEC] pb-3 text-xs font-extrabold">
         <button
+          type="button"
+          aria-pressed={activeTab === 'search'}
           onClick={() => setActiveTab('search')}
           className={`px-5 py-3 rounded-2xl transition-all flex items-center space-x-2 ${
             activeTab === 'search'
@@ -172,6 +174,8 @@ export const VisaPortalView: React.FC = () => {
         </button>
 
         <button
+          type="button"
+          aria-pressed={activeTab === 'ai-calculator'}
           onClick={() => setActiveTab('ai-calculator')}
           className={`px-5 py-3 rounded-2xl transition-all flex items-center space-x-2 ${
             activeTab === 'ai-calculator'
@@ -184,6 +188,8 @@ export const VisaPortalView: React.FC = () => {
         </button>
 
         <button
+          type="button"
+          aria-pressed={activeTab === 'crm'}
           onClick={() => setActiveTab('crm')}
           className={`px-5 py-3 rounded-2xl transition-all flex items-center space-x-2 ${
             activeTab === 'crm'
@@ -207,7 +213,10 @@ export const VisaPortalView: React.FC = () => {
             </h3>
 
             <form onSubmit={handleTrackVisa} className="flex flex-col sm:flex-row gap-3">
+              <label htmlFor="visa-tracking-number" className="sr-only">Visa tracking number</label>
               <input
+                id="visa-tracking-number"
+                name="trackingNumber"
                 type="text"
                 value={trackingInput}
                 onChange={(e) => setTrackingInput(e.target.value)}
@@ -226,7 +235,7 @@ export const VisaPortalView: React.FC = () => {
               <div className="mt-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 space-y-3 text-xs">
                 <div className="flex justify-between items-center border-b border-white/10 pb-2">
                   <div>
-                    <span className="text-[10px] text-emerald-200/80">Tracking Reference</span>
+                    <span className="text-[10px] text-emerald-100">Tracking Reference</span>
                     <p className="font-mono font-black text-[#C7A44D] text-sm">{trackedApp.trackingNumber}</p>
                   </div>
                   <span className="bg-[#C7A44D] text-[#093F31] text-xs font-black px-3 py-1 rounded-full">
@@ -338,8 +347,10 @@ export const VisaPortalView: React.FC = () => {
                     <form onSubmit={handleApplyVisa} className="space-y-3 text-xs">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[#666666] font-semibold mb-1">Applicant Name</label>
+                          <label htmlFor="visa-applicant-name" className="block text-[#52615B] font-semibold mb-1">Applicant Name</label>
                           <input
+                            id="visa-applicant-name"
+                            name="applicantName"
                             type="text"
                             value={applicantName}
                             onChange={(e) => setApplicantName(e.target.value)}
@@ -348,8 +359,10 @@ export const VisaPortalView: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-[#666666] font-semibold mb-1">Passport Number</label>
+                          <label htmlFor="visa-passport-number" className="block text-[#52615B] font-semibold mb-1">Passport Number</label>
                           <input
+                            id="visa-passport-number"
+                            name="passportNumber"
                             type="text"
                             value={passportNo}
                             onChange={(e) => setPassportNo(e.target.value)}
@@ -400,8 +413,10 @@ export const VisaPortalView: React.FC = () => {
 
             <form onSubmit={handleCalculateScore} className="space-y-3">
               <div>
-                <label className="block font-extrabold text-[#093F31] mb-1">Target Country</label>
+                <label htmlFor="visa-calc-country" className="block font-extrabold text-[#093F31] mb-1">Target Country</label>
                 <select
+                  id="visa-calc-country"
+                  name="calcCountry"
                   value={calcCountry}
                   onChange={(e) => setCalcCountry(e.target.value)}
                   className="w-full bg-[#F8FAF9] border border-[#ECECEC] rounded-xl p-2.5 font-bold text-[#111111]"
@@ -417,8 +432,10 @@ export const VisaPortalView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-extrabold text-[#093F31] mb-1">Visa Route</label>
+                <label htmlFor="visa-calc-route" className="block font-extrabold text-[#093F31] mb-1">Visa Route</label>
                 <select
+                  id="visa-calc-route"
+                  name="calcVisaType"
                   value={calcVisaType}
                   onChange={(e) => setCalcVisaType(e.target.value)}
                   className="w-full bg-[#F8FAF9] border border-[#ECECEC] rounded-xl p-2.5 font-bold text-[#111111]"
@@ -432,8 +449,10 @@ export const VisaPortalView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-extrabold text-[#093F31] mb-1">Monthly Income (BDT)</label>
+                <label htmlFor="visa-monthly-income" className="block font-extrabold text-[#093F31] mb-1">Monthly Income (BDT)</label>
                 <input
+                  id="visa-monthly-income"
+                  name="monthlyIncomeBDT"
                   type="number"
                   value={calcMonthlyIncomeBDT}
                   onChange={(e) => setCalcMonthlyIncomeBDT(Number(e.target.value))}
@@ -442,8 +461,10 @@ export const VisaPortalView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-extrabold text-[#093F31] mb-1">Available Bank Balance (BDT)</label>
+                <label htmlFor="visa-bank-balance" className="block font-extrabold text-[#093F31] mb-1">Available Bank Balance (BDT)</label>
                 <input
+                  id="visa-bank-balance"
+                  name="bankBalanceBDT"
                   type="number"
                   value={calcBankBalanceBDT}
                   onChange={(e) => setCalcBankBalanceBDT(Number(e.target.value))}
@@ -452,8 +473,10 @@ export const VisaPortalView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-extrabold text-[#093F31] mb-1">Travel History (Past 5 Years)</label>
+                <label htmlFor="visa-travel-history" className="block font-extrabold text-[#093F31] mb-1">Travel History (Past 5 Years)</label>
                 <input
+                  id="visa-travel-history"
+                  name="travelHistory"
                   type="text"
                   value={calcTravelHistory}
                   onChange={(e) => setCalcTravelHistory(e.target.value)}
@@ -463,8 +486,10 @@ export const VisaPortalView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-extrabold text-[#093F31] mb-1">Employment / Business Profile</label>
+                <label htmlFor="visa-employment-profile" className="block font-extrabold text-[#093F31] mb-1">Employment / Business Profile</label>
                 <input
+                  id="visa-employment-profile"
+                  name="employmentProfile"
                   type="text"
                   value={calcEmployment}
                   onChange={(e) => setCalcEmployment(e.target.value)}

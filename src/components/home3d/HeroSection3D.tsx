@@ -116,7 +116,7 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
             </h1>
 
             {/* Supporting Subtitle */}
-            <p className="text-sm sm:text-base text-emerald-100/80 max-w-xl font-normal leading-relaxed">
+            <p className="text-sm sm:text-base text-emerald-100 max-w-xl font-normal leading-relaxed">
               AI-powered travel, global mobility and study-abroad solutions — designed around your journey.
             </p>
 
@@ -197,6 +197,7 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
               <div className="flex items-center space-x-2 text-xs">
                 <button
                   type="button"
+                  aria-pressed={tripType === 'round'}
                   onClick={() => setTripType('round')}
                   className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                     tripType === 'round'
@@ -208,6 +209,7 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
                 </button>
                 <button
                   type="button"
+                  aria-pressed={tripType === 'oneWay'}
                   onClick={() => setTripType('oneWay')}
                   className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                     tripType === 'oneWay'
@@ -223,12 +225,14 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Origin */}
               <div className="bg-[#081C15] border border-[#0B5D3B]/40 rounded-2xl p-3 focus-within:border-[#C8A14A] transition-colors">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                <label htmlFor="hero-origin" className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 block mb-1">
                   From (Origin)
                 </label>
                 <div className="flex items-center space-x-2">
                   <MapPin className="w-4 h-4 text-[#C8A14A] shrink-0" />
                   <input
+                    id="hero-origin"
+                    name="origin"
                     type="text"
                     value={origin}
                     onChange={(e) => setOrigin(e.target.value)}
@@ -240,12 +244,14 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
 
               {/* Destination */}
               <div className="bg-[#081C15] border border-[#0B5D3B]/40 rounded-2xl p-3 focus-within:border-[#C8A14A] transition-colors">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                <label htmlFor="hero-destination" className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 block mb-1">
                   To (Destination)
                 </label>
                 <div className="flex items-center space-x-2">
                   <MapPin className="w-4 h-4 text-[#C8A14A] shrink-0" />
                   <input
+                    id="hero-destination"
+                    name="destination"
                     type="text"
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
@@ -257,12 +263,14 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
 
               {/* Date & Class */}
               <div className="bg-[#081C15] border border-[#0B5D3B]/40 rounded-2xl p-3 focus-within:border-[#C8A14A] transition-colors">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                <label htmlFor="hero-departure-date" className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 block mb-1">
                   Departure Date
                 </label>
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-[#C8A14A] shrink-0" />
                   <input
+                    id="hero-departure-date"
+                    name="departureDate"
                     type="date"
                     value={travelDate}
                     onChange={(e) => setTravelDate(e.target.value)}

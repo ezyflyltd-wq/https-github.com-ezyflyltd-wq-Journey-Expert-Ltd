@@ -20,7 +20,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }) => {
   return (
-    <footer className="bg-[#F8FAF9] text-[#666666] border-t border-[#ECECEC] text-sm font-sans">
+    <footer className="[content-visibility:auto] [contain-intrinsic-size:0_900px] bg-[#F8FAF9] text-[#666666] border-t border-[#ECECEC] text-sm font-sans">
       {/* Top Value Proposition Strip */}
       <div className="bg-white border-b border-[#ECECEC] py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -29,7 +29,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-[#093F31] font-extrabold text-sm font-serif">Multi-GDS Fare Engine</h4>
+              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">Multi-GDS Fare Engine</h2>
               <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
                 Direct connections to Sabre, Amadeus & Travelport Galileo for lowest fare search.
               </p>
@@ -41,7 +41,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
               <Award className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-[#093F31] font-extrabold text-sm font-serif">99.2% Visa Success Rate</h4>
+              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">99.2% Visa Success Rate</h2>
               <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
                 Expert visa documentation team for UK, USA, Canada, Schengen & Saudi Arabia.
               </p>
@@ -53,7 +53,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
               <Globe className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-[#093F31] font-extrabold text-sm font-serif">JEL Study Abroad Portal</h4>
+              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">JEL Study Abroad Portal</h2>
               <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
                 500+ Top partner universities in UK, Canada, Australia, USA & Malaysia.
               </p>
@@ -65,7 +65,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
               <Lock className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-[#093F31] font-extrabold text-sm font-serif">Instant Local Payments</h4>
+              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">Instant Local Payments</h2>
               <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
                 bKash, Nagad, SSLCommerz, Bank Transfers & International Credit Cards.
               </p>
@@ -136,9 +136,9 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
 
         {/* Quick Travel Links */}
         <div>
-          <h4 className="text-[#093F31] font-black text-sm mb-4 font-serif border-b border-[#ECECEC] pb-2">
+          <h2 className="text-[#093F31] font-black text-sm mb-4 font-serif border-b border-[#ECECEC] pb-2">
             OTA Modules
-          </h4>
+          </h2>
           <ul className="space-y-2.5 text-xs font-medium">
             <li>
               <button onClick={() => { onPortalChange('main'); onModuleChange('flights'); }} className="hover:text-[#0B6B53] transition-colors">
@@ -175,9 +175,9 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
 
         {/* Global Mobility & Study Abroad */}
         <div>
-          <h4 className="text-[#093F31] font-black text-sm mb-4 font-serif border-b border-[#ECECEC] pb-2">
+          <h2 className="text-[#093F31] font-black text-sm mb-4 font-serif border-b border-[#ECECEC] pb-2">
             JEL Study Abroad
-          </h4>
+          </h2>
           <ul className="space-y-2.5 text-xs font-medium">
             <li>
               <button onClick={() => { onPortalChange('main'); onModuleChange('study-abroad'); }} className="hover:text-[#0B6B53] transition-colors">
@@ -209,9 +209,9 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
 
         {/* Business Units & Portals */}
         <div>
-          <h4 className="text-[#093F31] font-black text-sm mb-4 font-serif border-b border-[#ECECEC] pb-2">
+          <h2 className="text-[#093F31] font-black text-sm mb-4 font-serif border-b border-[#ECECEC] pb-2">
             Ecosystem & Enterprise
-          </h4>
+          </h2>
           <ul className="space-y-2.5 text-xs font-medium">
             <li>
               <button onClick={() => { onPortalChange('main'); onModuleChange('business-units'); }} className="hover:text-[#0B6B53] transition-colors">
@@ -239,7 +239,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
               </button>
             </li>
             <li>
-              <button onClick={() => onPortalChange('architecture')} className="hover:text-[#0B6B53] transition-colors font-extrabold text-[#C7A44D] flex items-center">
+              <button onClick={() => onPortalChange('architecture')} className="hover:text-[#0B6B53] transition-colors font-extrabold text-[#6B5618] flex items-center">
                 <span>Database Schema & API Specs</span>
                 <ExternalLink className="w-3 h-3 ml-1" />
               </button>
@@ -248,7 +248,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
         </div>
         {/* Crawlable public SEO routes */}
         <nav aria-label="Public SEO pages" className="lg:col-span-5 border-t border-[#ECECEC] pt-6">
-          <h4 className="text-[#093F31] font-black text-sm mb-3 font-serif">Explore Journey Expert Services</h4>
+          <h2 className="text-[#093F31] font-black text-sm mb-3 font-serif">Explore Journey Expert Services</h2>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold">
             <a href="/flights" className="hover:text-[#0B6B53] transition-colors">Flight Search</a>
             <a href="/hotels" className="hover:text-[#0B6B53] transition-colors">Halal Hotels</a>

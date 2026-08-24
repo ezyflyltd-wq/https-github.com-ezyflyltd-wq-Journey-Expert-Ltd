@@ -1,4 +1,4 @@
-export type ServiceRoute = 'flights' | 'visa';
+export type ServiceRoute = 'flights' | 'visa' | 'study-abroad';
 
 export const SERVICE_ROUTE_COPY: Record<
   ServiceRoute,
@@ -13,6 +13,11 @@ export const SERVICE_ROUTE_COPY: Record<
     h1: 'Visa Consultancy and Application Support',
     intro:
       'Get structured visa consultancy, document preparation, checklist review, and application support for global destinations.',
+  },
+  'study-abroad': {
+    h1: 'Study Abroad and University Admissions',
+    intro:
+      'Explore study-abroad guidance, university admissions support, profile assessment, and student visa preparation.',
   },
 };
 
