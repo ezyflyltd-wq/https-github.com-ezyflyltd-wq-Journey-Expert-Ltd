@@ -25,10 +25,34 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Run technical SEO sitemap audit
+        env:
+          SEO_SITE_URL: 'https://journeyexpertltd.com'
+          SEO_AUDIT_OUTPUT: 'artifacts/seo-page-audit.json'
+          SEO_AUDIT_STRICT: '1'
+        run: |
+          mkdir -p artifacts
+          node scripts/audit-seo-pages.mjs
+
       - name: Install API client dependencies
         run: python -m pip install --upgrade google-auth requests
 
+      - name: Check Search Console credential availability
+        id: gsc-preflight
+        env:
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+        run: |
+          mkdir -p artifacts
+          if [ -n "$GSC_SERVICE_ACCOUNT_JSON" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            printf '%s\n' '{"status":"available","message":"GSC_SERVICE_ACCOUNT_JSON is present; URL Inspection will run."}' > artifacts/gsc-credential-status.json
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            printf '%s\n' '{"status":"blocked","message":"GSC_SERVICE_ACCOUNT_JSON is not configured. Add the owner-supplied service-account JSON as a GitHub Actions secret; no URL Inspection API call was attempted."}' > artifacts/gsc-credential-status.json
+          fi
+
       - name: Inspect indexed status
+        if: steps.gsc-preflight.outputs.available == 'true'
         env:
           GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
           GSC_SITE_URL: 'https://journeyexpertltd.com/'
@@ -39,11 +63,11 @@ jobs:
           mkdir -p artifacts
           python scripts/inspect-gsc-indexing.py
 
-      - name: Upload indexing report
+      - name: Upload SEO and indexing reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gsc-indexing-${{ github.run_id }}
-          path: artifacts/gsc-indexing-status.json
+          path: artifacts/*.json
           if-no-files-found: warn
           retention-days: 30
