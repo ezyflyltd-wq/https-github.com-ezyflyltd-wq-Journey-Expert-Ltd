@@ -1,3 +1,5 @@
+import { healthResponse } from '../_health';
+
 type PagesContext = {
   request: Request;
   env: Record<string, string | undefined>;
@@ -31,6 +33,21 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
   }
 
   const requestUrl = new URL(request.url);
+
+  if (requestUrl.pathname === '/api/health' || requestUrl.pathname === '/api/healthz') {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+        status: 405,
+        headers: {
+          allow: 'GET, HEAD',
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+        },
+      });
+    }
+    return healthResponse(request);
+  }
+
   const origin = (env.AI_STUDIO_ORIGIN || DEFAULT_AI_STUDIO_ORIGIN).replace(/\/$/, '');
   const targetUrl = `${origin}${requestUrl.pathname}${requestUrl.search}`;
   const headers = new Headers(request.headers);
