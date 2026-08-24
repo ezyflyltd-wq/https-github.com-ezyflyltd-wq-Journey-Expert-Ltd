@@ -38,6 +38,7 @@ export const DestinationDetailModal: React.FC<DestinationDetailModalProps> = ({
         {/* Top Header Glow Banner */}
         <div className="relative p-6 sm:p-8 bg-gradient-to-br from-[#0B5D3B]/40 via-[#081C15] to-[#040E0A] border-b border-[#0B5D3B]/40">
           <button
+            aria-label="Close destination details"
             onClick={onClose}
             className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors cursor-pointer"
           >

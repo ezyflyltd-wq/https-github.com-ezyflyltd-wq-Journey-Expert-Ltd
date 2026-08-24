@@ -110,7 +110,7 @@ How can I assist you today?
             </div>
           </div>
 
-          <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl">
+          <button aria-label="Close AI assistant" onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -208,7 +208,10 @@ How can I assist you today?
             }}
             className="flex items-center space-x-2"
           >
+            <label htmlFor="ai-assistant-query" className="sr-only">Ask the AI travel assistant</label>
             <input
+              id="ai-assistant-query"
+              name="query"
               type="text"
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
@@ -217,6 +220,7 @@ How can I assist you today?
             />
             <button
               type="submit"
+              aria-label={loading ? 'Sending message' : 'Send message'}
               disabled={loading}
               className="p-3 bg-[#0B6B53] hover:bg-[#093F31] text-white font-bold rounded-2xl transition-all shadow-md disabled:opacity-50"
             >

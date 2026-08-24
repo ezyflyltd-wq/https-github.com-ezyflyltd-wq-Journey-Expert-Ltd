@@ -147,10 +147,10 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-2 sm:space-x-3 text-xs shrink-0">
             {/* Currency Selector */}
             <div className="flex items-center space-x-1 bg-[#0B6B53]/50 px-2 py-0.5 rounded-full border border-[#C7A44D]/30">
-              <span className="text-emerald-200/70 text-[10px] sm:text-[11px]">Cur:</span>
+              <span className="text-emerald-300 text-[10px] sm:text-[11px]">Cur:</span>
               <button
                 onClick={() => setCurrency(currency === 'BDT' ? 'USD' : 'BDT')}
-                className="font-bold text-[#C7A44D] hover:text-amber-300 transition-colors text-[11px] sm:text-xs cursor-pointer"
+                className="font-bold text-[#E6CA65] hover:text-amber-200 transition-colors text-[11px] sm:text-xs cursor-pointer"
                 title="Toggle Currency"
               >
                 {currency} ({currency === 'BDT' ? '৳' : '$'})
@@ -490,6 +490,9 @@ export const Header: React.FC<HeaderProps> = ({
           {/* System Portal Switcher Dropdown */}
           <div className="relative" ref={portalSwitcherRef}>
             <button
+              type="button"
+              aria-label="Open system portals menu"
+              aria-expanded={isPortalSwitcherOpen}
               onClick={() => setIsPortalSwitcherOpen(!isPortalSwitcherOpen)}
               className="flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-[#F8FAF9] border border-[#ECECEC] rounded-xl text-xs font-bold text-[#111111] shadow-xs transition-all cursor-pointer"
             >
@@ -639,7 +642,10 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center space-x-3 w-full md:w-auto">
                 <div className="relative w-full md:w-72">
                   <Search className="w-4 h-4 text-[#666666] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <label htmlFor="desktop-portal-search" className="sr-only">Search ecosystem portals</label>
                   <input
+                    id="desktop-portal-search"
+                    name="desktopPortalSearch"
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -648,6 +654,8 @@ export const Header: React.FC<HeaderProps> = ({
                   />
                   {searchQuery && (
                     <button
+                      type="button"
+                      aria-label="Clear portal search"
                       onClick={() => setSearchQuery('')}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#666666] hover:text-[#111111]"
                     >
@@ -657,6 +665,8 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <button
+                  type="button"
+                  aria-label="Close portals menu"
                   onClick={() => setIsMegaMenuOpen(false)}
                   className="p-2 text-[#666666] hover:text-[#111111] hover:bg-[#F8FAF9] rounded-xl border border-[#ECECEC] transition-colors shrink-0"
                   title="Close Menu"
@@ -826,7 +836,10 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Quick Search */}
           <div className="relative">
             <Search className="w-4 h-4 text-[#666666] absolute left-3 top-1/2 -translate-y-1/2" />
+            <label htmlFor="mobile-portal-search" className="sr-only">Search ecosystem portals</label>
             <input
+              id="mobile-portal-search"
+              name="mobilePortalSearch"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

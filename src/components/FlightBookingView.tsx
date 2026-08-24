@@ -85,6 +85,8 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
           {['Auto', 'Sabre', 'Amadeus', 'Travelport Galileo'].map((gds) => (
             <button
               key={gds}
+              type="button"
+              aria-pressed={selectedGDSFilter === gds}
               onClick={() => setSelectedGDSFilter(gds)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
                 selectedGDSFilter === gds
@@ -200,6 +202,8 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                 </h3>
               </div>
               <button
+                type="button"
+                aria-label="Close flight booking dialog"
                 onClick={() => setShowBookingModal(false)}
                 className="p-2 bg-[#F8FAF9] hover:bg-[#ECECEC] text-[#111111] rounded-xl font-bold"
               >
@@ -231,8 +235,10 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[#666666] font-semibold mb-1">Full Legal Name (as in Passport)</label>
+                      <label htmlFor="flight-passenger-name" className="block text-[#666666] font-semibold mb-1">Full Legal Name (as in Passport)</label>
                       <input
+                        id="flight-passenger-name"
+                        name="passengerName"
                         type="text"
                         value={passengerName}
                         onChange={(e) => setPassengerName(e.target.value)}
@@ -240,8 +246,10 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-[#666666] font-semibold mb-1">Passport Number</label>
+                      <label htmlFor="flight-passport-number" className="block text-[#666666] font-semibold mb-1">Passport Number</label>
                       <input
+                        id="flight-passport-number"
+                        name="passportNumber"
                         type="text"
                         value={passportNumber}
                         onChange={(e) => setPassportNumber(e.target.value)}
@@ -249,8 +257,10 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-[#666666] font-semibold mb-1">Passport Expiry Date</label>
+                      <label htmlFor="flight-passport-expiry" className="block text-[#666666] font-semibold mb-1">Passport Expiry Date</label>
                       <input
+                        id="flight-passport-expiry"
+                        name="passportExpiry"
                         type="date"
                         value={passportExpiry}
                         onChange={(e) => setPassportExpiry(e.target.value)}
@@ -258,8 +268,10 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-[#666666] font-semibold mb-1">Nationality</label>
+                      <label htmlFor="flight-nationality" className="block text-[#666666] font-semibold mb-1">Nationality</label>
                       <input
+                        id="flight-nationality"
+                        name="nationality"
                         type="text"
                         defaultValue="Bangladeshi"
                         className="w-full bg-white border border-[#ECECEC] rounded-xl p-2.5 text-[#111111] font-bold"
@@ -307,6 +319,9 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                         return (
                           <button
                             key={seatId}
+                            type="button"
+                            aria-label={`Select seat ${seatId}`}
+                            aria-pressed={isSelected}
                             onClick={() => setSelectedSeat(seatId)}
                             className={`w-8 h-8 rounded-lg text-[10px] font-bold transition-all ${
                               isSelected
@@ -325,6 +340,9 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                         return (
                           <button
                             key={seatId}
+                            type="button"
+                            aria-label={`Select seat ${seatId}`}
+                            aria-pressed={isSelected}
                             onClick={() => setSelectedSeat(seatId)}
                             className={`w-8 h-8 rounded-lg text-[10px] font-bold transition-all ${
                               isSelected
@@ -370,6 +388,8 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
 
                   <div className="grid grid-cols-2 gap-3">
                     <button
+                      type="button"
+                      aria-pressed={paymentMethod === 'bKash'}
                       onClick={() => setPaymentMethod('bKash')}
                       className={`p-3 rounded-2xl border text-left flex items-center space-x-2 transition-all ${
                         paymentMethod === 'bKash'
@@ -387,6 +407,8 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                     </button>
 
                     <button
+                      type="button"
+                      aria-pressed={paymentMethod === 'Nagad'}
                       onClick={() => setPaymentMethod('Nagad')}
                       className={`p-3 rounded-2xl border text-left flex items-center space-x-2 transition-all ${
                         paymentMethod === 'Nagad'
@@ -404,6 +426,8 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                     </button>
 
                     <button
+                      type="button"
+                      aria-pressed={paymentMethod === 'SSLCommerz'}
                       onClick={() => setPaymentMethod('SSLCommerz')}
                       className={`p-3 rounded-2xl border text-left flex items-center space-x-2 transition-all ${
                         paymentMethod === 'SSLCommerz'
@@ -419,6 +443,8 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                     </button>
 
                     <button
+                      type="button"
+                      aria-pressed={paymentMethod === 'Card'}
                       onClick={() => setPaymentMethod('Card')}
                       className={`p-3 rounded-2xl border text-left flex items-center space-x-2 transition-all ${
                         paymentMethod === 'Card'

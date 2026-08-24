@@ -83,8 +83,10 @@ export const StudyAbroadView: React.FC = () => {
 
         <form onSubmit={handleRunAssessment} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
           <div>
-            <label className="block text-emerald-200/80 font-semibold mb-1">Your Highest GPA / CGPA</label>
+            <label htmlFor="study-gpa" className="block text-emerald-100 font-semibold mb-1">Your Highest GPA / CGPA</label>
             <input
+              id="study-gpa"
+              name="gpa"
               type="number"
               step="0.1"
               max="5.0"
@@ -95,20 +97,24 @@ export const StudyAbroadView: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-emerald-200/80 font-semibold mb-1">IELTS / TOEFL Overall Band</label>
+            <label htmlFor="study-ielts" className="block text-emerald-100 font-semibold mb-1">IELTS / TOEFL Overall Band</label>
             <input
+              id="study-ielts"
+              name="ieltsScore"
               type="number"
               step="0.5"
               max="9.0"
               value={profile.ieltsScore}
               onChange={(e) => setProfile({ ...profile, ieltsScore: parseFloat(e.target.value) || 0 })}
-              className="w-full bg-[#0B6B53]/40 border border-[#C7A44D]/30 rounded-xl p-2.5 text-[#C7A44D] font-bold"
+              className="w-full bg-[#0B6B53]/40 border border-[#C7A44D]/30 rounded-xl p-2.5 text-white font-bold"
             />
           </div>
 
           <div>
-            <label className="block text-emerald-200/80 font-semibold mb-1">Target Country</label>
+            <label htmlFor="study-country" className="block text-emerald-100 font-semibold mb-1">Target Country</label>
             <select
+              id="study-country"
+              name="preferredCountry"
               value={profile.preferredCountry}
               onChange={(e) => setProfile({ ...profile, preferredCountry: e.target.value })}
               className="w-full bg-[#0B6B53]/40 border border-[#C7A44D]/30 rounded-xl p-2.5 text-white font-bold"
@@ -121,8 +127,10 @@ export const StudyAbroadView: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-emerald-200/80 font-semibold mb-1">Annual Budget Limit ($ USD)</label>
+            <label htmlFor="study-budget" className="block text-emerald-100 font-semibold mb-1">Annual Budget Limit ($ USD)</label>
             <input
+              id="study-budget"
+              name="maxBudgetUSD"
               type="number"
               step="1000"
               value={profile.maxBudgetUSD}
@@ -133,8 +141,9 @@ export const StudyAbroadView: React.FC = () => {
 
           <div className="lg:col-span-4 pt-2">
             <button
-              type="submit"
-              className="w-full py-3.5 bg-[#C7A44D] hover:bg-amber-400 text-[#093F31] font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2"
+                type="submit"
+                aria-label="Run AI university and scholarship match"
+                className="w-full py-3.5 bg-[#C7A44D] hover:bg-amber-400 text-[#093F31] font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2"
             >
               <Sparkles className="w-4 h-4" />
               <span>RUN AI UNIVERSITY & SCHOLARSHIP MATCH</span>
@@ -168,6 +177,8 @@ export const StudyAbroadView: React.FC = () => {
             {['All', 'United Kingdom', 'Canada', 'Australia', 'Malaysia'].map((country) => (
               <button
                 key={country}
+                type="button"
+                aria-pressed={selectedCountry === country}
                 onClick={() => setSelectedCountry(country)}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
                   selectedCountry === country
