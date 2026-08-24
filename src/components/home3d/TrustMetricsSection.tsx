@@ -92,9 +92,9 @@ export const TrustMetricsSection: React.FC = () => {
                   {m.value}
                 </div>
 
-                <h4 className="text-sm font-bold text-emerald-300 uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-emerald-300 uppercase tracking-wider">
                   {m.label}
-                </h4>
+                </h3>
 
                 <p className="text-xs text-slate-300 font-normal leading-relaxed">
                   {m.sublabel}
