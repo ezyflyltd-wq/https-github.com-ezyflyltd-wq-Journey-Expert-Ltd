@@ -110,3 +110,9 @@ This design is safer than allowing concurrent, invisible writes. It prevents a l
 The synchronization guard was added in commit `439b66c67a3d3ff1e28276d2ba8c944cd9e39330`. Its GitHub Actions run completed with `success`. The protected `main` branch has administrator enforcement enabled, force-push disabled, and deletion disabled. The AI Studio panel subsequently reported that GitHub and Google AI Studio are currently in sync.
 
 Post-release probes returned HTTP 200 for the apex site, `www` site, `/api/health`, `/robots.txt`, and `/sitemap.xml`. The pre-sync rollback tag and backup branch remain available.
+
+## 10. Portal API safety hardening
+
+On 2026-08-25, the live custom-domain audit found that `/api/b2b/overview` and `/api/admin/overview` returned unauthenticated demo payloads even though the corresponding UI routes were protected by a client-side gate. Pull request [#17](https://github.com/ezyflyltd-wq/https-github.com-ezyflyltd-wq-Journey-Expert-Ltd/pull/17) removed those payloads from `server.ts`. Until authenticated, tenant-scoped B2B and role-checked owner data services are connected, both endpoints return HTTP 503 with `status: not_configured` and no records.
+
+The change was reviewed, tested with `pnpm run lint`, `pnpm run build:pages`, and `node tests/health-routes.mjs`, and merged into protected `main`. The post-merge production guard initially blocked only because its push-event diff sees the sensitive `server.ts` change while the merge commit message does not carry the review marker. This documentation commit records the completed review and provides a safe, branch-protected promotion trigger; it does not bypass the guard or modify Firebase, Firestore, DNS, or Cloudflare secrets.
