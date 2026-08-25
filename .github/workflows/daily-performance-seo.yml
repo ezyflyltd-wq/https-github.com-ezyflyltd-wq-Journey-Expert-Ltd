@@ -1,0 +1,160 @@
+name: Daily production performance and SEO health
+
+on:
+  schedule:
+    # GitHub Actions cron uses five fields: minute hour day-of-month month day-of-week.
+    # Runs daily at 04:30 UTC, 30 minutes after the existing Monday GSC monitor.
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: daily-production-health
+  cancel-in-progress: false
+
+env:
+  BASE_URL: 'https://journeyexpertltd.com'
+  PERFORMANCE_SAMPLES: '5'
+  PERFORMANCE_WARN_MEDIAN_MS: '500'
+  PERFORMANCE_WARN_P95_MS: '1200'
+  PERFORMANCE_CRITICAL_MEDIAN_MS: '2000'
+  SEO_SITE_URL: 'https://journeyexpertltd.com'
+  SEO_AUDIT_OUTPUT: 'artifacts/seo-page-audit.json'
+  SEO_AUDIT_STRICT: '0'
+
+jobs:
+  monitor:
+    name: Measure production performance and SEO
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout the monitored production source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.4.1'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Restore prior daily performance baseline
+        uses: actions/cache/restore@v4
+        with:
+          path: .monitor-baseline
+          key: daily-performance-${{ github.repository }}-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            daily-performance-${{ github.repository }}-${{ github.ref_name }}-
+
+      - name: Run production TTFB and cache-status samples
+        run: node scripts/daily-performance-health.mjs
+        env:
+          PERFORMANCE_OUTPUT: artifacts/daily-performance.json
+
+      - name: Run technical SEO and sitemap audit
+        run: |
+          mkdir -p artifacts
+          node scripts/audit-seo-pages.mjs
+
+      - name: Compare against prior daily baseline
+        id: compare
+        if: always()
+        run: node scripts/compare-daily-health.mjs
+        env:
+          PERFORMANCE_OUTPUT: artifacts/daily-performance.json
+          SEO_OUTPUT: artifacts/seo-page-audit.json
+          BASELINE_DIR: .monitor-baseline
+          SUMMARY_OUTPUT: artifacts/daily-health-summary.md
+          OUTPUT_PATH: artifacts/daily-health-delta.json
+
+      - name: Add summary to the workflow run
+        if: always() && hashFiles('artifacts/daily-health-summary.md') != ''
+        run: cat artifacts/daily-health-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update a daily health alert issue
+        if: always() && steps.compare.outputs.alert != 'none'
+        uses: actions/github-script@v7
+        env:
+          ALERT_LEVEL: ${{ steps.compare.outputs.alert }}
+          ALERT_COUNT: ${{ steps.compare.outputs.findings }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const title = '[Daily Health] Production performance or SEO alert';
+            const body = fs.readFileSync('artifacts/daily-health-summary.md', 'utf8');
+            const { owner, repo } = context.repo;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', per_page: 100,
+            });
+            const existing = issues.find((issue) => issue.title === title);
+            const message = [
+              `Automated alert level: ${process.env.ALERT_LEVEL}`,
+              `Finding count: ${process.env.ALERT_COUNT}`,
+              `Workflow: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
+              '',
+              body,
+            ].join('\n');
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: existing.number, body: message,
+              });
+              if (process.env.ALERT_LEVEL === 'critical' && existing.labels.every((label) => label.name !== 'critical')) {
+                await github.rest.issues.addLabels({
+                  owner, repo, issue_number: existing.number, labels: ['critical'],
+                });
+              }
+            } else {
+              await github.rest.issues.create({
+                owner, repo, title, body: message, labels: ['performance', process.env.ALERT_LEVEL],
+              });
+            }
+
+      - name: Close resolved daily health alert issue
+        if: always() && steps.compare.outputs.alert == 'none'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '[Daily Health] Production performance or SEO alert';
+            const { owner, repo } = context.repo;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', per_page: 100,
+            });
+            const existing = issues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: existing.number,
+                body: `Resolved by daily health run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
+              });
+              await github.rest.issues.update({
+                owner, repo, issue_number: existing.number, state: 'closed',
+              });
+            }
+
+      - name: Prepare next daily baseline
+        if: always()
+        run: |
+          mkdir -p .monitor-baseline
+          if [ -f artifacts/daily-performance.json ]; then cp artifacts/daily-performance.json .monitor-baseline/daily-performance.json; fi
+
+      - name: Save daily performance baseline
+        if: always() && hashFiles('.monitor-baseline/*') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .monitor-baseline
+          key: daily-performance-${{ github.repository }}-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Upload daily performance and SEO evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-performance-seo-${{ github.run_id }}
+          path: artifacts/*
+          if-no-files-found: warn
+          retention-days: 30
