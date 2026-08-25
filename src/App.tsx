@@ -49,6 +49,7 @@ import { MainViewModule, PortalType } from './types';
 import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
 import { RouteMetadata } from './seo/RouteMetadata';
 import { DeferredServiceWidget } from './components/seo/DeferredServiceWidget';
+import { ElevenLabsAngelaWidget, isPublicAngelaRoute } from './components/ElevenLabsAngelaWidget';
 import { ServiceRouteShell } from './components/seo/ServiceRouteShell';
 import { ProtectedPortalGate } from './components/ProtectedPortalGate';
 const Home3DExperience = lazy(() => import('./components/home3d/Home3DExperience').then(({ Home3DExperience }) => ({ default: Home3DExperience })));
@@ -791,6 +792,9 @@ export default function App() {
           />
         </Suspense>
       )}
+
+      {/* Public Angela widget; protected portal routes intentionally do not mount it. */}
+      {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && <ElevenLabsAngelaWidget />}
 
       {/* Global Footer */}
       <DeferredFooter onPortalChange={navigateToPortal} onModuleChange={navigateToModule} />
