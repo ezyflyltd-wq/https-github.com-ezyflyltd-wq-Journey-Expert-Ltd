@@ -259,13 +259,9 @@ export const Header: React.FC<HeaderProps> = ({
             Tours
           </button>
 
-          <button
-            onClick={() => {
-              onPortalChange('main');
-              onModuleChange('visa');
-              setIsMegaMenuOpen(false);
-
-            }}
+          <a
+            href="/visa"
+            onClick={() => setIsMegaMenuOpen(false)}
             className={`flex items-center px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               portal === 'main' && activeModule === 'visa'
                 ? 'bg-[#0B6B53] text-white shadow-md'
@@ -273,8 +269,8 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <FileCheck2 className="w-3.5 h-3.5 mr-1 text-[#C7A44D]" />
-            Visa
-          </button>
+            Visa information
+          </a>
 
           <button
             onClick={() => {

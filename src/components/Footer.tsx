@@ -41,9 +41,9 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
               <Award className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">99.2% Visa Success Rate</h2>
+              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">Visa Application Support</h2>
               <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
-                Expert visa documentation team for UK, USA, Canada, Schengen & Saudi Arabia.
+                Destination research, document preparation, and human-assisted application support. Approval is decided by the relevant authority.
               </p>
             </div>
           </div>
@@ -53,9 +53,9 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
               <Globe className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">JEL Study Abroad Portal</h2>
+              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">JEL Study Abroad Guidance</h2>
               <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
-                500+ Top partner universities in UK, Canada, Australia, USA & Malaysia.
+                Country, course, document, and admissions-planning support with current institution verification.
               </p>
             </div>
           </div>
