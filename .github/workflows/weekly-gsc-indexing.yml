@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: weekly-gsc-indexing
@@ -25,7 +26,16 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Restore previous monitoring baseline
+        uses: actions/cache/restore@v4
+        with:
+          path: .monitor-baseline
+          key: gsc-baseline-${{ github.repository }}-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            gsc-baseline-${{ github.repository }}-${{ github.ref_name }}-
+
       - name: Run technical SEO sitemap audit
+        id: seo-audit
         env:
           SEO_SITE_URL: 'https://journeyexpertltd.com'
           SEO_AUDIT_OUTPUT: 'artifacts/seo-page-audit.json'
@@ -52,6 +62,7 @@ jobs:
           fi
 
       - name: Inspect indexed status
+        id: gsc-inspection
         if: steps.gsc-preflight.outputs.available == 'true'
         env:
           GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
@@ -63,11 +74,61 @@ jobs:
           mkdir -p artifacts
           python scripts/inspect-gsc-indexing.py
 
+      - name: Compare with prior monitoring baseline
+        id: compare
+        if: always()
+        env:
+          SEO_OUTPUT: artifacts/seo-page-audit.json
+          GSC_OUTPUT: artifacts/gsc-indexing-status.json
+          BASELINE_DIR: .monitor-baseline
+          DELTA_OUTPUT: artifacts/gsc-indexing-delta.json
+          SUMMARY_OUTPUT: artifacts/gsc-indexing-summary.md
+        run: node scripts/compare-gsc-baseline.mjs
+
+      - name: Add monitoring summary to the workflow run
+        if: always() && hashFiles('artifacts/gsc-indexing-summary.md') != ''
+        run: cat artifacts/gsc-indexing-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update a GitHub alert issue
+        if: always() && steps.compare.outputs.alert != '' && steps.compare.outputs.alert != 'none'
+        uses: actions/github-script@v7
+        env:
+          ALERT_LEVEL: ${{ steps.compare.outputs.alert }}
+          ALERT_COUNT: ${{ steps.compare.outputs.alerts }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const title = '[SEO Monitor] Search Console indexing alert';
+            const body = fs.readFileSync('artifacts/gsc-indexing-summary.md', 'utf8');
+            const { owner, repo } = context.repo;
+            const { data: issues } = await github.rest.issues.listForRepo({ owner, repo, state: 'open', per_page: 100 });
+            const existing = issues.find((issue) => issue.title === title);
+            const message = `Automated alert level: ${process.env.ALERT_LEVEL}. Alert count: ${process.env.ALERT_COUNT}.\n\n${body}`;
+            if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body: message });
+            } else {
+              await github.rest.issues.create({ owner, repo, title, body: message });
+            }
+
+      - name: Prepare next monitoring baseline
+        if: always()
+        run: |
+          mkdir -p .monitor-baseline
+          if [ -f artifacts/gsc-indexing-status.json ]; then cp artifacts/gsc-indexing-status.json .monitor-baseline/gsc-indexing-status.json; fi
+          if [ -f artifacts/seo-page-audit.json ]; then cp artifacts/seo-page-audit.json .monitor-baseline/seo-page-audit.json; fi
+
+      - name: Save current monitoring baseline
+        if: always() && hashFiles('.monitor-baseline/*') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .monitor-baseline
+          key: gsc-baseline-${{ github.repository }}-${{ github.ref_name }}-${{ github.run_id }}
+
       - name: Upload SEO and indexing reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gsc-indexing-${{ github.run_id }}
-          path: artifacts/*.json
+          path: artifacts/*
           if-no-files-found: warn
           retention-days: 30
