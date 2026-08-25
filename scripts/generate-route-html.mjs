@@ -197,7 +197,7 @@ function staticContentFor(route, seo) {
   const heading = seo.title.split(' | ')[0];
   const links = relatedLinks
     .filter((link) => link.href !== route)
-    .slice(0, route === '/' ? 5 : 3)
+    .slice(0, 5)
     .map((link) => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`)
     .join('');
 
