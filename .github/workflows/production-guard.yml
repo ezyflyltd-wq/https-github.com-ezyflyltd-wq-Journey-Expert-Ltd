@@ -75,11 +75,17 @@ jobs:
       - name: Type-check
         run: pnpm run lint
 
+      - name: Test private Angela widget integration
+        run: pnpm run test:angela-private
+
       - name: Test Angela SDK 429 fallback
         run: pnpm run test:angela-429
 
       - name: Test signed-URL endpoint quota mapping
         run: pnpm run test:angela-signed-url
+
+      - name: Test signed-URL security and error handling
+        run: pnpm run test:angela-security
 
       - name: Build Cloudflare Pages output
         run: pnpm run build:pages

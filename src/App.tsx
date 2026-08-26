@@ -44,12 +44,12 @@ const InternationalExpansionView = lazy(() => import('./components/International
 const InnovationLabView = lazy(() => import('./components/InnovationLabView').then(({ InnovationLabView }) => ({ default: InnovationLabView })));
 const EnterpriseBlueprintView = lazy(() => import('./components/EnterpriseBlueprintView').then(({ EnterpriseBlueprintView }) => ({ default: EnterpriseBlueprintView })));
 const AIAssistantModal = lazy(() => import('./components/AIAssistantModal').then(({ AIAssistantModal: Component }) => ({ default: Component })));
+const AngelaPrivateSdkMount = lazy(() => import('./components/ElevenLabsAngelaWidget').then(({ AngelaPrivateSdkMount: Component }) => ({ default: Component })));
 
 import { MainViewModule, PortalType } from './types';
 import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
 import { RouteMetadata } from './seo/RouteMetadata';
 import { DeferredServiceWidget } from './components/seo/DeferredServiceWidget';
-import { AngelaPrivateSdkMount } from './components/ElevenLabsAngelaWidget';
 import { ServiceRouteShell } from './components/seo/ServiceRouteShell';
 import { ProtectedPortalGate } from './components/ProtectedPortalGate';
 const Home3DExperience = lazy(() => import('./components/home3d/Home3DExperience').then(({ Home3DExperience }) => ({ default: Home3DExperience })));
@@ -794,7 +794,11 @@ export default function App() {
       )}
 
       {/* Private Angela SDK; protected portal routes intentionally do not mount it. */}
-      {activePortal === 'main' && <AngelaPrivateSdkMount pathname={location.pathname} />}
+      {activePortal === 'main' && (
+        <Suspense fallback={null}>
+          <AngelaPrivateSdkMount pathname={location.pathname} />
+        </Suspense>
+      )}
 
       {/* Global Footer */}
       <DeferredFooter onPortalChange={navigateToPortal} onModuleChange={navigateToModule} />

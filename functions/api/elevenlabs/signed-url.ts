@@ -135,8 +135,15 @@ export const onRequest = async ({ request, env }: PagesContext): Promise<Respons
     return json({ error: 'Voice service could not create a session.' }, 502, headers);
   }
 
-  const body = await providerResponse.json() as SignedUrlResponse;
-  if (!body.signed_url) return json({ error: 'Voice service returned an invalid session.' }, 502, headers);
+  let body: SignedUrlResponse;
+  try {
+    body = await providerResponse.json() as SignedUrlResponse;
+  } catch {
+    return json({ error: 'Voice service returned an invalid session.' }, 502, headers);
+  }
+  if (!body.signed_url || !body.signed_url.startsWith('wss://')) {
+    return json({ error: 'Voice service returned an invalid session.' }, 502, headers);
+  }
 
   // The Firebase UID is intentionally not returned to the browser and is not logged.
   void verified.uid;
