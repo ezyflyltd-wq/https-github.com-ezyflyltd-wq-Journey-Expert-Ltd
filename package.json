@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
     "lint": "tsc --noEmit",
-    "test:angela-private": "node tests/angela-private-widget-check.mjs",
+    "test:angela-private": "node tests/angela-public-widget-check.mjs",
     "test:angela-429": "tsx tests/angela-sdk-429.test.ts",
     "test:angela-signed-url": "tsx tests/signed-url-function-429.test.ts",
     "test:angela-security": "tsx tests/signed-url-security.test.ts"
