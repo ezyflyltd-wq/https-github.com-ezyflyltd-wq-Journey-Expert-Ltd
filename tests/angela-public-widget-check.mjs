@@ -21,6 +21,10 @@ assert.equal(widget.includes('+880 1926-400400'), true, 'the human-support phone
 assert.equal(widget.includes('tel:+8801926400400'), true, 'the human-support phone number must be callable');
 assert.equal(widget.includes('https://elevenlabs.io/docs/eleven-agents/legal/disclosure-requirement'), true, 'the official disclosure guidance must be linked');
 assert.equal(widget.includes('agent-id={ANGELA_AGENT_ID}'), true, 'the custom element must receive the new agent constant');
+assert.equal(widget.includes('fixed bottom-4 right-4'), true, 'the public launcher must be fixed and floating');
+assert.equal(widget.includes('Talk to Anjela · কথা বলুন'), true, 'the floating launcher must be customer-visible and bilingual');
+assert.equal(widget.includes('sessionStorage'), true, 'consent state may persist only for the current browser session');
+assert.equal(widget.includes('onClick={() => setIsDisclosureOpen(true)}'), true, 'the floating launcher must open the disclosure before widget loading');
 assert.equal(app.includes("activePortal === 'main' && isPublicAngelaRoute(location.pathname)"), true, 'the widget must remain limited to approved public routes');
 
 console.log('Public Angela widget checks passed.');
