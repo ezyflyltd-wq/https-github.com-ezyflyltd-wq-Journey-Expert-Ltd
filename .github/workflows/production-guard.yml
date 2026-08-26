@@ -75,6 +75,12 @@ jobs:
       - name: Type-check
         run: pnpm run lint
 
+      - name: Test Angela SDK 429 fallback
+        run: pnpm run test:angela-429
+
+      - name: Test signed-URL endpoint quota mapping
+        run: pnpm run test:angela-signed-url
+
       - name: Build Cloudflare Pages output
         run: pnpm run build:pages
 
@@ -85,6 +91,7 @@ jobs:
           test -f dist/_headers
           test -f dist/_redirects
           test -f functions/api/[[path]].ts
+          test -f functions/api/elevenlabs/signed-url.ts
 
   promote:
     name: Promote validated source to Cloudflare release branch
