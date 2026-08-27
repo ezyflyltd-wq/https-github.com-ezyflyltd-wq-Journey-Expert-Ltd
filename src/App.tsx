@@ -50,9 +50,11 @@ import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath,
 import { RouteMetadata } from './seo/RouteMetadata';
 import { DeferredServiceWidget } from './components/seo/DeferredServiceWidget';
 import { ElevenLabsAngelaWidget, isPublicAngelaRoute } from './components/ElevenLabsAngelaWidget';
+const GeminiLiveAngelaWidget = lazy(() => import('./components/GeminiLiveAngelaWidget').then(({ GeminiLiveAngelaWidget: Component }) => ({ default: Component })));
 import { ServiceRouteShell } from './components/seo/ServiceRouteShell';
 import { ProtectedPortalGate } from './components/ProtectedPortalGate';
 const Home3DExperience = lazy(() => import('./components/home3d/Home3DExperience').then(({ Home3DExperience }) => ({ default: Home3DExperience })));
+const GEMINI_LIVE_ENABLED = import.meta.env.VITE_GEMINI_LIVE_ENABLED === 'true';
 import {
   Plane,
   Building2,
@@ -794,7 +796,15 @@ export default function App() {
       )}
 
       {/* Public Angela widget; protected portal routes intentionally do not mount it. */}
-      {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && <ElevenLabsAngelaWidget />}
+      {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && (
+        GEMINI_LIVE_ENABLED ? (
+          <Suspense fallback={null}>
+            <GeminiLiveAngelaWidget />
+          </Suspense>
+        ) : (
+          <ElevenLabsAngelaWidget />
+        )
+      )}
 
       {/* Global Footer */}
       <DeferredFooter onPortalChange={navigateToPortal} onModuleChange={navigateToModule} />
