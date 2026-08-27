@@ -27,6 +27,16 @@ const ALLOWED_ORIGINS = new Set([
   'https://journeyexpertltd.com',
   'https://www.journeyexpertltd.com',
 ]);
+const LOCAL_DEV_ORIGINS = new Set([
+  'http://localhost:8788',
+  'http://127.0.0.1:8788',
+]);
+const ALLOW_LOCAL_DEV = import.meta.env.VITE_GEMINI_ALLOW_LOCAL_DEV === 'true';
+
+function isAllowedOrigin(origin: string): boolean {
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  return ALLOW_LOCAL_DEV && LOCAL_DEV_ORIGINS.has(origin);
+}
 
 function readConsent(): boolean {
   try {
@@ -134,7 +144,7 @@ export function GeminiLiveAngelaWidget() {
     setErrorMessage('');
     setLastTranscript('');
 
-    if (!ALLOWED_ORIGINS.has(window.location.origin)) {
+    if (!isAllowedOrigin(window.location.origin)) {
       setStatus('error');
       setErrorMessage('This public widget is not enabled on the current origin.');
       return;
@@ -289,6 +299,11 @@ export function GeminiLiveAngelaWidget() {
           <p className="mt-3 text-sm font-semibold text-[#093F31]" aria-live="polite">{status === 'connected' ? 'Connected — কথা বলুন' : status === 'connecting' ? 'Connecting…' : status === 'error' ? 'Unavailable' : 'Ready'}</p>
           {lastTranscript && <p className="mt-2 text-xs leading-5 text-[#555555]" aria-live="polite">{lastTranscript}</p>}
           {errorMessage && <p className="mt-2 text-xs leading-5 text-[#A33A2B]" role="alert">{errorMessage}</p>}
+          {status === 'error' && (
+            <a href="/customer-support" className="mt-2 inline-block text-xs font-semibold text-[#0B6B53] underline">
+              Open human support / মানব সহায়তা
+            </a>
+          )}
           <div className="mt-4 flex gap-2">
             {status !== 'connected' && <button type="button" className="bg-[#093F31] px-4 py-2 text-sm font-bold text-white hover:bg-[#0B6B53]" onClick={connect}>Start voice / কথা শুরু করুন</button>}
             {status === 'connected' && <button type="button" className="bg-[#A33A2B] px-4 py-2 text-sm font-bold text-white" onClick={endCall}>End call / কল শেষ করুন</button>}
