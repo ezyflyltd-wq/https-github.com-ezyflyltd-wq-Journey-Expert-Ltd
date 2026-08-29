@@ -84,7 +84,7 @@ jobs:
           test -f dist/sitemap.xml
           test -f dist/_headers
           test -f dist/_redirects
-          test -f functions/api/[[path]].ts
+          test -f functions/api/ai-assistant.ts
 
   promote:
     name: Promote validated source to Cloudflare release branch
