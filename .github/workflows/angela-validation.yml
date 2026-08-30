@@ -1,0 +1,65 @@
+name: Angela validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  sync-safety-gate:
+    name: Sync safety gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Run sync safety gate
+        env:
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_BEFORE: ${{ github.event.before }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          GITHUB_HEAD_COMMIT_MESSAGE: ${{ github.event.pull_request.title }}
+        run: node scripts/sync-guard.mjs
+
+  type-check-and-pages-build:
+    name: Type-check and Pages build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Type-check
+        run: ./node_modules/.bin/tsc --noEmit
+      - name: Build Pages frontend
+        run: ./node_modules/.bin/vite build
+      - name: Run Angela regression tests
+        run: |
+          node tests/free-voice-widget-check.mjs
+          node tests/angela-public-widget-check.mjs
+          node tests/angela-responsive-brain-check.mjs
