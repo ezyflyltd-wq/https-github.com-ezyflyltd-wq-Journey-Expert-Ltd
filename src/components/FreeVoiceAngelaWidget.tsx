@@ -19,6 +19,11 @@ type SpeechRecognitionLike = {
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
+type ConversationTurn = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 declare global {
   interface Window {
     SpeechRecognition?: SpeechRecognitionConstructor;
@@ -95,6 +100,8 @@ export function FreeVoiceAngelaWidget() {
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastReply, setLastReply] = useState('');
   const [error, setError] = useState('');
+  const [conversationId] = useState(() => `angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+  const [history, setHistory] = useState<ConversationTurn[]>([]);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const recognitionSupported = Boolean(getSpeechRecognition());
@@ -138,17 +145,24 @@ export function FreeVoiceAngelaWidget() {
     setInput('');
 
     try {
-      const response = await fetch('/api/ai-assistant', {
+      const response = await fetch('/api/ai/voice-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: cleanPrompt,
-          systemContext: `You are Angela, the bilingual voice assistant for Journey Expert Ltd. in Bangladesh. Answer in ${language === 'bn' ? 'Bangla' : 'clear professional English'} unless the customer asks for another language. Help with flights, hotels, tours, Hajj and Umrah, visa document preparation, study abroad, and global mobility. Never claim a live fare, visa approval, university offer, booking, payment, or government decision unless the connected system actually confirms it. Never request passport numbers, bank details, card numbers, passwords, or sensitive documents. Escalate verified quotes, bookings, and case-specific advice to human support at +880 1926-400400. Keep responses concise and voice-friendly.`,
+          message: cleanPrompt,
+          language,
+          conversationId,
+          history,
         }),
       });
       if (!response.ok) throw new Error('AI endpoint unavailable');
       const data = await response.json();
-      const reply = String(data.reply || getFallbackReply(cleanPrompt));
+      const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt));
+      setHistory((turns) => [
+        ...turns,
+        { role: 'user', content: cleanPrompt },
+        { role: 'assistant', content: reply },
+      ].slice(-12));
       setLastReply(reply);
       speak(reply);
     } catch {
@@ -199,6 +213,16 @@ export function FreeVoiceAngelaWidget() {
     setIsListening(false);
   };
 
+  const resetConversation = () => {
+    recognitionRef.current?.stop();
+    window.speechSynthesis?.cancel();
+    setHistory([]);
+    setLastTranscript('');
+    setLastReply('');
+    setError('');
+    setIsListening(false);
+  };
+
   if (!hasAcceptedDisclosure) {
     return (
       <>
@@ -243,7 +267,10 @@ export function FreeVoiceAngelaWidget() {
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#E6CA65]">JEL Free AI Voice</p>
               <h2 className="text-sm font-bold">Angela · অ্যাঞ্জেলা</h2>
             </div>
-            <button type="button" aria-label="Close Angela assistant" onClick={() => setIsOpen(false)} className="rounded-lg p-1.5 hover:bg-white/10"><X className="h-4 w-4" /></button>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={resetConversation} className="rounded-lg px-2 py-1 text-[10px] font-bold text-[#E6CA65] hover:bg-white/10">New chat</button>
+              <button type="button" aria-label="Close Angela assistant" onClick={() => setIsOpen(false)} className="rounded-lg p-1.5 hover:bg-white/10"><X className="h-4 w-4" /></button>
+            </div>
           </header>
           <div className="space-y-3 p-4 text-xs text-[#333333]">
             <div className="flex items-center justify-between gap-2">
@@ -253,7 +280,7 @@ export function FreeVoiceAngelaWidget() {
               </div>
               <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => setVoiceEnabled((value) => !value)} className="rounded-lg border border-[#E8E1CF] p-2 hover:bg-[#F1E9D3]">{voiceEnabled ? <Volume2 className="h-4 w-4 text-[#0B6B53]" /> : <VolumeX className="h-4 w-4 text-[#777777]" />}</button>
             </div>
-            <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{recognitionSupported ? 'Press the microphone and speak. Angela will answer using the site AI.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
+            <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{recognitionSupported ? 'Ask Angela a question in Bangla, Banglish, or English. She will keep the conversation context.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
             <div className="flex justify-center">
               {isListening ? (
                 <button type="button" onClick={stopListening} className="inline-flex items-center gap-2 rounded-full bg-[#B42318] px-5 py-3 font-bold text-white shadow-md"><MicOff className="h-4 w-4" /> Stop listening</button>
