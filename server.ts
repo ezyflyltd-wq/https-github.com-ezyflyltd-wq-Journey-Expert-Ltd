@@ -2,6 +2,13 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import {
+  ANGELA_SYSTEM_PROMPT,
+  fallbackAngelaResponse,
+  parseAngelaResponse,
+  retrieveJelKnowledge,
+  sanitizeHistory,
+} from './server/angelaBrain';
 
 async function startServer() {
   const app = express();
@@ -22,6 +29,49 @@ async function startServer() {
     });
   }
 
+  const makeConversationId = (value: unknown): string => {
+    if (typeof value === 'string' && value.trim()) return value.trim().slice(0, 120);
+    return `angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  };
+
+  const runAngela = async (body: Record<string, unknown>) => {
+    const rawMessage = typeof body.message === 'string' ? body.message : body.prompt;
+    const message = typeof rawMessage === 'string' ? rawMessage.trim().slice(0, 4000) : '';
+    const language = typeof body.language === 'string' ? body.language : undefined;
+    const conversationId = makeConversationId(body.conversationId);
+    const history = sanitizeHistory(body.history);
+
+    if (!message) {
+      const error = new Error('Message is required');
+      (error as Error & { status?: number }).status = 400;
+      throw error;
+    }
+
+    if (!ai) {
+      return { conversationId, ...fallbackAngelaResponse(message, language) };
+    }
+
+    const retrievedContext = retrieveJelKnowledge(message);
+    const contents = [
+      ...history.map((turn) => ({
+        role: turn.role === 'assistant' ? 'model' as const : 'user' as const,
+        parts: [{ text: turn.content }],
+      })),
+      { role: 'user' as const, parts: [{ text: message }] },
+    ];
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.6-flash',
+      contents,
+      config: {
+        systemInstruction: `${ANGELA_SYSTEM_PROMPT}\n\nRETRIEVED JEL CONTEXT:\n${retrievedContext}`,
+        responseMimeType: 'application/json',
+        temperature: 0.25,
+      },
+    });
+    const parsed = parseAngelaResponse(response.text || '', message, language);
+    return { conversationId, ...parsed };
+  };
+
   // API Routes
   app.get('/api/health', (req: Request, res: Response) => {
     res.json({
@@ -33,57 +83,21 @@ async function startServer() {
     });
   });
 
-  // AI Assistant Route
-  app.post('/api/ai-assistant', async (req: Request, res: Response) => {
-    const { prompt, systemContext } = req.body;
-
-    if (!prompt) {
-      res.status(400).json({ error: 'Prompt is required' });
-      return;
-    }
-
+  // Shared conversational brain used by text chat and voice transcript requests.
+  const handleAngelaRequest = async (req: Request, res: Response) => {
     try {
-      if (!ai && process.env.GEMINI_API_KEY) {
-        ai = new GoogleGenAI({
-          apiKey: process.env.GEMINI_API_KEY,
-          httpOptions: {
-            headers: {
-              'User-Agent': 'aistudio-build',
-            },
-          },
-        });
-      }
-
-      if (!ai) {
-        // Fallback intelligent response if key is missing or not injected yet
-        res.json({
-          reply: `Welcome to **Journey Expert Ltd. (JEL)** AI Assistant!\n\nRegarding your request: "${prompt}"\n\n- **Flight & GDS Options**: We cross-reference live fares across Sabre, Amadeus, and Travelport Galileo to find optimal routes from Dhaka (DAC).\n- **Visa Requirements**: Please ensure your passport has 6+ months validity and bank statement covers 6 months.\n- **Study Abroad**: Our counselors support application to UK, USA, Canada, Australia, and Malaysia with guaranteed offer letter tracking.\n\n*Note: Add GEMINI_API_KEY in Secrets for live generative AI responses.*`,
-          sources: ['JEL Knowledge Base v2.4', 'Sabre GDS Fare Rule 2026', 'JEL Study Abroad Portal'],
-        });
-        return;
-      }
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: prompt,
-        config: {
-          systemInstruction: systemContext || `You are JEL Assistant, an elite AI travel & global mobility expert for Journey Expert Ltd. (JEL), Bangladesh's leading AI-powered OTA and global mobility platform. You provide expert guidance on flight booking across Sabre, Amadeus, and Galileo, hotel reservations, tour packages (Hajj, Umrah, Halal Tourism, Medical Tourism), visa requirement checklists for Bangladesh passport holders, and study abroad university matching (UK, USA, Canada, Australia, Malaysia). Be helpful, professional, clear, and structured with Markdown formatting and bullet points. Mention prices in BDT (৳) and USD ($).`,
-          temperature: 0.7,
-        },
-      });
-
-      res.json({
-        reply: response.text || 'No response generated.',
-        sources: ['JEL AI Gateway (Gemini 3.6 Flash)', 'Multi-GDS Live Engine', 'JEL Global Mobility Database'],
-      });
+      const payload = await runAngela(req.body as Record<string, unknown>);
+      res.json({ ...payload, response: payload.reply, sources: payload.usedSources });
     } catch (err: any) {
-      console.error('Error in /api/ai-assistant:', err);
-      res.status(500).json({
-        error: 'Failed to process AI response',
-        details: err.message || String(err),
+      const status = Number(err?.status) === 400 ? 400 : 500;
+      console.error('Error in Angela conversational brain:', err);
+      res.status(status).json({
+        error: status === 400 ? 'Message is required' : 'Failed to process Angela response',
       });
     }
-  });
+  };
+
+  app.post('/api/ai-assistant', handleAngelaRequest);
 
   // AI Travel Planner Endpoint
   app.post('/api/ai/planner', async (req: Request, res: Response) => {
@@ -140,35 +154,8 @@ async function startServer() {
     });
   });
 
-  // Voice AI Angela Endpoint
-  app.post('/api/ai/voice-agent', async (req: Request, res: Response) => {
-    const { message, language } = req.body;
-    const lang = language || 'en';
-
-    let responseText = '';
-    let audioTranscript = '';
-
-    if (lang === 'bn') {
-      responseText = `শুভরাত্রি! আমি জর্নি এক্সপার্ট লিমিটেড-এর ভয়েস এআই 'অ্যাঞ্জেলা'। আপনার নির্দেশ অনুযায়ী ইউকে ও কানাডা ভিসা ফাইলিং সংক্রান্ত সকল তথ্য তৈরি রয়েছে। আপনি কি এখনই বুকিং সম্পূর্ণ করতে চান?`;
-      audioTranscript = `[Angela Voice AI • Bangla Synthesizer • Sample Rate 48kHz]`;
-    } else if (lang === 'ar') {
-      responseText = `أهلاً بك! أنا "أنجيلا" المساعد الصوتي من شركة جيرني إكسبرت. نحن نقدم أفضل رحلات العمرة VIP والطيران إلى مكة والمدينة المنورة. كيف يمكنني مساعدتك اليوم؟`;
-      audioTranscript = `[Angela Voice AI • Arabic Synthesizer • Sample Rate 48kHz]`;
-    } else {
-      responseText = `Hello! I am Angela, your JEL Voice AI Specialist. I have verified your flight preference to London Heathrow and your UK visa application status. Would you like me to reserve your seat or connect you to a senior consultant?`;
-      audioTranscript = `[Angela Voice AI • English Synthesizer • Sample Rate 48kHz]`;
-    }
-
-    res.json({
-      language: lang,
-      response: responseText,
-      transcript: audioTranscript,
-      leadQualified: true,
-      leadScore: 94,
-      intent: 'FLIGHT_RESERVATION_VISA_CHECK',
-      suggestedAction: 'TRANSFER_TO_HUMAN_CONSULTANT_IF_NEEDED',
-    });
-  });
+  // Voice transcripts use the same brain as text chat; the client handles speech-to-text and TTS.
+  app.post('/api/ai/voice-agent', handleAngelaRequest);
 
   // Vector DB & RAG Knowledge Retrieval Endpoint
   app.post('/api/ai/rag-search', (req: Request, res: Response) => {
