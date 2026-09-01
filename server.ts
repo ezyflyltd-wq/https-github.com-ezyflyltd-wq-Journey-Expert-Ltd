@@ -16,7 +16,9 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Initialize Gemini AI client on the server side
+  // Initialize Gemini AI client on the server side. Keep the model configurable so
+  // production can rotate supported model versions without a source rewrite.
+  const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
   let ai: GoogleGenAI | null = null;
   if (process.env.GEMINI_API_KEY) {
     ai = new GoogleGenAI({
@@ -60,7 +62,7 @@ async function startServer() {
       { role: 'user' as const, parts: [{ text: message }] },
     ];
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: geminiModel,
       contents,
       config: {
         systemInstruction: `${ANGELA_SYSTEM_PROMPT}\n\nRETRIEVED JEL CONTEXT:\n${retrievedContext}`,
