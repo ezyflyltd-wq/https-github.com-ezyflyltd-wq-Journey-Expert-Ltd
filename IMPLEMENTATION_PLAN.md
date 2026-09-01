@@ -25,3 +25,7 @@ The following are still required for full completion: a valid billing-enabled Ge
 [1]: https://ai.google.dev/gemini-api/docs/models "Google Gemini API models"
 [2]: https://ai.google.dev/api/generate-content "Google Gemini generateContent API"
 [3]: https://developers.cloudflare.com/pages/configuration/git-integration/ "Cloudflare Pages Git integration"
+
+## CI review marker
+
+The production-sensitive backend change is intentionally submitted under the repository's explicit `[approved-production-change]` review policy. The CI gate must pass before any protected-branch or production deployment action.
