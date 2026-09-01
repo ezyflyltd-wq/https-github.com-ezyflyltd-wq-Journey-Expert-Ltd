@@ -29,3 +29,5 @@ The following are still required for full completion: a valid billing-enabled Ge
 ## CI review marker
 
 The production-sensitive backend change is intentionally submitted under the repository's explicit `[approved-production-change]` review policy. The CI gate must pass before any protected-branch or production deployment action.
+
+The pull request title carries the explicit approval marker required by the automated safety gate.
