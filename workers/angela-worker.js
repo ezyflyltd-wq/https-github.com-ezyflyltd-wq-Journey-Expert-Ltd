@@ -1,6 +1,7 @@
 const ALLOWED_ORIGIN = 'https://journeyexpertltd.com';
 const PRIMARY_MODEL = 'gemini-3.7-flash';
-const FALLBACK_MODEL = 'gemini-2.5-flash';
+const FALLBACK_MODEL = 'gemini-3.6-flash';
+const GEMINI_TIMEOUT_MS = 18000;
 
 const SYSTEM_PROMPT = `You are Angela, the official AI Travel and Education Assistant of Journey Expert Ltd. (JEL), Bangladesh.
 Answer the customer's actual question first, then ask at most one useful follow-up question. Reply in natural Bangla for Bangla or Banglish, English for English, and Arabic only when requested. Be warm, concise, professional, and easy to understand aloud.
@@ -40,6 +41,19 @@ function safeLead(value) {
 
 function fallback(message, language) {
   const bangla = language === 'bn';
+  const visaRequest = /visa|embassy|immigration|eligib|fee|ভিসা|এম্বেসি|ইমিগ্রেশন|যোগ্যতা|ফি/i.test(message);
+  if (visaRequest) {
+    return {
+      reply: bangla
+        ? 'ভিসার নিয়ম, ফি এবং যোগ্যতা পরিবর্তনশীল; তাই বর্তমান তথ্য সংশ্লিষ্ট সরকারি উৎস থেকে যাচাই করা প্রয়োজন। আপনার কেসটি সঠিকভাবে পর্যালোচনা করার জন্য Journey Expert-এর একজন ভিসা কনসালট্যান্টের সহায়তা নিন: +880 1926-400400।'
+        : 'Visa rules, fees, and eligibility can change and must be verified with the relevant official source. A Journey Expert visa consultant should review your case; contact +880 1926-400400.',
+      language, intent: 'visa_info', confidence: 0.62,
+      nextQuestion: bangla ? 'আপনি কোন দেশে, কোন উদ্দেশ্যে এবং আনুমানিক কবে ভ্রমণ করতে চান?' : 'Which country, purpose, and approximate travel date should we review?',
+      lead: {}, handoffRequired: true,
+      handoffReason: 'Current visa information and case-specific eligibility require official verification and human consultant review.',
+      usedSources: ['JEL Visa Guidance Policy'],
+    };
+  }
   return {
     reply: bangla ? `আমি আপনার প্রশ্নটি বুঝেছি। নির্ভুলভাবে সাহায্য করতে গন্তব্য, ভ্রমণের তারিখ এবং কোন service প্রয়োজন তা জানাবেন? quotation বা booking যাচাই করতে Journey Expert consultant-এর সঙ্গে কথা বলুন: +880 1926-400400।` : `I understand your question. Please share your destination, travel date, and required service so I can guide you accurately. For a verified quotation or booking, contact a Journey Expert consultant at +880 1926-400400.`,
     language, intent: 'GENERAL_TRAVEL_ENQUIRY', confidence: 0.45,
@@ -52,10 +66,20 @@ function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'access-control-allow-origin': ALLOWED_ORIGIN, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'Content-Type' } });
 }
 
+async function fetchWithTimeout(url, options, timeoutMs = GEMINI_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort('timeout'), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function callGemini(env, model, message, language, history) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
   const contents = [...(Array.isArray(history) ? history : []).slice(-12).map((turn) => ({ role: turn && turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: String(turn && turn.content || '').slice(0, 2000) }] })), { role: 'user', parts: [{ text: message }] }];
-  const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\nRetrieved JEL context:\n${contextFor(message)}\n\nLanguage hint: ${language}` }] }, contents, generationConfig: { temperature: 0.25, responseMimeType: 'application/json' } }) });
+  const response = await fetchWithTimeout(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\nRetrieved JEL context:\n${contextFor(message)}\n\nLanguage hint: ${language}` }] }, contents, generationConfig: { temperature: 0.25, responseMimeType: 'application/json' } }) });
   if (!response.ok) throw new Error(`Gemini HTTP ${response.status}`);
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
@@ -77,14 +101,45 @@ export default {
     const message = String(body?.message || body?.prompt || '').trim().slice(0, 4000);
     if (!message) return json({ error: 'Message is required' }, 400);
     const language = languageOf(message, body?.language);
+    const conversationId = typeof body?.conversationId === 'string'
+      ? body.conversationId.trim().slice(0, 120)
+      : `angela-${Date.now()}`;
+    const history = Array.isArray(body?.history)
+      ? body.history
+          .filter((turn) => turn && typeof turn === 'object')
+          .map((turn) => ({
+            role: turn.role === 'assistant' ? 'assistant' : 'user',
+            content: String(turn.content || '').trim().slice(0, 2000),
+          }))
+          .filter((turn) => turn.content)
+          .slice(-12)
+      : [];
     let payload = null;
     if (env.GEMINI_API_KEY) {
       for (const model of [env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL]) {
-        try { payload = await callGemini(env, model, message, language, body?.history); break; } catch (error) { console.error(`Angela model failed: ${model}`, error); }
+        try { payload = await callGemini(env, model, message, language, history); break; } catch (error) { console.error(`Angela model failed: ${model}`, error); }
       }
     }
     payload ||= fallback(message, language);
-    if (payload.handoffRequired && env.HANDOFF_WEBHOOK_URL) ctx.waitUntil(fetch(env.HANDOFF_WEBHOOK_URL, { method: 'POST', headers: { 'content-type': 'application/json', ...(env.HANDOFF_WEBHOOK_SECRET ? { 'x-angela-webhook-secret': env.HANDOFF_WEBHOOK_SECRET } : {}) }, body: JSON.stringify({ event: 'angela.handoff', createdAt: new Date().toISOString(), payload }) }).catch((error) => console.error('Handoff webhook failed', error)));
-    return json({ conversationId: typeof body?.conversationId === 'string' ? body.conversationId.slice(0, 120) : `angela-${Date.now()}`, ...payload, response: payload.reply, sources: payload.usedSources });
+    if (payload.handoffRequired && env.HANDOFF_WEBHOOK_URL) {
+      const handoffEvent = {
+        event: 'angela.handoff',
+        createdAt: new Date().toISOString(),
+        conversationId,
+        message,
+        history,
+        ai: payload,
+        status: 'NEW',
+      };
+      ctx.waitUntil(fetchWithTimeout(env.HANDOFF_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(env.HANDOFF_WEBHOOK_SECRET ? { 'x-angela-webhook-secret': env.HANDOFF_WEBHOOK_SECRET } : {}),
+        },
+        body: JSON.stringify(handoffEvent),
+      }, 5000).catch((error) => console.error('Handoff webhook failed', error)));
+    }
+    return json({ conversationId, ...payload, response: payload.reply, sources: payload.usedSources });
   },
 };

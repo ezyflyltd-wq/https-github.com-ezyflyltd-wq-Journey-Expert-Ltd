@@ -85,6 +85,19 @@ function getSpeechRecognition(): SpeechRecognitionConstructor | null {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
+function getPreferredFemaleVoice(language: 'en' | 'bn'): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices();
+  const prefix = language === 'bn' ? 'bn' : 'en';
+  const femaleHints = ['female', 'woman', 'zira', 'samantha', 'karen', 'susan', 'google বাংলা', 'google bangla'];
+  const matching = voices.filter((voice) => voice.lang.toLowerCase().startsWith(prefix));
+  return matching.sort((a, b) => {
+    const aScore = femaleHints.some((hint) => a.name.toLowerCase().includes(hint)) ? 1 : 0;
+    const bScore = femaleHints.some((hint) => b.name.toLowerCase().includes(hint)) ? 1 : 0;
+    return bScore - aScore;
+  })[0] || null;
+}
+
 function getFallbackReply(prompt: string): string {
   return `I can help with flights, hotels, visa guidance, study abroad, Hajj and Umrah, and global mobility. For your request, “${prompt}”, please contact the Journey Expert support team at +880 1926-400400 for a verified quote or case review.`;
 }
@@ -131,8 +144,9 @@ export function FreeVoiceAngelaWidget() {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text.replace(/[*#_`]/g, ''));
     utterance.lang = language === 'bn' ? 'bn-BD' : 'en-US';
-    utterance.rate = 0.98;
-    utterance.pitch = 1;
+    utterance.voice = getPreferredFemaleVoice(language) || null;
+    utterance.rate = 1.03;
+    utterance.pitch = 1.02;
     window.speechSynthesis.speak(utterance);
   };
 
