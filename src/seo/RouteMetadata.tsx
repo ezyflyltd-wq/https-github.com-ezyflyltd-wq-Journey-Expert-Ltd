@@ -39,10 +39,10 @@ const ROUTE_SEO: Record<string, RouteSeo> = {
     keywords: 'tour packages Bangladesh, holidays, custom travel itinerary',
   },
   '/visa': {
-    title: 'Visa Consultancy and Application Support | Journey Expert Ltd.',
-    description: 'Get structured visa consultancy, document preparation, checklist review, and application support for global destinations.',
+    title: 'Visa Information and Application Support for Bangladesh Travellers | Journey Expert Ltd.',
+    description: 'Destination research, document preparation, checklist review, and human-assisted visa application support for Bangladesh travellers. Requirements and decisions come from the relevant authority.',
     type: 'service',
-    keywords: 'visa consultancy Bangladesh, visa application support, UK visa, Canada visa, Schengen visa',
+    keywords: 'visa information Bangladesh, visa application support, UK visa, Canada visa, Schengen visa',
   },
   '/study-abroad': {
     title: 'Study Abroad and University Admissions | Journey Expert Ltd.',

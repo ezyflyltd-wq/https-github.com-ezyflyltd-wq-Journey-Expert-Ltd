@@ -34,6 +34,12 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
 
   const requestUrl = new URL(request.url);
 
+  // Never proxy private portal overview paths to the public AI Studio origin.
+  // These endpoints require authenticated, tenant-scoped backend services.
+  if (requestUrl.pathname === '/api/b2b/overview' || requestUrl.pathname === '/api/admin/overview') {
+    return jsonError('Private portal data service is not configured for public access.', 503);
+  }
+
   if (requestUrl.pathname === '/api/health' || requestUrl.pathname === '/api/healthz') {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {

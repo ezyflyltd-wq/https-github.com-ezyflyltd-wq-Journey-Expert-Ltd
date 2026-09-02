@@ -125,11 +125,7 @@ export interface VisaCountry {
   code: string;
   flag: string;
   visaType: 'Tourist' | 'Student' | 'Business' | 'Work' | 'Medical';
-  processingTimeDays: number;
-  feeBDT: number;
-  feeUSD: number;
-  embassyInDhaka: boolean;
-  approvalRate: string;
+  officialSource: string;
   requirements: string[];
   documentsRequired: string[];
 }

@@ -50,7 +50,9 @@ import { MainViewModule, PortalType } from './types';
 import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
 import { RouteMetadata } from './seo/RouteMetadata';
 import { DeferredServiceWidget } from './components/seo/DeferredServiceWidget';
+import { FreeVoiceAngelaWidget, isPublicAngelaRoute } from './components/FreeVoiceAngelaWidget';
 import { ServiceRouteShell } from './components/seo/ServiceRouteShell';
+import { ProtectedPortalGate } from './components/ProtectedPortalGate';
 const Home3DExperience = lazy(() => import('./components/home3d/Home3DExperience').then(({ Home3DExperience }) => ({ default: Home3DExperience })));
 import {
   Plane,
@@ -317,16 +319,48 @@ export default function App() {
         )}
 
         {/* CUSTOMER PORTAL VIEW */}
-        {activePortal === 'customer' && <CustomerDashboard />}
+        {activePortal === 'customer' && (
+          <ProtectedPortalGate
+            title="Customer Portal"
+            description="Sign in to view your bookings, visa applications, loyalty activity, support requests, and wallet records."
+            allowedRoles={['customer', 'agent', 'corporate', 'admin']}
+          >
+            <CustomerDashboard />
+          </ProtectedPortalGate>
+        )}
 
         {/* B2B AGENT PORTAL VIEW */}
-        {activePortal === 'agent' && <AgentPortal />}
+        {activePortal === 'agent' && (
+          <ProtectedPortalGate
+            title="B2B Agent Portal"
+            description="Sign in with an authorized Journey Expert partner profile to access B2B services and account tools."
+            allowedRoles={['agent', 'corporate', 'admin']}
+          >
+            <AgentPortal />
+          </ProtectedPortalGate>
+        )}
 
         {/* ADMIN CONTROL CENTER VIEW */}
-        {activePortal === 'admin' && <AdminDashboard />}
+        {activePortal === 'admin' && (
+          <ProtectedPortalGate
+            title="Admin Control Center"
+            description="This owner workspace is restricted to authorized Journey Expert administrators."
+            allowedRoles={['admin']}
+          >
+            <AdminDashboard />
+          </ProtectedPortalGate>
+        )}
 
         {/* ARCHITECTURE & SYSTEM DOCS VIEW */}
-        {activePortal === 'architecture' && <ArchitectureDocsView />}
+        {activePortal === 'architecture' && (
+          <ProtectedPortalGate
+            title="Enterprise Architecture"
+            description="Sign in with an authorized Journey Expert profile to view private architecture and system documentation."
+            allowedRoles={['admin', 'corporate']}
+          >
+            <ArchitectureDocsView />
+          </ProtectedPortalGate>
+        )}
       </main>
 
       {/* Global AI Assistant Modal */}
@@ -338,6 +372,9 @@ export default function App() {
           />
         </Suspense>
       )}
+
+      {/* Public Angela widget; protected portal routes intentionally do not mount it. */}
+      {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && <FreeVoiceAngelaWidget />}
 
       {/* Global Footer */}
       <DeferredFooter onPortalChange={navigateToPortal} onModuleChange={navigateToModule} />

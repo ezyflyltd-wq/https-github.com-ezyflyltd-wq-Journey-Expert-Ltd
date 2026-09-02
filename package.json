@@ -12,7 +12,8 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:free-voice": "node tests/free-voice-widget-check.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

@@ -2,6 +2,13 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import {
+  ANGELA_SYSTEM_PROMPT,
+  fallbackAngelaResponse,
+  parseAngelaResponse,
+  retrieveJelKnowledge,
+  sanitizeHistory,
+} from './server/angelaBrain';
 
 async function startServer() {
   const app = express();
@@ -9,7 +16,9 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Initialize Gemini AI client on the server side
+  // Initialize Gemini AI client on the server side. Keep the model configurable so
+  // production can rotate supported model versions without a source rewrite.
+  const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
   let ai: GoogleGenAI | null = null;
   if (process.env.GEMINI_API_KEY) {
     ai = new GoogleGenAI({
@@ -22,6 +31,49 @@ async function startServer() {
     });
   }
 
+  const makeConversationId = (value: unknown): string => {
+    if (typeof value === 'string' && value.trim()) return value.trim().slice(0, 120);
+    return `angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  };
+
+  const runAngela = async (body: Record<string, unknown>) => {
+    const rawMessage = typeof body.message === 'string' ? body.message : body.prompt;
+    const message = typeof rawMessage === 'string' ? rawMessage.trim().slice(0, 4000) : '';
+    const language = typeof body.language === 'string' ? body.language : undefined;
+    const conversationId = makeConversationId(body.conversationId);
+    const history = sanitizeHistory(body.history);
+
+    if (!message) {
+      const error = new Error('Message is required');
+      (error as Error & { status?: number }).status = 400;
+      throw error;
+    }
+
+    if (!ai) {
+      return { conversationId, ...fallbackAngelaResponse(message, language) };
+    }
+
+    const retrievedContext = retrieveJelKnowledge(message);
+    const contents = [
+      ...history.map((turn) => ({
+        role: turn.role === 'assistant' ? 'model' as const : 'user' as const,
+        parts: [{ text: turn.content }],
+      })),
+      { role: 'user' as const, parts: [{ text: message }] },
+    ];
+    const response = await ai.models.generateContent({
+      model: geminiModel,
+      contents,
+      config: {
+        systemInstruction: `${ANGELA_SYSTEM_PROMPT}\n\nRETRIEVED JEL CONTEXT:\n${retrievedContext}`,
+        responseMimeType: 'application/json',
+        temperature: 0.25,
+      },
+    });
+    const parsed = parseAngelaResponse(response.text || '', message, language);
+    return { conversationId, ...parsed };
+  };
+
   // API Routes
   app.get('/api/health', (req: Request, res: Response) => {
     res.json({
@@ -33,57 +85,21 @@ async function startServer() {
     });
   });
 
-  // AI Assistant Route
-  app.post('/api/ai-assistant', async (req: Request, res: Response) => {
-    const { prompt, systemContext } = req.body;
-
-    if (!prompt) {
-      res.status(400).json({ error: 'Prompt is required' });
-      return;
-    }
-
+  // Shared conversational brain used by text chat and voice transcript requests.
+  const handleAngelaRequest = async (req: Request, res: Response) => {
     try {
-      if (!ai && process.env.GEMINI_API_KEY) {
-        ai = new GoogleGenAI({
-          apiKey: process.env.GEMINI_API_KEY,
-          httpOptions: {
-            headers: {
-              'User-Agent': 'aistudio-build',
-            },
-          },
-        });
-      }
-
-      if (!ai) {
-        // Fallback intelligent response if key is missing or not injected yet
-        res.json({
-          reply: `Welcome to **Journey Expert Ltd. (JEL)** AI Assistant!\n\nRegarding your request: "${prompt}"\n\n- **Flight & GDS Options**: We cross-reference live fares across Sabre, Amadeus, and Travelport Galileo to find optimal routes from Dhaka (DAC).\n- **Visa Requirements**: Please ensure your passport has 6+ months validity and bank statement covers 6 months.\n- **Study Abroad**: Our counselors support application to UK, USA, Canada, Australia, and Malaysia with guaranteed offer letter tracking.\n\n*Note: Add GEMINI_API_KEY in Secrets for live generative AI responses.*`,
-          sources: ['JEL Knowledge Base v2.4', 'Sabre GDS Fare Rule 2026', 'JEL Study Abroad Portal'],
-        });
-        return;
-      }
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: prompt,
-        config: {
-          systemInstruction: systemContext || `You are JEL Assistant, an elite AI travel & global mobility expert for Journey Expert Ltd. (JEL), Bangladesh's leading AI-powered OTA and global mobility platform. You provide expert guidance on flight booking across Sabre, Amadeus, and Galileo, hotel reservations, tour packages (Hajj, Umrah, Halal Tourism, Medical Tourism), visa requirement checklists for Bangladesh passport holders, and study abroad university matching (UK, USA, Canada, Australia, Malaysia). Be helpful, professional, clear, and structured with Markdown formatting and bullet points. Mention prices in BDT (৳) and USD ($).`,
-          temperature: 0.7,
-        },
-      });
-
-      res.json({
-        reply: response.text || 'No response generated.',
-        sources: ['JEL AI Gateway (Gemini 3.6 Flash)', 'Multi-GDS Live Engine', 'JEL Global Mobility Database'],
-      });
+      const payload = await runAngela(req.body as Record<string, unknown>);
+      res.json({ ...payload, response: payload.reply, sources: payload.usedSources });
     } catch (err: any) {
-      console.error('Error in /api/ai-assistant:', err);
-      res.status(500).json({
-        error: 'Failed to process AI response',
-        details: err.message || String(err),
+      const status = Number(err?.status) === 400 ? 400 : 500;
+      console.error('Error in Angela conversational brain:', err);
+      res.status(status).json({
+        error: status === 400 ? 'Message is required' : 'Failed to process Angela response',
       });
     }
-  });
+  };
+
+  app.post('/api/ai-assistant', handleAngelaRequest);
 
   // AI Travel Planner Endpoint
   app.post('/api/ai/planner', async (req: Request, res: Response) => {
@@ -140,35 +156,8 @@ async function startServer() {
     });
   });
 
-  // Voice AI Angela Endpoint
-  app.post('/api/ai/voice-agent', async (req: Request, res: Response) => {
-    const { message, language } = req.body;
-    const lang = language || 'en';
-
-    let responseText = '';
-    let audioTranscript = '';
-
-    if (lang === 'bn') {
-      responseText = `শুভরাত্রি! আমি জর্নি এক্সপার্ট লিমিটেড-এর ভয়েস এআই 'অ্যাঞ্জেলা'। আপনার নির্দেশ অনুযায়ী ইউকে ও কানাডা ভিসা ফাইলিং সংক্রান্ত সকল তথ্য তৈরি রয়েছে। আপনি কি এখনই বুকিং সম্পূর্ণ করতে চান?`;
-      audioTranscript = `[Angela Voice AI • Bangla Synthesizer • Sample Rate 48kHz]`;
-    } else if (lang === 'ar') {
-      responseText = `أهلاً بك! أنا "أنجيلا" المساعد الصوتي من شركة جيرني إكسبرت. نحن نقدم أفضل رحلات العمرة VIP والطيران إلى مكة والمدينة المنورة. كيف يمكنني مساعدتك اليوم؟`;
-      audioTranscript = `[Angela Voice AI • Arabic Synthesizer • Sample Rate 48kHz]`;
-    } else {
-      responseText = `Hello! I am Angela, your JEL Voice AI Specialist. I have verified your flight preference to London Heathrow and your UK visa application status. Would you like me to reserve your seat or connect you to a senior consultant?`;
-      audioTranscript = `[Angela Voice AI • English Synthesizer • Sample Rate 48kHz]`;
-    }
-
-    res.json({
-      language: lang,
-      response: responseText,
-      transcript: audioTranscript,
-      leadQualified: true,
-      leadScore: 94,
-      intent: 'FLIGHT_RESERVATION_VISA_CHECK',
-      suggestedAction: 'TRANSFER_TO_HUMAN_CONSULTANT_IF_NEEDED',
-    });
-  });
+  // Voice transcripts use the same brain as text chat; the client handles speech-to-text and TTS.
+  app.post('/api/ai/voice-agent', handleAngelaRequest);
 
   // Vector DB & RAG Knowledge Retrieval Endpoint
   app.post('/api/ai/rag-search', (req: Request, res: Response) => {
@@ -214,46 +203,13 @@ async function startServer() {
   });
 
   // B2B Travel Agent Portal Endpoint
-  app.get('/api/b2b/overview', (req: Request, res: Response) => {
-    res.json({
-      agentProfile: {
-        agentCode: 'AG-78901',
-        agencyName: 'Dhaka Global Express & Air Travel Ltd.',
-        ownerName: 'Al-Haj Kabir Hossain',
-        tradeLicense: 'TRAD/DNCC/019283/2026',
-        civilAviationNo: 'CAAB/AT/2026/894',
-        tierLevel: 'PLATINUM_IATA',
-        commissionRatePercent: 8.5,
-        creditLimitBDT: 5000000,
-        availableCreditBDT: 3180000,
-        walletDepositBDT: 1840000,
-        performanceScore: 98.4,
-        sabrePCC: '7A9X',
-        amadeusOfficeId: 'DACBG2100',
-        galileoPCC: '5V21',
-      },
-      b2bBookings: [
-        { pnr: 'JEL-B2B-1092', service: 'Flight (DAC-LHR)', passenger: 'Prof. Anisur Rahman', gdsFareBDT: 92000, agentMarkupBDT: 3500, totalChargedBDT: 95500, status: 'TICKETED_ISSUED', date: '2026-08-04' },
-        { pnr: 'JEL-B2B-1093', service: 'Hotel (Hilton Makkah 5*)', passenger: 'Siddique & Family (4 Pax)', gdsFareBDT: 185000, agentMarkupBDT: 8000, totalChargedBDT: 193000, status: 'VOUCHER_CONFIRMED', date: '2026-08-04' },
-        { pnr: 'JEL-B2B-1094', service: 'Visa (UK Priority Visitor)', passenger: 'Nusrat Jahan', gdsFareBDT: 45000, agentMarkupBDT: 5000, totalChargedBDT: 50000, status: 'EMBASSY_SUBMITTED', date: '2026-08-03' },
-      ],
-      whiteLabelConfig: {
-        customDomain: 'booking.dhakaglobaltravel.com',
-        brandName: 'Dhaka Global Air Services',
-        logoUrl: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=300&q=80',
-        primaryColor: '#093F31',
-        secondaryColor: '#C7A44D',
-        siteStatus: 'LIVE_ACTIVE',
-        monthlyVisitorCount: 14200,
-      },
-      apiDistributionKeys: [
-        { keyName: 'Production Flight Search API', apiKey: '••••••••••••••••••••', rateLimitPerMin: 1200, status: 'ACTIVE' },
-        { keyName: 'Hotel Booking Webhook API', apiKey: '••••••••••••••••••••', rateLimitPerMin: 600, status: 'ACTIVE' },
-      ],
-      aiB2BAssistant: {
-        fareYieldPrediction: 'Air Arabia (G9) fares to Sharjah expected to increase 14% on Thursday. Recommend ticketing pending PNRs before 18:00.',
-        creditRiskScore: 'LOW_RISK (100% On-Time Settlement history)',
-      }
+  // Partner data must come from an authenticated, tenant-scoped service. Do not
+  // return the former demo payload from a public route.
+  app.get('/api/b2b/overview', (_req: Request, res: Response) => {
+    res.status(503).json({
+      status: 'not_configured',
+      error: 'B2B partner data service is not connected in this environment.',
+      message: 'No partner records were returned.',
     });
   });
 
@@ -988,58 +944,12 @@ async function startServer() {
   });
 
   // Admin ERP & CRM Overview Endpoint
-  app.get('/api/admin/overview', (req: Request, res: Response) => {
-    res.json({
-      timestamp: new Date().toISOString(),
-      kpis: {
-        totalRevenueBDT: 48500000,
-        monthlyGrowthPercent: 18.4,
-        totalBookings: 1840,
-        flightSalesBDT: 28400000,
-        hotelSalesBDT: 8200000,
-        visaRevenueBDT: 6100000,
-        studyAbroadRevenueBDT: 5800000,
-        activeB2BAgents: 328,
-        visaApprovalRate: '99.2%',
-        totalCustomerWalletBDT: 14200000,
-        totalAgentCreditBDT: 38500000,
-        netProfitMarginPercent: 14.8,
-      },
-      liveSystemHealth: {
-        sabreGDS: 'OPERATIONAL (42ms)',
-        amadeusGDS: 'OPERATIONAL (58ms)',
-        galileoGDS: 'OPERATIONAL (65ms)',
-        sslCommerz: 'ONLINE',
-        bKashPGW: 'ONLINE',
-        nagadPGW: 'ONLINE',
-        stripeGlobal: 'ONLINE',
-        aiGateway: 'GEMINI_3_6_ACTIVE',
-      },
-      recentPNRs: [
-        { pnr: 'JEL-89412', passenger: 'Dr. Rafiqul Islam', route: 'DAC - LHR', airline: 'Biman BG-201', amountBDT: 88500, status: 'TICKETED', payment: 'PAID (bKash)', date: '2026-08-04' },
-        { pnr: 'JEL-89413', passenger: 'Tahmina Begum', route: 'DAC - DXB', airline: 'Emirates EK-583', amountBDT: 54000, status: 'ISSUED', payment: 'PAID (Card)', date: '2026-08-04' },
-        { pnr: 'JEL-89414', passenger: 'Anisur Rahman', route: 'DAC - JED', airline: 'Saudia SV-802', amountBDT: 72000, status: 'HOLD', payment: 'PENDING (Agent Credit)', date: '2026-08-04' },
-      ],
-      pendingVisaApplications: [
-        { id: 'V-2026-901', applicant: 'Farhana Akter', country: 'United Kingdom', type: 'Student (Tier 4)', status: 'EMBASSY_PROCESSING', officer: 'Anowar Hossain', priority: 'HIGH' },
-        { id: 'V-2026-902', applicant: 'Kabir Ahmed', country: 'Canada', type: 'Visitor Visa', status: 'DOCUMENT_VERIFICATION', officer: 'Sabrina Islam', priority: 'MEDIUM' },
-        { id: 'V-2026-903', applicant: 'Zakir Hossain', country: 'Saudi Arabia', type: 'Umrah Visa', status: 'APPROVED', officer: 'Mufti Imran', priority: 'URGENT' },
-      ],
-      leadPipeline: [
-        { leadId: 'LD-4091', name: 'Nusrat Jahan', service: 'Study Abroad UK', valueBDT: 450000, status: 'CAS_ISSUED', score: 96, counselor: 'Tanvir Rahman' },
-        { leadId: 'LD-4092', name: 'Beximco Pharma Corporate Group', service: 'Corporate Flight + Hotel', valueBDT: 1850000, status: 'PROPOSAL_SENT', score: 91, counselor: 'Kamrul Hasan' },
-        { leadId: 'LD-4093', name: 'Al-Haj Siddique', service: 'VIP Umrah Package', valueBDT: 620000, status: 'PAYMENT_RECEIVED', score: 98, counselor: 'Mawlana Faruq' },
-      ],
-      agentWallets: [
-        { agencyName: 'Dhaka Global Travels (Agent #102)', creditLimitBDT: 5000000, balanceBDT: 1840000, status: 'ACTIVE' },
-        { agencyName: 'Chittagong Express Tours (Agent #108)', creditLimitBDT: 3000000, balanceBDT: 420000, status: 'ACTIVE' },
-        { agencyName: 'Sylhet Jet Air Service (Agent #115)', creditLimitBDT: 2500000, balanceBDT: -120000, status: 'CREDIT_HOLD_WARNING' },
-      ],
-      auditLogs: [
-        { time: '23:14:02', user: 'Super Admin (CEO)', action: 'APPROVED_AGENT_CREDIT_LINE', target: 'Chittagong Express (+৳ 500k)', ip: '103.114.22.10' },
-        { time: '22:58:19', user: 'Visa Officer Anowar', action: 'UPLOADED_UKVI_CAS_LETTER', target: 'Student Farhana Akter', ip: '103.114.22.14' },
-        { time: '22:30:45', user: 'AI Yield Engine', action: 'AUTO_SWITCHED_SUPPLIER_GDS', target: 'Sabre -> Amadeus for QR-641', ip: '127.0.0.1' },
-      ],
+  // Owner data must be loaded from an authenticated, role-checked service.
+  app.get('/api/admin/overview', (_req: Request, res: Response) => {
+    res.status(503).json({
+      status: 'not_configured',
+      error: 'Owner operations data service is not connected in this environment.',
+      message: 'No operational records were returned.',
     });
   });
 

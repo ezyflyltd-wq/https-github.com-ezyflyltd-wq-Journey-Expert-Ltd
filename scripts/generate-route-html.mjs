@@ -30,9 +30,9 @@ const publicRoutes = {
     type: 'Service',
   },
   '/visa': {
-    title: 'Visa Consultancy and Application Support | Journey Expert Ltd.',
-    description: 'Get structured visa consultancy, document preparation, checklist review, and application support for global destinations.',
-    keywords: 'visa consultancy Bangladesh, visa application support, UK visa, Canada visa, Schengen visa',
+    title: 'Visa Information and Application Support for Bangladesh Travellers | Journey Expert Ltd.',
+    description: 'Destination research, document preparation, checklist review, and human-assisted visa application support for Bangladesh travellers. Requirements and decisions come from the relevant authority.',
+    keywords: 'visa information Bangladesh, visa application support, UK visa, Canada visa, Schengen visa',
     type: 'Service',
   },
   '/study-abroad': {
@@ -186,7 +186,7 @@ function metadataFor(route) {
 const relatedLinks = [
   { href: '/', label: 'Journey Expert Ltd. home' },
   { href: '/flights', label: 'Flight search from Bangladesh' },
-  { href: '/visa', label: 'Visa consultancy and application support' },
+  { href: '/visa', label: 'Visa information and application support' },
   { href: '/study-abroad', label: 'Study abroad and university admissions' },
   { href: '/hajj-umrah', label: 'Hajj and Umrah travel services' },
 ];
@@ -197,7 +197,7 @@ function staticContentFor(route, seo) {
   const heading = seo.title.split(' | ')[0];
   const links = relatedLinks
     .filter((link) => link.href !== route)
-    .slice(0, route === '/' ? 5 : 3)
+    .slice(0, 5)
     .map((link) => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`)
     .join('');
 
