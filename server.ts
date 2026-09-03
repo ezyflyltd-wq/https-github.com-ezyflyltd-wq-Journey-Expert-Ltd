@@ -188,8 +188,6 @@ async function startServer() {
       });
     }
   };
-    }
-  };
 
   app.post('/api/ai-assistant', handleAngelaRequest);
 
