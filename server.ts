@@ -16,9 +16,71 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Initialize Gemini AI client on the server side. Keep the model configurable so
-  // production can rotate supported model versions without a source rewrite.
-  const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+  // Read-only JEL tool declarations. These never perform bookings, payments, or other
+  // binding actions; they return an explicit integration status until provider APIs are configured.
+  const jelFunctionDeclarations = [
+    {
+      name: 'search_flights',
+      description: 'Search configured GDS providers for flight options. Read-only; never issues or holds a ticket.',
+      parametersJsonSchema: {
+        type: 'object',
+        properties: {
+          origin: { type: 'string', description: 'IATA origin code, for example DAC.' },
+          destination: { type: 'string', description: 'IATA destination code, for example YYZ.' },
+          departureDate: { type: 'string', description: 'ISO date YYYY-MM-DD.' },
+          returnDate: { type: 'string', description: 'Optional ISO return date YYYY-MM-DD.' },
+          passengers: { type: 'integer', description: 'Number of passengers.' },
+        },
+        required: ['origin', 'destination', 'departureDate'],
+      },
+    },
+    {
+      name: 'search_hotels',
+      description: 'Search configured hotel providers for availability. Read-only; never makes a reservation.',
+      parametersJsonSchema: {
+        type: 'object',
+        properties: {
+          city: { type: 'string', description: 'Destination city.' },
+          checkIn: { type: 'string', description: 'ISO date YYYY-MM-DD.' },
+          checkOut: { type: 'string', description: 'ISO date YYYY-MM-DD.' },
+          guests: { type: 'integer', description: 'Number of guests.' },
+        },
+        required: ['city', 'checkIn', 'checkOut'],
+      },
+    },
+    {
+      name: 'get_booking_status',
+      description: 'Retrieve the status of a booking from a configured provider. Read-only; never changes a booking.',
+      parametersJsonSchema: {
+        type: 'object',
+        properties: {
+          bookingReference: { type: 'string', description: 'Provider booking reference.' },
+        },
+        required: ['bookingReference'],
+      },
+    },
+  ];
+
+  type JelToolCall = { name: string; args?: Record<string, unknown> };
+
+  async function executeJelReadOnlyTool(call: JelToolCall) {
+    const supportedTools = new Set(jelFunctionDeclarations.map((tool) => tool.name));
+    if (!supportedTools.has(call.name)) {
+      return { status: 'UNSUPPORTED_TOOL', tool: call.name };
+    }
+
+    // Provider integrations are intentionally not faked. Return a structured result
+    // so Angela can explain that a human/provider connection is required.
+    return {
+      status: 'PROVIDER_INTEGRATION_REQUIRED',
+      tool: call.name,
+      requestedParameters: call.args || {},
+      message: 'No live provider connector is configured for this read-only tool. Do not invent availability, prices, or booking status.',
+    };
+  }
+
+  // Keep model selection configurable while defaulting to the supported production model.
+  const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
   let ai: GoogleGenAI | null = null;
   if (process.env.GEMINI_API_KEY) {
     ai = new GoogleGenAI({
@@ -68,10 +130,38 @@ async function startServer() {
         systemInstruction: `${ANGELA_SYSTEM_PROMPT}\n\nRETRIEVED JEL CONTEXT:\n${retrievedContext}`,
         responseMimeType: 'application/json',
         temperature: 0.25,
+        tools: [{ functionDeclarations: jelFunctionDeclarations }],
       },
     });
-    const parsed = parseAngelaResponse(response.text || '', message, language);
-    return { conversationId, ...parsed };
+
+    const functionCalls = (response as any).functionCalls || [];
+    let responseText = response.text || '';
+    if (functionCalls.length) {
+      const modelParts = (response as any).candidates?.[0]?.content?.parts || [];
+      const toolParts = await Promise.all(functionCalls.map(async (call: JelToolCall) => ({
+        functionResponse: {
+          name: call.name,
+          response: await executeJelReadOnlyTool(call),
+        },
+      })));
+      const followUp = await ai.models.generateContent({
+        model: geminiModel,
+        contents: [
+          ...contents,
+          { role: 'model' as const, parts: modelParts },
+          { role: 'user' as const, parts: toolParts },
+        ],
+        config: {
+          systemInstruction: `${ANGELA_SYSTEM_PROMPT}\n\nRETRIEVED JEL CONTEXT:\n${retrievedContext}`,
+          responseMimeType: 'application/json',
+          temperature: 0.25,
+        },
+      });
+      responseText = followUp.text || responseText;
+    }
+
+    const parsed = parseAngelaResponse(responseText, message, language);
+    return { conversationId, ...parsed, toolCalls: functionCalls.map((call: JelToolCall) => call.name) };
   };
 
   // API Routes
