@@ -7,6 +7,7 @@ const widgetPath = path.join(root, 'src/components/FreeVoiceAngelaWidget.tsx');
 const appPath = path.join(root, 'src/App.tsx');
 const widget = fs.readFileSync(widgetPath, 'utf8');
 const app = fs.readFileSync(appPath, 'utf8');
+const server = fs.readFileSync(path.join(root, 'server.ts'), 'utf8');
 
 assert.equal(widget.includes('getSpeechRecognition'), true, 'the widget must include browser speech recognition');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
@@ -17,6 +18,8 @@ assert.equal(widget.includes('fixed bottom-4 right-4'), true, 'the public launch
 assert.equal(widget.includes('Talk to Angela · কথা বলুন'), true, 'the launcher must be customer-visible and bilingual');
 assert.equal(app.includes("activePortal === 'main' && isPublicAngelaRoute(location.pathname)"), true, 'the widget must remain limited to approved public routes');
 assert.equal(app.includes('FreeVoiceAngelaWidget'), true, 'the app must mount the free voice widget');
+assert.equal(server.includes("app.post('/api/voice/elevenlabs'"), true, 'the server must expose the ElevenLabs proxy');
+assert.equal(server.includes("app.get('/api/voice/status'"), true, 'the server must expose voice provider status');
+assert.equal(server.includes("'xi-api-key': apiKey"), true, 'the ElevenLabs key must be sent server-side');
 
 console.log('Free Angela voice widget checks passed.');
-
