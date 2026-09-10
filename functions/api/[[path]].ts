@@ -17,6 +17,35 @@ function jsonError(message: string, status: number): Response {
   });
 }
 
+async function elevenLabsResponse(request: Request, env: Record<string, string | undefined>): Promise<Response> {
+  const apiKey = env.ELEVENLABS_API_KEY;
+  const voiceId = env.ELEVENLABS_VOICE_ID;
+  if (request.method !== 'POST') return jsonError('Method Not Allowed', 405);
+  const body = await request.json().catch(() => ({})) as { text?: unknown; language?: unknown };
+  const text = typeof body.text === 'string' ? body.text.trim().slice(0, 5000) : '';
+  if (!text) return jsonError('Text is required', 400);
+  if (!apiKey || !voiceId) {
+    return new Response(JSON.stringify({ error: 'ElevenLabs is not configured', configured: false, fallback: 'browser-speech-synthesis' }), {
+      status: 503,
+      headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+    });
+  }
+  const upstream = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
+    method: 'POST',
+    headers: { accept: 'audio/mpeg', 'content-type': 'application/json', 'xi-api-key': apiKey },
+    body: JSON.stringify({
+      text,
+      model_id: env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2',
+      output_format: env.ELEVENLABS_OUTPUT_FORMAT || 'mp3_44100_128',
+      voice_settings: { stability: 0.48, similarity_boost: 0.78, style: 0.18, use_speaker_boost: true },
+    }),
+  });
+  if (!upstream.ok) return jsonError('ElevenLabs request failed', 502);
+  const headers = new Headers(upstream.headers);
+  headers.set('cache-control', 'no-store');
+  return new Response(upstream.body, { status: upstream.status, headers });
+}
+
 export const onRequest = async (context: PagesContext): Promise<Response> => {
   const { request, env } = context;
 
@@ -52,6 +81,22 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
       });
     }
     return healthResponse(request);
+  }
+
+  if (requestUrl.pathname === '/api/voice/status') {
+    return new Response(JSON.stringify({
+      provider: 'elevenlabs',
+      configured: Boolean(env.ELEVENLABS_API_KEY && env.ELEVENLABS_VOICE_ID),
+      fallback: 'browser-speech-synthesis',
+    }), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+  }
+
+  if (requestUrl.pathname === '/api/voice/elevenlabs') {
+    try {
+      return await elevenLabsResponse(request, env);
+    } catch {
+      return jsonError('ElevenLabs proxy unavailable', 502);
+    }
   }
 
   const origin = (env.AI_STUDIO_ORIGIN || DEFAULT_AI_STUDIO_ORIGIN).replace(/\/$/, '');
