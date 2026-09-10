@@ -159,6 +159,55 @@ async function startServer() {
   // Voice transcripts use the same brain as text chat; the client handles speech-to-text and TTS.
   app.post('/api/ai/voice-agent', handleAngelaRequest);
 
+  // Optional ElevenLabs TTS proxy. The API key stays server-side; when it is not
+  // configured the client continues using browser speech synthesis as a safe fallback.
+  app.get('/api/voice/status', (_req: Request, res: Response) => {
+    res.json({
+      provider: 'elevenlabs',
+      configured: Boolean(process.env.ELEVENLABS_API_KEY && process.env.ELEVENLABS_VOICE_ID),
+      voiceId: process.env.ELEVENLABS_VOICE_ID || 'default-not-configured',
+      fallback: 'browser-speech-synthesis',
+    });
+  });
+
+  app.post('/api/voice/elevenlabs', async (req: Request, res: Response) => {
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    const voiceId = process.env.ELEVENLABS_VOICE_ID;
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim().slice(0, 5000) : '';
+    const language = req.body?.language === 'bn' ? 'bn' : 'en';
+
+    if (!text) return res.status(400).json({ error: 'Text is required' });
+    if (!apiKey || !voiceId) {
+      return res.status(503).json({ error: 'ElevenLabs is not configured', configured: false, fallback: 'browser-speech-synthesis' });
+    }
+
+    try {
+      const upstream = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
+        method: 'POST',
+        headers: { accept: 'audio/mpeg', 'content-type': 'application/json', 'xi-api-key': apiKey },
+        body: JSON.stringify({
+          text,
+          model_id: process.env.ELEVENLABS_MODEL_ID || (language === 'bn' ? 'eleven_multilingual_v2' : 'eleven_multilingual_v2'),
+          output_format: process.env.ELEVENLABS_OUTPUT_FORMAT || 'mp3_44100_128',
+          voice_settings: { stability: 0.48, similarity_boost: 0.78, style: 0.18, use_speaker_boost: true },
+        }),
+      });
+
+      if (!upstream.ok) {
+        const detail = await upstream.text();
+        console.error('ElevenLabs upstream error:', upstream.status, detail.slice(0, 500));
+        return res.status(502).json({ error: 'ElevenLabs request failed', upstreamStatus: upstream.status });
+      }
+
+      res.setHeader('Content-Type', upstream.headers.get('content-type') || 'audio/mpeg');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.send(Buffer.from(await upstream.arrayBuffer()));
+    } catch (error) {
+      console.error('ElevenLabs proxy error:', error);
+      return res.status(502).json({ error: 'ElevenLabs proxy unavailable' });
+    }
+  });
+
   // Vector DB & RAG Knowledge Retrieval Endpoint
   app.post('/api/ai/rag-search', (req: Request, res: Response) => {
     const { query } = req.body;

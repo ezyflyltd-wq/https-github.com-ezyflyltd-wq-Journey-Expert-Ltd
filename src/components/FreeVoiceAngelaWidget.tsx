@@ -113,17 +113,28 @@ export function FreeVoiceAngelaWidget() {
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastReply, setLastReply] = useState('');
   const [error, setError] = useState('');
+  const [voiceProvider, setVoiceProvider] = useState<'elevenlabs' | 'browser'>('browser');
   const [conversationId] = useState(() => `angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
   const [history, setHistory] = useState<ConversationTurn[]>([]);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const recognitionSupported = Boolean(getSpeechRecognition());
 
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
+      audioRef.current?.pause();
+      if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
       if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
     };
+  }, []);
+
+  useEffect(() => {
+    void fetch('/api/voice/status')
+      .then((response) => response.json())
+      .then((data) => setVoiceProvider(data.configured ? 'elevenlabs' : 'browser'))
+      .catch(() => setVoiceProvider('browser'));
   }, []);
 
   useEffect(() => {
@@ -139,8 +150,8 @@ export function FreeVoiceAngelaWidget() {
     setIsOpen(true);
   };
 
-  const speak = (text: string) => {
-    if (!voiceEnabled || typeof window === 'undefined' || !window.speechSynthesis) return;
+  const speakWithBrowser = (text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text.replace(/[*#_`]/g, ''));
     utterance.lang = language === 'bn' ? 'bn-BD' : 'en-US';
@@ -148,6 +159,28 @@ export function FreeVoiceAngelaWidget() {
     utterance.rate = 1.03;
     utterance.pitch = 1.02;
     window.speechSynthesis.speak(utterance);
+  };
+
+  const speak = async (text: string) => {
+    if (!voiceEnabled) return;
+    try {
+      const response = await fetch('/api/voice/elevenlabs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, language }),
+      });
+      if (!response.ok) throw new Error('ElevenLabs is not configured');
+      const audioUrl = URL.createObjectURL(await response.blob());
+      audioRef.current?.pause();
+      if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      setVoiceProvider('elevenlabs');
+      await audio.play();
+    } catch {
+      setVoiceProvider('browser');
+      speakWithBrowser(text);
+    }
   };
 
   const askAssistant = async (prompt: string) => {
@@ -178,12 +211,12 @@ export function FreeVoiceAngelaWidget() {
         { role: 'assistant', content: reply },
       ].slice(-12));
       setLastReply(reply);
-      speak(reply);
+      void speak(reply);
     } catch {
       const fallback = getFallbackReply(cleanPrompt);
       setLastReply(fallback);
       setError('Live AI is temporarily unavailable, so a safe support message is shown.');
-      speak(fallback);
+      void speak(fallback);
     } finally {
       setIsLoading(false);
     }
@@ -230,6 +263,7 @@ export function FreeVoiceAngelaWidget() {
   const resetConversation = () => {
     recognitionRef.current?.stop();
     window.speechSynthesis?.cancel();
+    audioRef.current?.pause();
     setHistory([]);
     setLastTranscript('');
     setLastReply('');
@@ -295,6 +329,9 @@ export function FreeVoiceAngelaWidget() {
               <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => setVoiceEnabled((value) => !value)} className="rounded-lg border border-[#E8E1CF] p-2 hover:bg-[#F1E9D3]">{voiceEnabled ? <Volume2 className="h-4 w-4 text-[#0B6B53]" /> : <VolumeX className="h-4 w-4 text-[#777777]" />}</button>
             </div>
             <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{recognitionSupported ? 'Ask Angela a question in Bangla, Banglish, or English. She will keep the conversation context.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0B6B53]" data-testid="voice-provider-status">
+              Voice output: {voiceProvider === 'elevenlabs' ? 'ElevenLabs API' : 'Browser fallback'}
+            </p>
             <div className="flex justify-center">
               {isListening ? (
                 <button type="button" onClick={stopListening} className="inline-flex items-center gap-2 rounded-full bg-[#B42318] px-5 py-3 font-bold text-white shadow-md"><MicOff className="h-4 w-4" /> Stop listening</button>
@@ -322,4 +359,3 @@ export function FreeVoiceAngelaWidget() {
     </div>
   );
 }
-
