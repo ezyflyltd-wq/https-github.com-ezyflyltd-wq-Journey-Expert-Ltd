@@ -94,6 +94,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'access-control-allow-origin': ALLOWED_ORIGIN, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'Content-Type' } });
     if (url.pathname === '/api/health' || url.pathname === '/api/healthz' || url.pathname === '/api/ai/health') return json({ status: 'online', service: 'Angela API Gateway', version: '4.0.0', aiConfigured: Boolean(env.GEMINI_API_KEY), models: [env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL], timestamp: new Date().toISOString() });
+    if (url.pathname === '/api/voice/status' && request.method === 'GET') return json({ configured: false, provider: 'browser' });
     if (url.pathname !== '/api/ai-assistant' && url.pathname !== '/api/ai/voice-agent') return json({ error: 'Not found' }, 404);
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
     let body;
@@ -143,3 +144,4 @@ export default {
     return json({ conversationId, ...payload, response: payload.reply, sources: payload.usedSources });
   },
 };
+
