@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { normalizePath } from '../routing/routes';
+import { fetchAngelaSpeech, voiceErrorMessage } from '../lib/angelaAudio';
 
 type SpeechRecognitionEventLike = {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -113,16 +114,39 @@ export function FreeVoiceAngelaWidget() {
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastReply, setLastReply] = useState('');
   const [error, setError] = useState('');
-  const [voiceProvider, setVoiceProvider] = useState<'elevenlabs' | 'browser'>('browser');
-  const [conversationId] = useState(() => `angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+  const [voiceProvider, setVoiceProvider] = useState<'elevenlabs' | 'browser' | 'gemini'>('browser');
+  const [conversationId, setConversationId] = useState(() => `angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
   const [history, setHistory] = useState<ConversationTurn[]>([]);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const speechRequestRef = useRef<AbortController | null>(null);
+  const chatRequestRef = useRef<AbortController | null>(null);
+  const voiceEnabledRef = useRef(voiceEnabled);
+  voiceEnabledRef.current = voiceEnabled;
+  const stopAudio = () => {
+    speechRequestRef.current?.abort();
+    speechRequestRef.current = null;
+    audioRef.current?.pause();
+    if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
+    audioRef.current = null;
+    window.speechSynthesis?.cancel();
+  };
+  const cancelChat = () => {
+    chatRequestRef.current?.abort();
+    chatRequestRef.current = null;
+    setIsLoading(false);
+  };
 
   const recognitionSupported = Boolean(getSpeechRecognition());
 
   useEffect(() => {
     return () => {
+      chatRequestRef.current?.abort();
+      chatRequestRef.current = null;
+      speechRequestRef.current?.abort();
+      speechRequestRef.current = null;
+      if (recognitionRef.current) recognitionRef.current.onresult = null;
       recognitionRef.current?.stop();
       audioRef.current?.pause();
       if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
@@ -139,6 +163,9 @@ export function FreeVoiceAngelaWidget() {
 
   useEffect(() => {
     if (!isOpen) {
+      stopAudio();
+      cancelChat();
+      if (recognitionRef.current) recognitionRef.current.onresult = null;
       recognitionRef.current?.stop();
       setIsListening(false);
     }
@@ -154,23 +181,58 @@ export function FreeVoiceAngelaWidget() {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text.replace(/[*#_`]/g, ''));
-    utterance.lang = language === 'bn' ? 'bn-BD' : 'en-US';
-    utterance.voice = getPreferredFemaleVoice(language) || null;
+    const replyLanguage = /[\u0980-\u09FF]/.test(text) ? 'bn' : language;
+    utterance.lang = replyLanguage === 'bn' ? 'bn-BD' : 'en-US';
+    utterance.voice = getPreferredFemaleVoice(replyLanguage) || null;
     utterance.rate = 1.03;
     utterance.pitch = 1.02;
     window.speechSynthesis.speak(utterance);
   };
 
   const speak = async (text: string) => {
-    if (!voiceEnabled) return;
+    stopAudio();
+    if (!voiceEnabledRef.current) return;
+    const needsBanglaAudio = /[\u0980-\u09FF]/.test(text) && !getPreferredFemaleVoice('bn');
+    if (needsBanglaAudio) {
+      const controller = new AbortController();
+      speechRequestRef.current = controller;
+      const timer = setTimeout(() => controller.abort(), 30000);
+      try {
+        const blob = await fetchAngelaSpeech(text.replace(/[*#_`]/g, ''), controller.signal);
+        if (speechRequestRef.current !== controller || !voiceEnabledRef.current) return;
+        const audio = new Audio(URL.createObjectURL(blob));
+        audioRef.current = audio;
+        audio.onended = () => { if (audioRef.current === audio) stopAudio(); };
+        audio.onerror = () => {
+          if (audioRef.current !== audio) return;
+          stopAudio(); setError('কণ্ঠ চালানো যায়নি। Listen চেপে আবার চেষ্টা করুন।');
+        };
+        await audio.play();
+        setVoiceProvider('gemini');
+      } catch (error) {
+        if (speechRequestRef.current !== controller || !voiceEnabledRef.current) return;
+        stopAudio(); setError(voiceErrorMessage(error));
+      } finally {
+        clearTimeout(timer);
+        if (speechRequestRef.current === controller) speechRequestRef.current = null;
+      }
+      return;
+    }
+    if (voiceProvider !== 'elevenlabs') { speakWithBrowser(text); return; }
+    const controller = new AbortController();
+    speechRequestRef.current = controller;
+    const timer = setTimeout(() => controller.abort(), 6000);
     try {
       const response = await fetch('/api/voice/elevenlabs', {
+        signal: controller.signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, language }),
       });
       if (!response.ok) throw new Error('ElevenLabs is not configured');
-      const audioUrl = URL.createObjectURL(await response.blob());
+      const blob = await response.blob();
+      if (speechRequestRef.current !== controller || !voiceEnabledRef.current) return;
+      const audioUrl = URL.createObjectURL(blob);
       audioRef.current?.pause();
       if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
       const audio = new Audio(audioUrl);
@@ -178,14 +240,22 @@ export function FreeVoiceAngelaWidget() {
       setVoiceProvider('elevenlabs');
       await audio.play();
     } catch {
+      if (speechRequestRef.current !== controller || !voiceEnabledRef.current) return;
       setVoiceProvider('browser');
       speakWithBrowser(text);
+    } finally {
+      clearTimeout(timer);
+      if (speechRequestRef.current === controller) speechRequestRef.current = null;
     }
   };
 
   const askAssistant = async (prompt: string) => {
     const cleanPrompt = prompt.trim();
-    if (!cleanPrompt || isLoading) return;
+    if (!cleanPrompt || chatRequestRef.current) return;
+    stopAudio();
+    const controller = new AbortController();
+    chatRequestRef.current = controller;
+    const timer = setTimeout(() => controller.abort(), 45000);
     setIsLoading(true);
     setError('');
     setLastTranscript(cleanPrompt);
@@ -193,6 +263,7 @@ export function FreeVoiceAngelaWidget() {
 
     try {
       const response = await fetch('/api/ai/voice-agent', {
+        signal: controller.signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -204,6 +275,7 @@ export function FreeVoiceAngelaWidget() {
       });
       if (!response.ok) throw new Error('AI endpoint unavailable');
       const data = await response.json();
+      if (chatRequestRef.current !== controller) return;
       const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt));
       setHistory((turns) => [
         ...turns,
@@ -213,22 +285,30 @@ export function FreeVoiceAngelaWidget() {
       setLastReply(reply);
       void speak(reply);
     } catch {
+      if (chatRequestRef.current !== controller) return;
       const fallback = getFallbackReply(cleanPrompt);
       setLastReply(fallback);
       setError('Live AI is temporarily unavailable, so a safe support message is shown.');
       void speak(fallback);
     } finally {
-      setIsLoading(false);
+      clearTimeout(timer);
+      if (chatRequestRef.current === controller) {
+        chatRequestRef.current = null;
+        setIsLoading(false);
+      }
     }
   };
 
   const startListening = () => {
+    stopAudio();
+    cancelChat();
     const Recognition = getSpeechRecognition();
     if (!Recognition) {
       setError('Voice input is not available in this browser. You can type your question below.');
       return;
     }
 
+    if (recognitionRef.current) recognitionRef.current.onresult = null;
     recognitionRef.current?.stop();
     const recognition = new Recognition();
     recognition.lang = language === 'bn' ? 'bn-BD' : 'en-US';
@@ -261,6 +341,10 @@ export function FreeVoiceAngelaWidget() {
   };
 
   const resetConversation = () => {
+    stopAudio();
+    cancelChat();
+    setConversationId(`angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+    if (recognitionRef.current) recognitionRef.current.onresult = null;
     recognitionRef.current?.stop();
     window.speechSynthesis?.cancel();
     audioRef.current?.pause();
@@ -292,8 +376,8 @@ export function FreeVoiceAngelaWidget() {
             <aside role="dialog" aria-modal="true" aria-labelledby="free-angela-disclosure-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[#C7A44D]/60 bg-[#FFFDF6] p-5 text-left shadow-2xl sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0B6B53]">Journey Expert Ltd. AI support</p>
               <h2 id="free-angela-disclosure-title" className="mt-1 text-xl font-bold text-[#093F31]">Before you talk with Angela</h2>
-              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input may be processed by your browser’s speech service, and the transcript is sent to Journey Expert’s AI endpoint to generate a reply. This free version does not use ElevenLabs.</p>
-              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনার ব্রাউজারের speech service ভয়েস ইনপুট প্রক্রিয়া করতে পারে এবং উত্তর তৈরির জন্য transcript Journey Expert-এর AI endpoint-এ পাঠানো হয়। এই free version-এ ElevenLabs ব্যবহার করা হয় না।</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input may be processed by your browser’s speech service, and the transcript is sent to Journey Expert’s AI endpoint to generate a reply. Browser voice is the default. If premium voice is configured, reply text may be sent to ElevenLabs for speech. If your browser has no Bangla voice, reply text is sent to Google to generate Bangla audio.</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনার ব্রাউজারের speech service ভয়েস ইনপুট প্রক্রিয়া করতে পারে এবং উত্তর তৈরির জন্য transcript Journey Expert-এর AI endpoint-এ পাঠানো হয়। ডিফল্টভাবে ব্রাউজারের ভয়েস ব্যবহৃত হয়। প্রিমিয়াম ভয়েস চালু থাকলে উত্তরের লেখা ElevenLabs-এ পাঠানো হতে পারে। ব্রাউজারে বাংলা কণ্ঠ না থাকলে বাংলা audio তৈরিতে উত্তরের লেখা Google-এ পাঠানো হয়।</p>
               <p className="mt-3 text-xs leading-5 text-[#555555]">Replies may be incomplete or inaccurate. Do not share passport, bank, payment, password, or other sensitive information. For verified support, call <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
               <div className="mt-4 flex flex-col gap-3 border-t border-[#E8E1CF] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button type="button" className="inline-flex min-h-11 items-center justify-center bg-[#093F31] px-5 py-3 text-sm font-bold text-white hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" onClick={acceptDisclosure}>Agree and continue / সম্মত হয়ে চালিয়ে যান</button>
@@ -323,14 +407,14 @@ export function FreeVoiceAngelaWidget() {
           <div className="space-y-3 p-4 text-xs text-[#333333]">
             <div className="flex items-center justify-between gap-2">
               <div className="flex gap-1">
-                <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'en' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => setLanguage('en')}>English</button>
-                <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'bn' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => setLanguage('bn')}>বাংলা</button>
+                <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'en' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => { resetConversation(); setLanguage('en'); }}>English</button>
+                <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'bn' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => { resetConversation(); setLanguage('bn'); }}>বাংলা</button>
               </div>
-              <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => setVoiceEnabled((value) => !value)} className="rounded-lg border border-[#E8E1CF] p-2 hover:bg-[#F1E9D3]">{voiceEnabled ? <Volume2 className="h-4 w-4 text-[#0B6B53]" /> : <VolumeX className="h-4 w-4 text-[#777777]" />}</button>
+              <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => { stopAudio(); voiceEnabledRef.current = !voiceEnabled; setVoiceEnabled(!voiceEnabled); }} className="rounded-lg border border-[#E8E1CF] p-2 hover:bg-[#F1E9D3]">{voiceEnabled ? <Volume2 className="h-4 w-4 text-[#0B6B53]" /> : <VolumeX className="h-4 w-4 text-[#777777]" />}</button>
             </div>
             <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{recognitionSupported ? 'Ask Angela a question in Bangla, Banglish, or English. She will keep the conversation context.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0B6B53]" data-testid="voice-provider-status">
-              Voice output: {voiceProvider === 'elevenlabs' ? 'ElevenLabs API' : 'Browser fallback'}
+              Voice output: {voiceProvider === 'gemini' ? 'বাংলা AI voice' : voiceProvider === 'elevenlabs' ? 'ElevenLabs API' : 'Browser voice'}
             </p>
             <div className="flex justify-center">
               {isListening ? (
@@ -359,3 +443,4 @@ export function FreeVoiceAngelaWidget() {
     </div>
   );
 }
+
