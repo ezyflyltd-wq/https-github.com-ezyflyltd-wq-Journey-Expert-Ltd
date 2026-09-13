@@ -1,3 +1,4 @@
+import { onRequest as speech } from '../functions/angela/speech.ts';
 const ALLOWED_ORIGIN = 'https://journeyexpertltd.com';
 const PRIMARY_MODEL = 'gemini-3.7-flash';
 const FALLBACK_MODEL = 'gemini-3.6-flash';
@@ -18,11 +19,18 @@ const KNOWLEDGE = [
   ['hajj umrah হজ ওমরাহ মক্কা মদিনা', 'JEL can assist with Hajj and Umrah enquiries, including packages, travel, accommodation, transport, and visa guidance. Price and availability must be confirmed for the requested season.', 'JEL Hajj and Umrah Service Guide'],
 ];
 
+const COMPANY_CONTEXT = `Journey Expert Limited (JEL) operates JourneyExpertLtd.com for travel and global mobility and JourneyExpertBD.com for JEL Study Abroad. Both use Angela, the company's AI assistant.
+Office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215, Bangladesh.
+Customer phone: +880 1926-400400. Office phone: +880 2 9830404.
+Travel email: journeyexpertltd@gmail.com. Study abroad email: journeyexpertbd@gmail.com.
+Services: air-ticket enquiries, hotels, domestic and international tours, visa-document guidance, Hajj and Umrah, study-abroad counseling, university applications, scholarship guidance, corporate and group travel.
+These are company contact and service details from the company's website. Opening hours, current prices, university partnerships, accreditation, live inventory and application outcomes must be confirmed by the team.`;
+
 function languageOf(text, requested) {
   if (['bn', 'en', 'ar'].includes(requested)) return requested;
   if (/[\u0600-\u06FF]/.test(text)) return 'ar';
   if (/[\u0980-\u09FF]/.test(text)) return 'bn';
-  if (/\b(ami|apni|chai|jabo|jete|koto|kivabe|ki|dhaka|dubai|visa|ticket|hobe|korbo|lagbe|den)\b/i.test(text)) return 'bn';
+  if (/\b(ami|apni|chai|jabo|jete|koto|kivabe|hobe|korbo|lagbe|apnader|kothay|banglay)\b/i.test(text)) return 'bn';
   return 'en';
 }
 
@@ -30,7 +38,7 @@ function contextFor(query) {
   const normalized = query.toLocaleLowerCase();
   const matches = KNOWLEDGE.map(([keywords, text, source]) => ({ keywords, text, source, score: keywords.split(' ').filter((k) => normalized.includes(k)).length }))
     .filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 3);
-  return matches.length ? matches.map((item) => `[${item.source}] ${item.text}`).join('\n') : 'No specific JEL knowledge entry matched. Do not invent an answer; explain what can be verified and offer human support.';
+  return `[JEL Company Contact and Service Information] ${COMPANY_CONTEXT}\n` + (matches.length ? matches.map((item) => `[${item.source}] ${item.text}`).join('\n') : 'No additional service entry matched. Use company facts above or offer human support.');
 }
 
 function safeLead(value) {
@@ -77,9 +85,9 @@ async function fetchWithTimeout(url, options, timeoutMs = GEMINI_TIMEOUT_MS) {
 }
 
 async function callGemini(env, model, message, language, history) {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   const contents = [...(Array.isArray(history) ? history : []).slice(-12).map((turn) => ({ role: turn && turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: String(turn && turn.content || '').slice(0, 2000) }] })), { role: 'user', parts: [{ text: message }] }];
-  const response = await fetchWithTimeout(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\nRetrieved JEL context:\n${contextFor(message)}\n\nLanguage hint: ${language}` }] }, contents, generationConfig: { temperature: 0.25, responseMimeType: 'application/json' } }) });
+  const response = await fetchWithTimeout(endpoint, { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY }, body: JSON.stringify({ systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\nRetrieved JEL context:\n${contextFor(message)}\n\nRequired response language: ${language}. Use Bengali script for bn, English for en. Keep the spoken reply below 150 words.` }] }, contents, generationConfig: { temperature: 0.25, responseMimeType: 'application/json' } }) });
   if (!response.ok) throw new Error(`Gemini HTTP ${response.status}`);
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
@@ -92,8 +100,10 @@ async function callGemini(env, model, message, language, history) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === '/api/angela/speech') return speech({ request, env });
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'access-control-allow-origin': ALLOWED_ORIGIN, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'Content-Type' } });
     if (url.pathname === '/api/health' || url.pathname === '/api/healthz' || url.pathname === '/api/ai/health') return json({ status: 'online', service: 'Angela API Gateway', version: '4.0.0', aiConfigured: Boolean(env.GEMINI_API_KEY), models: [env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL], timestamp: new Date().toISOString() });
+    if (url.pathname === '/api/voice/status' && request.method === 'GET') return json({ configured: false, provider: 'browser' });
     if (url.pathname !== '/api/ai-assistant' && url.pathname !== '/api/ai/voice-agent') return json({ error: 'Not found' }, 404);
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
     let body;
@@ -120,6 +130,7 @@ export default {
         try { payload = await callGemini(env, model, message, language, history); break; } catch (error) { console.error(`Angela model failed: ${model}`, error); }
       }
     }
+    const mode = payload ? 'ai' : 'fallback';
     payload ||= fallback(message, language);
     if (payload.handoffRequired && env.HANDOFF_WEBHOOK_URL) {
       const handoffEvent = {
@@ -140,6 +151,8 @@ export default {
         body: JSON.stringify(handoffEvent),
       }, 5000).catch((error) => console.error('Handoff webhook failed', error)));
     }
-    return json({ conversationId, ...payload, response: payload.reply, sources: payload.usedSources });
+    return json({ conversationId, ...payload, mode, response: payload.reply, sources: payload.usedSources });
   },
 };
+
+
