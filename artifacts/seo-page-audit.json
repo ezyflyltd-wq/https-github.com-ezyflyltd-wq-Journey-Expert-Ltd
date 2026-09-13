@@ -1,0 +1,532 @@
+{
+  "checkedAt": "2026-09-13T05:07:34.686Z",
+  "siteUrl": "https://journeyexpertltd.com",
+  "sitemapUrl": "https://journeyexpertltd.com/sitemap.xml",
+  "sitemapStatus": 200,
+  "sitemapContentType": "application/xml; charset=utf-8",
+  "urlCount": 25,
+  "indexableTechnicalChecks": 25,
+  "technicalFailures": 0,
+  "results": [
+    {
+      "url": "https://journeyexpertltd.com/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 352.9,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/",
+      "title": "Journey Expert Ltd. | AI Travel, Visa &amp; Global Mobility",
+      "h1Count": 1,
+      "internalLinkCount": 4,
+      "internalLinks": [
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/flights",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 2001.3,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/flights",
+      "title": "Flight Search from Bangladesh | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 4,
+      "internalLinks": [
+        "/",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/hotels",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 2102,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/hotels",
+      "title": "Halal Hotels and Accommodation | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/packages",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 1862.9,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/packages",
+      "title": "Tour Packages and Holidays | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/visa",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 611.7,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/visa",
+      "title": "Visa Information and Application Support for Bangladesh Travellers | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 4,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/study-abroad",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 524.3,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/study-abroad",
+      "title": "Study Abroad and University Admissions | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 4,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/hajj-umrah",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 609,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/hajj-umrah",
+      "title": "Hajj and Umrah Travel Services | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 4,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/healthcare-insurance",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 422.5,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/healthcare-insurance",
+      "title": "Travel Healthcare and Insurance Support | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/concierge",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 596.3,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/concierge",
+      "title": "Airport Concierge and Meet &amp; Greet | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/craft-bangla",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 609.1,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/craft-bangla",
+      "title": "Craft Bangla Heritage Marketplace | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/corporate-travel",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 646.6,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/corporate-travel",
+      "title": "Corporate Travel Management | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/dmc-marketplace",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 595.2,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/dmc-marketplace",
+      "title": "DMC and Destination Marketplace | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/b2b-marketplace",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 425.5,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/b2b-marketplace",
+      "title": "B2B Travel Marketplace | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/mobile-apps",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 347.7,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/mobile-apps",
+      "title": "Journey Expert Mobile Apps | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/seo-growth",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 659,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/seo-growth",
+      "title": "SEO and Growth Platform | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/customer-support",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 596.3,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/customer-support",
+      "title": "Customer Support and AI Contact Center | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/international-expansion",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 598.9,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/international-expansion",
+      "title": "International Expansion and Partnerships | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/innovation-lab",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 422.8,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/innovation-lab",
+      "title": "Innovation Lab and Future Mobility | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/business-units",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 651,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/business-units",
+      "title": "Journey Expert Business Units | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/developer",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 353.5,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/developer",
+      "title": "Developer and API Gateway | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/ai/travel-planner",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 600,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/ai/travel-planner",
+      "title": "AI Travel Planner | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/ai-agent-ecosystem",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 430.3,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/ai-agent-ecosystem",
+      "title": "AI Agent Ecosystem | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/enterprise/blueprint",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 609,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/enterprise/blueprint",
+      "title": "Enterprise Travel Platform Blueprint | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/enterprise/design-system",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 351.3,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/enterprise/design-system",
+      "title": "Website and Design System | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    },
+    {
+      "url": "https://journeyexpertltd.com/enterprise/cms-knowledge",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "location": null,
+      "elapsedMs": 649.4,
+      "robots": "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+      "canonical": "https://journeyexpertltd.com/enterprise/cms-knowledge",
+      "title": "Headless CMS and Travel Knowledge | Journey Expert Ltd.",
+      "h1Count": 1,
+      "internalLinkCount": 5,
+      "internalLinks": [
+        "/",
+        "/flights",
+        "/visa",
+        "/study-abroad",
+        "/hajj-umrah"
+      ],
+      "indexable": true,
+      "issues": []
+    }
+  ]
+}
