@@ -262,47 +262,13 @@ async function startServer() {
     });
   });
 
-  // Corporate Travel Management Platform (TMC) Endpoint
-  app.get('/api/corporate/overview', (req: Request, res: Response) => {
-    res.json({
-      companyProfile: {
-        corporateId: 'CORP-8902',
-        companyName: 'Beximco Pharmaceuticals & Tech Group',
-        tier: 'ENTERPRISE_GOLD',
-        accountManager: 'Farhana Chowdhury (Senior TMC Specialist)',
-        creditLimitBDT: 25000000,
-        utilizedCreditBDT: 8400000,
-        availableCreditBDT: 16600000,
-        paymentTermsDays: 30,
-        contractExpires: '2027-12-31',
-        branches: ['Dhaka HQ (Gulshan)', 'Chittagong Regional', 'Sylhet R&D Hub', 'London Representative Office'],
-      },
-      monthlyMetrics: {
-        totalTravelSpendBDT: 8400000,
-        savingsFromPolicyBDT: 1420000,
-        policyCompliancePercent: 96.8,
-        activeTripsCount: 14,
-        pendingApprovalsCount: 5,
-        carbonFootprintTonsCO2: 18.4,
-      },
-      recentRequests: [
-        { id: 'TR-2026-801', employee: 'Dr. Rafiqul Islam', department: 'R&D Bioplant', route: 'DAC - LHR - FRA', dates: '12 Sep - 20 Sep 2026', estCostBDT: 245000, status: 'APPROVED_PENDING_TICKET', approver: 'GM Finance (Kamrul Hasan)', policyCheck: 'IN_POLICY' },
-        { id: 'TR-2026-802', employee: 'Sultana Razia', department: 'Global Sales', route: 'DAC - DXB', dates: '18 Aug - 22 Aug 2026', estCostBDT: 98000, status: 'TICKETED', approver: 'VP Sales (Tariq Ahmed)', policyCheck: 'IN_POLICY' },
-        { id: 'TR-2026-803', employee: 'Zakir Hossain', department: 'Supply Chain', route: 'DAC - SIN', dates: '25 Aug - 28 Aug 2026', estCostBDT: 135000, status: 'PENDING_MANAGER', approver: 'Line Manager (Anisur Rahman)', policyCheck: 'POLICY_EXCEPTION_BUSINESS_CLASS' },
-      ],
-      travelPolicies: [
-        { tier: 'Executive VP & C-Suite', flightClass: 'Business Class (Long-haul > 6 hrs)', hotelCapBDT: 35000, advanceDays: 3, approvalLevels: 'Single Approval' },
-        { tier: 'Senior Managers & Directors', flightClass: 'Economy Flex / Premium Econ', hotelCapBDT: 20000, advanceDays: 7, approvalLevels: 'Line Manager + Finance' },
-        { tier: 'General Staff & Engineers', flightClass: 'Economy Saver', hotelCapBDT: 12000, advanceDays: 14, approvalLevels: 'Line Manager' },
-      ],
-      aiCorporateAssistant: {
-        savingsInsight: 'Switching 4 upcoming Singapore flights from SQ to BG Economy Flex saves ৳ 1,80,000 without compromising baggage allowances.',
-        riskAlerts: 'Typhoon alert issued for Tokyo Narita (NRT). 2 employees currently on travel advised to rebook flights via Seoul.',
-      },
-      unsettledExpenses: [
-        { id: 'EXP-901', employee: 'Sultana Razia', category: 'Hotel Incidentals & Taxi', amountBDT: 18500, status: 'SUBMITTED', receiptUploaded: true },
-        { id: 'EXP-902', employee: 'Dr. Rafiqul Islam', category: 'Client Dinner & Transit', amountBDT: 34000, status: 'APPROVED_FOR_REIMBURSEMENT', receiptUploaded: true },
-      ],
+  // Corporate data must come from an authenticated, tenant-scoped service.
+  // Do not expose fabricated company profiles, credit balances, or travel requests.
+  app.get('/api/corporate/overview', (_req: Request, res: Response) => {
+    res.status(503).json({
+      status: 'not_configured',
+      error: 'Corporate tenant data service is not connected in this environment.',
+      message: 'No corporate records were returned.',
     });
   });
 
