@@ -36,3 +36,8 @@ No real Firebase data, payment, GDS, Search Console property, GitHub branch prot
 ## Security note
 
 The code never prints or commits secret values. It deliberately reports only configuration state and uses browser speech fallback when premium TTS is not configured. It also avoids returning demo corporate or partner records through public routes.
+
+
+## Review rerun note
+
+The pull request title includes the required `[sync-review]` marker so the existing production-sensitive-file guard can evaluate this reviewed branch.
