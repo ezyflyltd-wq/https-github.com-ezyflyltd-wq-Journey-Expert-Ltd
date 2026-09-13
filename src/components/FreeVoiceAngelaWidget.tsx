@@ -279,8 +279,8 @@ export function FreeVoiceAngelaWidget() {
       const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt));
       setHistory((turns) => [
         ...turns,
-        { role: 'user', content: cleanPrompt },
-        { role: 'assistant', content: reply },
+        { role: 'user' as const, content: cleanPrompt },
+        { role: 'assistant' as const, content: reply },
       ].slice(-12));
       setLastReply(reply);
       void speak(reply);
@@ -443,4 +443,5 @@ export function FreeVoiceAngelaWidget() {
     </div>
   );
 }
+
 
