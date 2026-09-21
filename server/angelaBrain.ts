@@ -20,7 +20,7 @@ export type AngelaLead = {
 
 export type AngelaResponse = {
   reply: string;
-  language: 'bn' | 'en' | 'ar';
+  language: 'bn' | 'en' | 'hi' | 'ar';
   intent: string;
   confidence: number;
   nextQuestion: string;
@@ -37,6 +37,7 @@ Your job is to understand the customer's spoken or typed question, answer the ac
 LANGUAGE
 - Reply in natural Bangla when the customer speaks Bangla or Banglish.
 - Reply in English when the customer speaks English.
+- Reply in Hindi when the customer speaks or writes Hindi.
 - Reply in Arabic only when the customer asks for Arabic.
 - If languages are mixed, use the dominant language and keep common travel terms in English when natural.
 - Voice replies must be short, clear, warm, and easy to understand aloud.
@@ -81,7 +82,7 @@ OUTPUT
 Return valid JSON only with this exact shape:
 {
   "reply": "spoken answer in the customer's language",
-  "language": "bn|en|ar",
+  "language": "bn|en|hi|ar",
   "intent": "one concise intent label",
   "confidence": 0.0,
   "nextQuestion": "one optional next question or empty string",
@@ -151,8 +152,8 @@ export function retrieveJelKnowledge(query: string): string {
   return ranked.map(({ entry }) => `[${entry.source}] ${entry.text}`).join('\n');
 }
 
-function detectLanguage(value: string, requested?: string): 'bn' | 'en' | 'ar' {
-  if (requested === 'bn' || requested === 'ar' || requested === 'en') return requested;
+function detectLanguage(value: string, requested?: string): 'bn' | 'en' | 'hi' | 'ar' {
+  if (requested === 'bn' || requested === 'hi' || requested === 'ar' || requested === 'en') return requested;
   if (/[ -]/.test(value) && /[\u0600-\u06FF]/.test(value)) return 'ar';
   if (/[\u0980-\u09FF]/.test(value)) return 'bn';
   return 'en';
@@ -162,16 +163,19 @@ function fallbackReply(message: string, requestedLanguage?: string): AngelaRespo
   const language = detectLanguage(message, requestedLanguage);
   const isBangla = language === 'bn';
   const isArabic = language === 'ar';
+  const isHindi = language === 'hi';
   return {
     reply: isBangla
       ? `আমি আপনার প্রশ্নটি বুঝেছি: “${message}”। নির্ভুল ও বর্তমান তথ্য যাচাই করার জন্য আপনার গন্তব্য, ভ্রমণের তারিখ এবং প্রয়োজনীয় service জানালে আমি পরবর্তী ধাপটি বুঝিয়ে দিতে পারি। quotation বা booking-এর জন্য Journey Expert consultant-এর সঙ্গে কথা বলুন: +880 1926-400400।`
-      : isArabic
-        ? `فهمت سؤالك: “${message}”. للحصول على معلومات دقيقة ومحدثة، أخبرني بالوجهة وتاريخ السفر والخدمة المطلوبة. للاستفسار عن السعر أو الحجز تواصل مع مستشار Journey Expert على الرقم +880 1926-400400.`
-        : `I understand your question: “${message}”. To guide you accurately, please share your destination, travel date, and required service. For a verified quotation or booking, contact a Journey Expert consultant at +880 1926-400400.`,
+      : isHindi
+        ? `मैंने आपका सवाल समझा: “${message}”। सही जानकारी के लिए गंतव्य, यात्रा की तारीख और आवश्यक सेवा बताइए। सत्यापित कोटेशन या बुकिंग के लिए Journey Expert consultant से +880 1926-400400 पर संपर्क करें।`
+        : isArabic
+          ? `فهمت سؤالك: “${message}”. للحصول على معلومات دقيقة ومحدثة، أخبرني بالوجهة وتاريخ السفر والخدمة المطلوبة. للاستفسار عن السعر أو الحجز تواصل مع مستشار Journey Expert على الرقم +880 1926-400400.`
+          : `I understand your question: “${message}”. To guide you accurately, please share your destination, travel date, and required service. For a verified quotation or booking, contact a Journey Expert consultant at +880 1926-400400.`,
     language,
     intent: 'GENERAL_TRAVEL_ENQUIRY',
     confidence: 0.52,
-    nextQuestion: isBangla ? 'আপনার গন্তব্য, ভ্রমণের তারিখ এবং কোন service প্রয়োজন তা জানাবেন?' : 'What is your destination, travel date, and required service?',
+    nextQuestion: isBangla ? 'আপনার গন্তব্য, ভ্রমণের তারিখ এবং কোন service প্রয়োজন তা জানাবেন?' : isHindi ? 'आपका गंतव्य, यात्रा की तारीख और आवश्यक सेवा क्या है?' : 'What is your destination, travel date, and required service?',
     lead: {},
     handoffRequired: false,
     handoffReason: '',
