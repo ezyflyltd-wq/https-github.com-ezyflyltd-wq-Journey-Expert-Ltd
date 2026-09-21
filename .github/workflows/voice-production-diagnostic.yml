@@ -9,17 +9,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Probe female TTS
+      - name: Probe production Pages API alias
         shell: bash
         run: |
           set -u
-          for base in https://journeyexpertltd.com https://2ff832bc.journey-expert-ltd-main.pages.dev; do
-            audio="$(mktemp)"
-            headers="$(mktemp)"
+          base="https://journey-expert-ltd-main.pages.dev"
+          for path in /api/ai/voice-agent /api/voice/gemini; do
+            out="$(mktemp)"; headers="$(mktemp)"
+            if [ "$path" = "/api/ai/voice-agent" ]; then
+              payload='{"message":"বাংলায় মালয়েশিয়া ভিসা সম্পর্কে বলুন","language":"bn","history":[]}'
+            else
+              payload='{"text":"আসসালামু আলাইকুম, আমি অ্যাঞ্জেলা।","language":"bn"}'
+            fi
             start="$(date +%s%3N)"
-            code="$(curl --silent --show-error --max-time 10 -D "$headers" -o "$audio" -w '%{http_code}'               -H 'Content-Type: application/json' -H 'Origin: https://journeyexpertltd.com'               --data '{"text":"আসসালামু আলাইকুম, আমি অ্যাঞ্জেলা।","language":"bn"}'               "$base/api/voice/gemini" || true)"
+            code="$(curl --silent --show-error --max-time 10 -D "$headers" -o "$out" -w '%{http_code}'               -H 'Content-Type: application/json' -H 'Origin: https://journeyexpertltd.com'               --data "$payload" "$base$path" || true)"
             end="$(date +%s%3N)"
             ctype="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ {gsub("\r",""); print $2}' "$headers" | tail -1)"
-            echo "base=$base tts_status=$code elapsed_ms=$((end-start)) content_type=$ctype bytes=$(wc -c < "$audio" | tr -d ' ')"
-            rm -f "$audio" "$headers"
+            echo "path=$path status=$code elapsed_ms=$((end-start)) content_type=$ctype bytes=$(wc -c < "$out" | tr -d ' ')"
+            rm -f "$out" "$headers"
           done
