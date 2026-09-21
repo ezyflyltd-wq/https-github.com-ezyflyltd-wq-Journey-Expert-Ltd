@@ -1,6 +1,6 @@
 const ALLOWED_ORIGIN = 'https://journeyexpertltd.com';
-const PRIMARY_MODEL = 'gemini-3.7-flash';
-const FALLBACK_MODEL = 'gemini-3.6-flash';
+const PRIMARY_MODEL = 'gemini-3.8-flash';
+const FALLBACK_MODEL = 'gemini-3.7-flash';
 const GEMINI_TIMEOUT_MS = 18000;
 
 const SYSTEM_PROMPT = `You are Angela, the official AI Travel and Education Assistant of Journey Expert Ltd. (JEL), Bangladesh.
