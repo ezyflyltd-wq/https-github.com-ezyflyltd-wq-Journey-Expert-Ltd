@@ -113,7 +113,7 @@ export function FreeVoiceAngelaWidget() {
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastReply, setLastReply] = useState('');
   const [error, setError] = useState('');
-  const [voiceProvider, setVoiceProvider] = useState<'elevenlabs' | 'browser'>('browser');
+  const [voiceProvider] = useState<'browser'>('browser');
   const [conversationId] = useState(() => `angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
   const [history, setHistory] = useState<ConversationTurn[]>([]);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -130,12 +130,6 @@ export function FreeVoiceAngelaWidget() {
     };
   }, []);
 
-  useEffect(() => {
-    void fetch('/api/voice/status')
-      .then((response) => response.json())
-      .then((data) => setVoiceProvider(data.configured ? 'elevenlabs' : 'browser'))
-      .catch(() => setVoiceProvider('browser'));
-  }, []);
 
   useEffect(() => {
     if (!isOpen) {
@@ -163,24 +157,7 @@ export function FreeVoiceAngelaWidget() {
 
   const speak = async (text: string) => {
     if (!voiceEnabled) return;
-    try {
-      const response = await fetch('/api/voice/elevenlabs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, language }),
-      });
-      if (!response.ok) throw new Error('ElevenLabs is not configured');
-      const audioUrl = URL.createObjectURL(await response.blob());
-      audioRef.current?.pause();
-      if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      setVoiceProvider('elevenlabs');
-      await audio.play();
-    } catch {
-      setVoiceProvider('browser');
-      speakWithBrowser(text);
-    }
+    speakWithBrowser(text);
   };
 
   const askAssistant = async (prompt: string) => {
