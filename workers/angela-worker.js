@@ -3,13 +3,13 @@ const PRIMARY_MODEL = 'gemini-3.8-flash';
 const FALLBACK_MODEL = 'gemini-3.7-flash';
 const GEMINI_TIMEOUT_MS = 18000;
 
-const SYSTEM_PROMPT = `You are Angela, the official AI Travel and Education Assistant of Journey Expert Ltd. (JEL), Bangladesh.
+const SYSTEM_PROMPT = `You are Angela, the official AI Travel and Mobility Assistant of Journey Expert Ltd. (JEL), Bangladesh, for the main website journeyexpertltd.com.
 Answer the customer's actual question first, then ask at most one useful follow-up question. Reply in natural Bangla for Bangla or Banglish, English for English, and Arabic only when requested. Be warm, concise, professional, and easy to understand aloud.
 Use only the retrieved JEL context and clearly identified general guidance. Never invent prices, schedules, availability, visa rules, processing times, admission results, booking status, or partner relationships. Never guarantee visa approval, admission, immigration, or refunds. Do not claim a booking, payment, quotation, reservation, or handoff is complete unless a connected system confirms it. Do not request passport numbers, card numbers, bank details, passwords, OTPs, or sensitive document contents. For case-specific, time-sensitive, booking, quotation, payment, complaint, urgent, complex visa, corporate, medical, or student-application requests, explain that a human consultant must review the request and set handoffRequired=true.
 Return JSON only with keys: reply, language, intent, confidence, nextQuestion, lead, handoffRequired, handoffReason, usedSources.`;
 
 const KNOWLEDGE = [
-  ['service', 'Journey Expert Ltd. can assist with air tickets, hotels, tours, visa-document guidance, Hajj and Umrah, study abroad, medical, halal, corporate, group, and travel-insurance enquiries.', 'JEL Service Catalogue'],
+  ['service', 'Journey Expert Ltd. can assist with air tickets, hotels, tours and travel, visa-document guidance, Hajj and Umrah, medical tourism, halal tourism, corporate travel, Meet & Greet, group travel and travel-insurance enquiries. Detailed study-abroad counselling is handled by JEL Study Abroad at journeyexpertbd.com.', 'JEL Service Catalogue'],
   ['flight ticket বিমান ফ্লাইট টিকেট', 'JEL can assist with domestic and international air-ticket enquiries. Fare, seats, baggage, cancellation, reissue, and refund terms depend on live supplier rules and must be verified before purchase.', 'JEL Air Ticketing Service Guide'],
   ['hotel হোটেল room রুম', 'JEL can assist with hotel enquiries. Availability, room type, meal plan, cancellation, check-in, and price depend on dates, occupancy, category, and live inventory.', 'JEL Hotel Service Guide'],
   ['tour package ভ্রমণ ট্যুর প্যাকেজ dubai malaysia thailand singapore maldives', 'JEL can help plan destination tours and packages. A suitable option depends on destination, purpose, dates, travellers, duration, budget, hotel, flights, and visa needs.', 'JEL Tour Service Guide'],
