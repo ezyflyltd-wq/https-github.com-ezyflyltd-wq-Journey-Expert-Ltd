@@ -9,18 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Probe AI and female TTS
+      - name: Compare custom domain and Pages preview
         shell: bash
         run: |
-          set -euo pipefail
-          ai="$(mktemp)"
-          audio="$(mktemp)"
-          trap 'rm -f "$ai" "$audio"' EXIT
-          code="$(curl --silent --show-error --max-time 20 -o "$ai" -w '%{http_code}'             -H 'Content-Type: application/json' -H 'Origin: https://journeyexpertltd.com'             --data '{"message":"বাংলায় মালয়েশিয়া ভিসা সম্পর্কে বলুন","language":"bn","history":[]}'             https://journeyexpertltd.com/api/ai/voice-agent)"
-          echo "ai_status=$code"
-          echo "ai_mode=$(jq -r '.mode // ""' "$ai")"
-          echo "ai_language=$(jq -r '.language // ""' "$ai")"
-          tts="$(curl --silent --show-error --max-time 20 -D /tmp/headers -o "$audio" -w '%{http_code}'             -H 'Content-Type: application/json' -H 'Origin: https://journeyexpertltd.com'             --data '{"text":"আসসালামু আলাইকুম, আমি অ্যাঞ্জেলা।","language":"bn"}'             https://journeyexpertltd.com/api/voice/gemini || true)"
-          echo "tts_status=$tts"
-          echo "tts_type=$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ {gsub("\r",""); print $2}' /tmp/headers | tail -1)"
-          echo "tts_bytes=$(wc -c < "$audio" | tr -d ' ')"
+          set -u
+          for base in https://journeyexpertltd.com https://2ff832bc.journey-expert-ltd-main.pages.dev; do
+            ai="$(mktemp)"
+            start="$(date +%s%3N)"
+            code="$(curl --silent --show-error --max-time 8 -o "$ai" -w '%{http_code}'               -H 'Content-Type: application/json' -H 'Origin: https://journeyexpertltd.com'               --data '{"message":"বাংলায় মালয়েশিয়া ভিসা সম্পর্কে বলুন","language":"bn","history":[]}'               "$base/api/ai/voice-agent" || true)"
+            end="$(date +%s%3N)"
+            echo "base=$base ai_status=$code elapsed_ms=$((end-start)) bytes=$(wc -c < "$ai" | tr -d ' ')"
+            if jq -e . "$ai" >/dev/null 2>&1; then
+              echo "mode=$(jq -r '.mode // ""' "$ai") language=$(jq -r '.language // ""' "$ai")"
+            fi
+            rm -f "$ai"
+          done
