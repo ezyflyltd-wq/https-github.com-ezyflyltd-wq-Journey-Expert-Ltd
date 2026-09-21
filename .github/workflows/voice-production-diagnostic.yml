@@ -9,18 +9,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Compare custom domain and Pages preview
+      - name: Probe female TTS
         shell: bash
         run: |
           set -u
           for base in https://journeyexpertltd.com https://2ff832bc.journey-expert-ltd-main.pages.dev; do
-            ai="$(mktemp)"
+            audio="$(mktemp)"
+            headers="$(mktemp)"
             start="$(date +%s%3N)"
-            code="$(curl --silent --show-error --max-time 8 -o "$ai" -w '%{http_code}'               -H 'Content-Type: application/json' -H 'Origin: https://journeyexpertltd.com'               --data '{"message":"বাংলায় মালয়েশিয়া ভিসা সম্পর্কে বলুন","language":"bn","history":[]}'               "$base/api/ai/voice-agent" || true)"
+            code="$(curl --silent --show-error --max-time 10 -D "$headers" -o "$audio" -w '%{http_code}'               -H 'Content-Type: application/json' -H 'Origin: https://journeyexpertltd.com'               --data '{"text":"আসসালামু আলাইকুম, আমি অ্যাঞ্জেলা।","language":"bn"}'               "$base/api/voice/gemini" || true)"
             end="$(date +%s%3N)"
-            echo "base=$base ai_status=$code elapsed_ms=$((end-start)) bytes=$(wc -c < "$ai" | tr -d ' ')"
-            if jq -e . "$ai" >/dev/null 2>&1; then
-              echo "mode=$(jq -r '.mode // ""' "$ai") language=$(jq -r '.language // ""' "$ai")"
-            fi
-            rm -f "$ai"
+            ctype="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ {gsub("\r",""); print $2}' "$headers" | tail -1)"
+            echo "base=$base tts_status=$code elapsed_ms=$((end-start)) content_type=$ctype bytes=$(wc -c < "$audio" | tr -d ' ')"
+            rm -f "$audio" "$headers"
           done
