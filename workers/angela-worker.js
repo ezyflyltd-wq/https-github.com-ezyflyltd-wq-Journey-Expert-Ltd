@@ -4,7 +4,7 @@ const FALLBACK_MODEL = 'gemini-3.7-flash';
 const GEMINI_TIMEOUT_MS = 18000;
 
 const SYSTEM_PROMPT = `You are Angela, the official AI Travel and Mobility Assistant of Journey Expert Ltd. (JEL), Bangladesh, for the main website journeyexpertltd.com.
-Answer the customer's actual question first, then ask at most one useful follow-up question. Reply in natural Bangla for Bangla or Banglish, English for English, and Arabic only when requested. Be warm, concise, professional, and easy to understand aloud.
+Answer the customer's actual question first, then ask at most one useful follow-up question. Reply in natural Bangla for Bangla or Banglish, English for English, Hindi for Hindi, and Arabic only when requested. Be warm, concise, professional, and easy to understand aloud.
 Use only the retrieved JEL context and clearly identified general guidance. Never invent prices, schedules, availability, visa rules, processing times, admission results, booking status, or partner relationships. Never guarantee visa approval, admission, immigration, or refunds. Do not claim a booking, payment, quotation, reservation, or handoff is complete unless a connected system confirms it. Do not request passport numbers, card numbers, bank details, passwords, OTPs, or sensitive document contents. For case-specific, time-sensitive, booking, quotation, payment, complaint, urgent, complex visa, corporate, medical, or student-application requests, explain that a human consultant must review the request and set handoffRequired=true.
 Return JSON only with keys: reply, language, intent, confidence, nextQuestion, lead, handoffRequired, handoffReason, usedSources.`;
 
@@ -19,9 +19,10 @@ const KNOWLEDGE = [
 ];
 
 function languageOf(text, requested) {
-  if (['bn', 'en', 'ar'].includes(requested)) return requested;
+  if (['bn', 'en', 'hi', 'ar'].includes(requested)) return requested;
   if (/[\u0600-\u06FF]/.test(text)) return 'ar';
   if (/[\u0980-\u09FF]/.test(text)) return 'bn';
+  if (/[\u0900-\u097F]/.test(text)) return 'hi';
   if (/\b(ami|apni|chai|jabo|jete|koto|kivabe|ki|dhaka|dubai|visa|ticket|hobe|korbo|lagbe|den)\b/i.test(text)) return 'bn';
   return 'en';
 }
@@ -41,12 +42,15 @@ function safeLead(value) {
 
 function fallback(message, language) {
   const bangla = language === 'bn';
+  const hindi = language === 'hi';
   const visaRequest = /visa|embassy|immigration|eligib|fee|ভিসা|এম্বেসি|ইমিগ্রেশন|যোগ্যতা|ফি/i.test(message);
   if (visaRequest) {
     return {
       reply: bangla
         ? 'ভিসার নিয়ম, ফি এবং যোগ্যতা পরিবর্তনশীল; তাই বর্তমান তথ্য সংশ্লিষ্ট সরকারি উৎস থেকে যাচাই করা প্রয়োজন। আপনার কেসটি সঠিকভাবে পর্যালোচনা করার জন্য Journey Expert-এর একজন ভিসা কনসালট্যান্টের সহায়তা নিন: +880 1926-400400।'
-        : 'Visa rules, fees, and eligibility can change and must be verified with the relevant official source. A Journey Expert visa consultant should review your case; contact +880 1926-400400.',
+        : hindi
+          ? 'वीज़ा नियम, शुल्क और पात्रता बदल सकते हैं और आधिकारिक स्रोत से सत्यापित करना आवश्यक है। अपने मामले की समीक्षा के लिए Journey Expert visa consultant से +880 1926-400400 पर संपर्क करें।'
+          : 'Visa rules, fees, and eligibility can change and must be verified with the relevant official source. A Journey Expert visa consultant should review your case; contact +880 1926-400400.',
       language, intent: 'visa_info', confidence: 0.62,
       nextQuestion: bangla ? 'আপনি কোন দেশে, কোন উদ্দেশ্যে এবং আনুমানিক কবে ভ্রমণ করতে চান?' : 'Which country, purpose, and approximate travel date should we review?',
       lead: {}, handoffRequired: true,
@@ -55,7 +59,7 @@ function fallback(message, language) {
     };
   }
   return {
-    reply: bangla ? `আমি আপনার প্রশ্নটি বুঝেছি। নির্ভুলভাবে সাহায্য করতে গন্তব্য, ভ্রমণের তারিখ এবং কোন service প্রয়োজন তা জানাবেন? quotation বা booking যাচাই করতে Journey Expert consultant-এর সঙ্গে কথা বলুন: +880 1926-400400।` : `I understand your question. Please share your destination, travel date, and required service so I can guide you accurately. For a verified quotation or booking, contact a Journey Expert consultant at +880 1926-400400.`,
+    reply: bangla ? `আমি আপনার প্রশ্নটি বুঝেছি। নির্ভুলভাবে সাহায্য করতে গন্তব্য, ভ্রমণের তারিখ এবং কোন service প্রয়োজন তা জানাবেন? quotation বা booking যাচাই করতে Journey Expert consultant-এর সঙ্গে কথা বলুন: +880 1926-400400।` : hindi ? `मैंने आपका सवाल समझा। सही जानकारी के लिए गंतव्य, यात्रा की तारीख और आवश्यक सेवा बताइए। सत्यापित कोटेशन या बुकिंग के लिए +880 1926-400400 पर संपर्क करें।` : `I understand your question. Please share your destination, travel date, and required service so I can guide you accurately. For a verified quotation or booking, contact a Journey Expert consultant at +880 1926-400400.`,
     language, intent: 'GENERAL_TRAVEL_ENQUIRY', confidence: 0.45,
     nextQuestion: bangla ? 'আপনার গন্তব্য, ভ্রমণের তারিখ এবং কোন service প্রয়োজন?' : 'What is your destination, travel date, and required service?',
     lead: {}, handoffRequired: false, handoffReason: '', usedSources: ['JEL safe fallback'],
@@ -86,7 +90,7 @@ async function callGemini(env, model, message, language, history) {
   if (!text) throw new Error('Gemini returned no text');
   const parsed = JSON.parse(text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim());
   if (typeof parsed.reply !== 'string' || !parsed.reply.trim()) throw new Error('Gemini JSON omitted reply');
-  return { reply: parsed.reply.trim().slice(0, 4000), language: ['bn', 'en', 'ar'].includes(parsed.language) ? parsed.language : language, intent: typeof parsed.intent === 'string' ? parsed.intent.slice(0, 100) : 'GENERAL_TRAVEL_ENQUIRY', confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.6)), nextQuestion: typeof parsed.nextQuestion === 'string' ? parsed.nextQuestion.slice(0, 500) : '', lead: safeLead(parsed.lead), handoffRequired: parsed.handoffRequired === true, handoffReason: typeof parsed.handoffReason === 'string' ? parsed.handoffReason.slice(0, 500) : '', usedSources: Array.isArray(parsed.usedSources) ? parsed.usedSources.filter((item) => typeof item === 'string').slice(0, 8) : ['JEL Service Catalogue'] };
+  return { reply: parsed.reply.trim().slice(0, 4000), language: ['bn', 'en', 'hi', 'ar'].includes(parsed.language) ? parsed.language : language, intent: typeof parsed.intent === 'string' ? parsed.intent.slice(0, 100) : 'GENERAL_TRAVEL_ENQUIRY', confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.6)), nextQuestion: typeof parsed.nextQuestion === 'string' ? parsed.nextQuestion.slice(0, 500) : '', lead: safeLead(parsed.lead), handoffRequired: parsed.handoffRequired === true, handoffReason: typeof parsed.handoffReason === 'string' ? parsed.handoffReason.slice(0, 500) : '', usedSources: Array.isArray(parsed.usedSources) ? parsed.usedSources.filter((item) => typeof item === 'string').slice(0, 8) : ['JEL Service Catalogue'] };
 }
 
 export default {

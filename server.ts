@@ -156,6 +156,56 @@ async function startServer() {
     });
   });
 
+  // Production-reviewed Gemini female TTS fallback for browsers/devices without a female system voice.
+  // Kore is an explicitly female Gemini prebuilt voice.
+  app.post('/api/voice/gemini', async (req: Request, res: Response) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim().slice(0, 1800) : '';
+    const language = req.body?.language === 'bn' ? 'bn' : req.body?.language === 'hi' ? 'hi' : 'en';
+    if (!text) return res.status(400).json({ error: 'Text is required' });
+    if (!apiKey) return res.status(503).json({ error: 'Gemini voice is not configured' });
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      const model = process.env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
+      const prompt = language === 'bn'
+        ? 'Read this Bengali transcript naturally and exactly as written. Do not translate or add text:\n'
+        : language === 'hi'
+          ? 'Read this Hindi transcript naturally and exactly as written. Do not translate or add text:\n'
+          : 'Read this English transcript naturally and exactly as written. Do not add text:\n';
+      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt + text }] }],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+          },
+        }),
+      });
+      if (!upstream.ok) return res.status(upstream.status === 429 ? 429 : 502).json({ error: 'Gemini voice unavailable' });
+      const data: any = await upstream.json();
+      const inline = data?.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData?.data)?.inlineData;
+      if (!inline?.data) return res.status(502).json({ error: 'No audio returned' });
+      const raw = Buffer.from(inline.data, 'base64');
+      const wav = Buffer.alloc(44 + raw.length);
+      wav.write('RIFF', 0); wav.writeUInt32LE(36 + raw.length, 4); wav.write('WAVE', 8);
+      wav.write('fmt ', 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+      wav.writeUInt32LE(24000, 24); wav.writeUInt32LE(48000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+      wav.write('data', 36); wav.writeUInt32LE(raw.length, 40); raw.copy(wav, 44);
+      res.setHeader('Content-Type', 'audio/wav');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.send(wav);
+    } catch {
+      return res.status(controller.signal.aborted ? 503 : 502).json({ error: controller.signal.aborted ? 'Gemini voice timeout' : 'Gemini voice unavailable' });
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+
   // Voice transcripts use the same brain as text chat; the client handles speech-to-text and TTS.
   app.post('/api/ai/voice-agent', handleAngelaRequest);
 
