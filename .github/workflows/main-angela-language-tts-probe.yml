@@ -1,0 +1,36 @@
+name: Main Angela language and TTS probe
+
+on:
+  push:
+    branches:
+      - diag/main-angela-hindi-tts-20260921
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Probe live Angela text and female TTS
+        shell: bash
+        run: |
+          set -euo pipefail
+          for spec in             'bn|আমি মালয়েশিয়া টুরিস্ট ভিসা সম্পর্কে জানতে চাই'             'en|I want information about Malaysia tourist visa'             'hi|मुझे मलेशिया टूरिस्ट वीज़ा के बारे में जानकारी चाहिए'; do
+            lang="${spec%%|*}"
+            msg="${spec#*|}"
+            out="$(mktemp)"
+            metrics="$(curl --fail --silent --show-error --max-time 25               --header 'Content-Type: application/json'               --header 'Origin: https://journeyexpertltd.com'               --data "$(jq -nc --arg message "$msg" --arg language "$lang" '{message:$message,language:$language,conversationId:"prod-probe",history:[]}')"               --output "$out"               --write-out 'code=%{http_code} total=%{time_total} start=%{time_starttransfer}'               https://journeyexpertltd.com/api/ai/voice-agent)"
+            reply="$(jq -r '.reply // .response // ""' "$out")"
+            detected="$(jq -r '.language // ""' "$out")"
+            echo "TEXT $lang $metrics detected=$detected reply_len=${#reply}"
+            test -n "$reply"
+            rm -f "$out"
+
+            audio="$(mktemp)"
+            tts_metrics="$(curl --silent --show-error --max-time 25               --header 'Content-Type: application/json'               --header 'Origin: https://journeyexpertltd.com'               --data "$(jq -nc --arg text "$msg" --arg language "$lang" '{text:$text,language:$language}')"               --output "$audio"               --write-out 'code=%{http_code} type=%{content_type} total=%{time_total} start=%{time_starttransfer}'               https://journeyexpertltd.com/api/voice/gemini || true)"
+            bytes="$(wc -c < "$audio" | tr -d ' ')"
+            echo "TTS $lang $tts_metrics bytes=$bytes"
+            rm -f "$audio"
+          done
