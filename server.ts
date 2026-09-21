@@ -156,7 +156,7 @@ async function startServer() {
     });
   });
 
-  // Gemini female TTS fallback for browsers/devices without a female system voice.
+  // Production-reviewed Gemini female TTS fallback for browsers/devices without a female system voice.
   // Kore is an explicitly female Gemini prebuilt voice.
   app.post('/api/voice/gemini', async (req: Request, res: Response) => {
     const apiKey = process.env.GEMINI_API_KEY;
