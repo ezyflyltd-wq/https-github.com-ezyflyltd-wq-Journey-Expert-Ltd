@@ -91,17 +91,43 @@ function detectReplyLanguage(text: string): 'bn' | 'en' {
   return 'en';
 }
 
-function getPreferredFemaleVoice(language: 'en' | 'bn'): SpeechSynthesisVoice | null {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return null;
-  const voices = window.speechSynthesis.getVoices();
+const FEMALE_VOICE_HINTS: Record<'en' | 'bn', string[]> = {
+  bn: ['nabanita', 'female', 'woman', 'heera'],
+  en: ['zira', 'aria', 'jenny', 'sonia', 'samantha', 'victoria', 'ava', 'allison', 'karen', 'susan', 'hazel', 'libby', 'natasha', 'serena', 'moira', 'fiona', 'tessa', 'veena', 'female', 'woman', 'google uk english female'],
+};
+
+async function loadSpeechVoices(): Promise<SpeechSynthesisVoice[]> {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return [];
+  const synthesis = window.speechSynthesis;
+  let voices = synthesis.getVoices();
+  if (voices.length) return voices;
+
+  await new Promise<void>((resolve) => {
+    const finish = () => {
+      window.clearTimeout(timeout);
+      synthesis.removeEventListener('voiceschanged', onVoices);
+      resolve();
+    };
+    const onVoices = () => {
+      if (synthesis.getVoices().length) finish();
+    };
+    const timeout = window.setTimeout(finish, 1500);
+    synthesis.addEventListener('voiceschanged', onVoices);
+    onVoices();
+  });
+
+  voices = synthesis.getVoices();
+  return voices;
+}
+
+function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' | 'bn'): SpeechSynthesisVoice | null {
   const prefix = language === 'bn' ? 'bn' : 'en';
-  const femaleHints = ['female', 'woman', 'nabanita', 'zira', 'aria', 'jenny', 'sonia', 'samantha', 'victoria', 'ava', 'allison', 'karen', 'susan', 'google বাংলা', 'google bangla', 'google uk english female'];
-  const matching = voices.filter((voice) => voice.lang.toLowerCase().startsWith(prefix));
-  return matching.sort((a, b) => {
-    const aScore = femaleHints.some((hint) => a.name.toLowerCase().includes(hint)) ? 1 : 0;
-    const bScore = femaleHints.some((hint) => b.name.toLowerCase().includes(hint)) ? 1 : 0;
-    return bScore - aScore;
-  })[0] || null;
+  const hints = FEMALE_VOICE_HINTS[language];
+  return voices.find((voice) => {
+    const name = voice.name.toLowerCase();
+    const languageMatch = voice.lang.toLowerCase().startsWith(prefix);
+    return languageMatch && hints.some((hint) => name.includes(hint));
+  }) || null;
 }
 
 function getFallbackReply(prompt: string): string {
@@ -152,21 +178,34 @@ export function FreeVoiceAngelaWidget() {
     setIsOpen(true);
   };
 
-  const speakWithBrowser = (text: string) => {
+  const speakWithBrowser = async (text: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const effectiveLanguage: 'bn' | 'en' = language === 'auto' ? detectReplyLanguage(text) : language;
+    const voices = await loadSpeechVoices();
+    const femaleVoice = getPreferredFemaleVoice(voices, effectiveLanguage);
+
+    if (!femaleVoice) {
+      setError(effectiveLanguage === 'bn'
+        ? 'এই ডিভাইসে female বাংলা voice পাওয়া যায়নি। Male default voice চালানো হয়নি।'
+        : 'A female English system voice is not available on this device. The male default voice was not used.');
+      return;
+    }
+
     const utterance = new SpeechSynthesisUtterance(text.replace(/[*#_`]/g, ''));
-    utterance.lang = effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US';
-    utterance.voice = getPreferredFemaleVoice(effectiveLanguage) || null;
+    utterance.lang = femaleVoice.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US');
+    utterance.voice = femaleVoice;
     utterance.rate = 1.0;
-    utterance.pitch = 1.04;
+    utterance.pitch = 1.0;
+    utterance.onerror = () => setError(effectiveLanguage === 'bn'
+      ? 'Female voice playback ব্যর্থ হয়েছে। আবার চেষ্টা করুন।'
+      : 'Female voice playback failed. Please try again.');
     window.speechSynthesis.speak(utterance);
   };
 
   const speak = async (text: string) => {
     if (!voiceEnabled) return;
-    speakWithBrowser(text);
+    await speakWithBrowser(text);
   };
 
   const askAssistant = async (prompt: string) => {
