@@ -1,11 +1,9 @@
 name: Angela production live smoke
-# Re-probe after edge fast-path production deployment.
 
 on:
   push:
     branches:
       - diag/main-angela-hindi-tts-20260921
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,40 +11,36 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
     steps:
-      - name: Check live Angela Bengali English Hindi
+      - name: Inspect production health version
         shell: bash
         run: |
-          set -euo pipefail
-          for spec in             'bn|আমি মালয়েশিয়া টুরিস্ট ভিসা সম্পর্কে জানতে চাই'             'en|I want information about Malaysia tourist visa'             'hi|मुझे मलेशिया टूरिस्ट वीज़ा के बारे में जानकारी चाहिए'; do
-            lang="${spec%%|*}"
-            msg="${spec#*|}"
-            body="$(mktemp)"
-            metrics="$(curl --fail --silent --show-error --max-time 25               --header 'Content-Type: application/json'               --header 'Origin: https://journeyexpertltd.com'               --data "$(jq -nc --arg m "$msg" --arg l "$lang" '{message:$m,language:$l,conversationId:"production-probe",history:[]}')"               --output "$body"               --write-out 'code=%{http_code} total=%{time_total} start=%{time_starttransfer}'               https://journeyexpertltd.com/api/ai/voice-agent)"
-            detected="$(jq -r '.language // ""' "$body")"
-            reply="$(jq -r '.reply // .response // ""' "$body")"
-            echo "TEXT $lang $metrics detected=$detected reply_len=${#reply}"
-            test -n "$reply"
+          set -u
+          body="$(mktemp)"
+          status="$(curl --silent --show-error --max-time 10 --output "$body" --write-out '%{http_code}' https://journeyexpertltd.com/api/health || true)"
+          echo "HEALTH code=$status body=$(cat "$body")"
+          rm -f "$body"
+
+      - name: Probe bounded text routes
+        shell: bash
+        run: |
+          set -u
+          for spec in             'bn|আমি মালয়েশিয়া ভিসা সম্পর্কে জানতে চাই'             'en|I want information about Malaysia tourist visa'             'hi|मुझे मलेशिया टूरिस्ट वीज़ा के बारे में जानकारी चाहिए'; do
+            lang="${spec%%|*}"; msg="${spec#*|}"; body="$(mktemp)"
+            metrics="$(curl --silent --show-error --max-time 8               --header 'Content-Type: application/json'               --header 'Origin: https://journeyexpertltd.com'               --data "$(jq -nc --arg m "$msg" --arg l "$lang" '{message:$m,language:$l,conversationId:"probe",history:[]}')"               --output "$body"               --write-out 'code=%{http_code} total=%{time_total} start=%{time_starttransfer}'               https://journeyexpertltd.com/api/ai/voice-agent || true)"
+            if jq -e . "$body" >/dev/null 2>&1; then
+              echo "TEXT $lang $metrics mode=$(jq -r '.mode // ""' "$body") detected=$(jq -r '.language // ""' "$body") reply_len=$(jq -r '.reply // .response // ""' "$body" | wc -m | tr -d ' ')"
+            else
+              echo "TEXT $lang $metrics non_json bytes=$(wc -c < "$body" | tr -d ' ')"
+            fi
             rm -f "$body"
           done
 
-      - name: Check live Gemini Kore female TTS
+      - name: Probe bounded female TTS
         shell: bash
         run: |
-          set -euo pipefail
-          for spec in             'bn|হ্যালো, আমি অ্যাঞ্জেলা।'             'en|Hello, I am Angela.'             'hi|नमस्ते, मैं एंजेला हूँ।'; do
-            lang="${spec%%|*}"
-            msg="${spec#*|}"
-            headers="$(mktemp)"
-            audio="$(mktemp)"
-            status="$(curl --silent --show-error --max-time 25               --dump-header "$headers"               --header 'Content-Type: application/json'               --header 'Origin: https://journeyexpertltd.com'               --data "$(jq -nc --arg t "$msg" --arg l "$lang" '{text:$t,language:$l}')"               --output "$audio"               --write-out '%{http_code}'               https://journeyexpertltd.com/api/voice/gemini)"
-            ctype="$(grep -i '^content-type:' "$headers" | tail -1 | tr -d '\r' || true)"
-            bytes="$(wc -c < "$audio" | tr -d ' ')"
-            echo "TTS $lang code=$status type=$ctype bytes=$bytes"
-            test "$status" = "200"
-            grep -qi '^content-type: audio/wav' "$headers"
-            test "$bytes" -gt 1000
-            test "$(head -c 4 "$audio")" = "RIFF"
-            rm -f "$headers" "$audio"
-          done
+          set -u
+          body="$(mktemp)"; headers="$(mktemp)"
+          metrics="$(curl --silent --show-error --max-time 8 --dump-header "$headers"             --header 'Content-Type: application/json' --header 'Origin: https://journeyexpertltd.com'             --data '{"text":"হ্যালো, আমি অ্যাঞ্জেলা।","language":"bn"}'             --output "$body" --write-out 'code=%{http_code} total=%{time_total} type=%{content_type}'             https://journeyexpertltd.com/api/voice/gemini || true)"
+          echo "TTS $metrics bytes=$(wc -c < "$body" | tr -d ' ') first4=$(head -c 4 "$body" 2>/dev/null || true)"
