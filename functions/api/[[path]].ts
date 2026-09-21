@@ -68,10 +68,10 @@ async function handleDirectAngela(request: Request, env: Record<string, string |
         ? 'Respond in concise natural Hindi.'
         : 'Respond in concise natural English.';
     const system = `You are Angela, the official AI Travel and Mobility Assistant of Journey Expert Ltd. in Bangladesh. Help with air tickets, visa-document guidance, tours and travel, hotels, Hajj and Umrah, medical tourism, halal tourism, insurance, corporate travel and Meet & Greet. Never guarantee visas, fares, seat inventory, consular outcomes, or unverified live prices. For study-abroad counselling, direct users to journeyexpertbd.com. ${prompt}`;
-    const models = [env.GEMINI_EDGE_MODEL || 'gemini-3.5-flash-lite', env.GEMINI_MODEL || 'gemini-3.8-flash'];
-    for (const model of [...new Set(models)]) {
+    const models = [env.GEMINI_EDGE_MODEL || 'gemini-3.5-flash-lite'];
+    for (const model of models) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 3500);
+      const timer = setTimeout(() => controller.abort(), 1800);
       try {
         const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: 'POST',
@@ -91,24 +91,8 @@ async function handleDirectAngela(request: Request, env: Record<string, string |
     }
   }
 
-  // Bound the legacy AI Studio fallback so a slow upstream cannot freeze the widget.
-  const origin = (env.AI_STUDIO_ORIGIN || DEFAULT_AI_STUDIO_ORIGIN).replace(/\/$/, '');
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5500);
-  try {
-    const upstream = await fetch(`${origin}/api/ai/voice-agent`, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'Origin': 'https://journeyexpertltd.com' },
-      body: JSON.stringify({ ...payload, language }),
-    });
-    if (upstream.ok) {
-      const data: any = await upstream.json();
-      const reply = String(data?.reply || data?.response || '').trim();
-      if (reply) return jsonResponse({ ...data, reply, language: data?.language || language }, 200, request);
-    }
-  } catch { /* use fast fallback */ } finally { clearTimeout(timer); }
-
+  // Do not chain another remote AI hop after the bounded direct Gemini attempt.
+  // A fast, domain-safe response keeps Angela responsive even during provider latency.
   return jsonResponse(fastFallback(message, language), 200, request);
 }
 
@@ -135,7 +119,7 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
 
   const model = env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
+  const timer = setTimeout(() => controller.abort(), 6000);
   try {
     const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST', signal: controller.signal,
