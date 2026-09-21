@@ -1,7 +1,8 @@
 const ALLOWED_ORIGIN = 'https://journeyexpertltd.com';
-const PRIMARY_MODEL = 'gemini-3.8-flash';
-const FALLBACK_MODEL = 'gemini-3.7-flash';
-const GEMINI_TIMEOUT_MS = 18000;
+const PRIMARY_MODEL = 'gemini-3.5-flash-lite';
+const FALLBACK_MODEL = 'gemini-3.8-flash';
+const GEMINI_TIMEOUT_MS = 2400;
+const TTS_MODEL = 'gemini-3.1-flash-tts-preview';
 
 const SYSTEM_PROMPT = `You are Angela, the official AI Travel and Mobility Assistant of Journey Expert Ltd. (JEL), Bangladesh, for the main website journeyexpertltd.com.
 Answer the customer's actual question first, then ask at most one useful follow-up question. Reply in natural Bangla for Bangla or Banglish, English for English, Hindi for Hindi, and Arabic only when requested. Be warm, concise, professional, and easy to understand aloud.
@@ -83,7 +84,7 @@ async function fetchWithTimeout(url, options, timeoutMs = GEMINI_TIMEOUT_MS) {
 async function callGemini(env, model, message, language, history) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
   const contents = [...(Array.isArray(history) ? history : []).slice(-12).map((turn) => ({ role: turn && turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: String(turn && turn.content || '').slice(0, 2000) }] })), { role: 'user', parts: [{ text: message }] }];
-  const response = await fetchWithTimeout(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\nRetrieved JEL context:\n${contextFor(message)}\n\nLanguage hint: ${language}` }] }, contents, generationConfig: { temperature: 0.25, responseMimeType: 'application/json' } }) });
+  const response = await fetchWithTimeout(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\nRetrieved JEL context:\n${contextFor(message)}\n\nLanguage hint: ${language}` }] }, contents, generationConfig: { temperature: 0.25, maxOutputTokens: 640, responseMimeType: 'application/json' } }) });
   if (!response.ok) throw new Error(`Gemini HTTP ${response.status}`);
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
@@ -93,11 +94,78 @@ async function callGemini(env, model, message, language, history) {
   return { reply: parsed.reply.trim().slice(0, 4000), language: ['bn', 'en', 'hi', 'ar'].includes(parsed.language) ? parsed.language : language, intent: typeof parsed.intent === 'string' ? parsed.intent.slice(0, 100) : 'GENERAL_TRAVEL_ENQUIRY', confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.6)), nextQuestion: typeof parsed.nextQuestion === 'string' ? parsed.nextQuestion.slice(0, 500) : '', lead: safeLead(parsed.lead), handoffRequired: parsed.handoffRequired === true, handoffReason: typeof parsed.handoffReason === 'string' ? parsed.handoffReason.slice(0, 500) : '', usedSources: Array.isArray(parsed.usedSources) ? parsed.usedSources.filter((item) => typeof item === 'string').slice(0, 8) : ['JEL Service Catalogue'] };
 }
 
+
+function pcmToWav(pcm) {
+  const output = new ArrayBuffer(44 + pcm.length);
+  const view = new DataView(output);
+  const bytes = new Uint8Array(output);
+  const label = (offset, value) => { for (let i = 0; i < value.length; i++) bytes[offset + i] = value.charCodeAt(i); };
+  label(0, 'RIFF'); view.setUint32(4, 36 + pcm.length, true); label(8, 'WAVE');
+  label(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, 24000, true); view.setUint32(28, 48000, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  label(36, 'data'); view.setUint32(40, pcm.length, true); bytes.set(pcm, 44);
+  return output;
+}
+
+async function femaleTts(request, env) {
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
+  const text = String(body?.text || '').trim().slice(0, 1800);
+  if (!text) return json({ error: 'Text is required' }, 400);
+  const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
+  if (!key) return json({ error: 'female_voice_not_configured' }, 503);
+  const model = env.GEMINI_TTS_MODEL || TTS_MODEL;
+  try {
+    const response = await fetchWithTimeout(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Read the following exactly in its original language, naturally and clearly. Do not translate or add words:\n' + text }] }],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+          },
+        }),
+      },
+      12000
+    );
+    if (!response.ok) return json({ error: response.status === 429 ? 'voice_quota_exceeded' : 'voice_provider_unavailable' }, response.status === 429 ? 429 : 502);
+    const data = await response.json();
+    const audio = data?.candidates?.[0]?.content?.parts?.find((part) => part.inlineData?.data)?.inlineData;
+    if (!audio?.data) return json({ error: 'invalid_audio' }, 502);
+    const binary = atob(audio.data);
+    const pcm = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+    return new Response(pcmToWav(pcm), {
+      status: 200,
+      headers: {
+        'content-type': 'audio/wav',
+        'cache-control': 'no-store',
+        'x-content-type-options': 'nosniff',
+        'access-control-allow-origin': ALLOWED_ORIGIN,
+      },
+    });
+  } catch {
+    return json({ error: 'voice_provider_unavailable' }, 503);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'access-control-allow-origin': ALLOWED_ORIGIN, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'Content-Type' } });
-    if (url.pathname === '/api/health' || url.pathname === '/api/healthz' || url.pathname === '/api/ai/health') return json({ status: 'online', service: 'Angela API Gateway', version: '4.0.0', aiConfigured: Boolean(env.GEMINI_API_KEY), models: [env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL], timestamp: new Date().toISOString() });
+    if (url.pathname === '/api/health' || url.pathname === '/api/healthz' || url.pathname === '/api/ai/health') return json({
+      status: 'online',
+      service: 'Angela API Gateway',
+      version: '4.1.0-fast-female',
+      aiConfigured: Boolean(env.GEMINI_API_KEY),
+      femaleTtsConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
+      models: [env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL],
+      timestamp: new Date().toISOString()
+    });
+    if (url.pathname === '/api/voice/gemini') return femaleTts(request, env);
     if (url.pathname !== '/api/ai-assistant' && url.pathname !== '/api/ai/voice-agent') return json({ error: 'Not found' }, 404);
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
     let body;
@@ -120,7 +188,7 @@ export default {
       : [];
     let payload = null;
     if (env.GEMINI_API_KEY) {
-      for (const model of [env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL]) {
+      for (const model of [...new Set([env.GEMINI_EDGE_MODEL || PRIMARY_MODEL, env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL])]) {
         try { payload = await callGemini(env, model, message, language, history); break; } catch (error) { console.error(`Angela model failed: ${model}`, error); }
       }
     }
