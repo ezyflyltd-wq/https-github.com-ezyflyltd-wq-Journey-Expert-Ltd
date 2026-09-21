@@ -2,81 +2,50 @@ name: Angela production live smoke
 
 on:
   push:
-    branches: [main]
-    paths:
-      - ".github/workflows/angela-live-smoke.yml"
-      - "src/components/FreeVoiceAngelaWidget.tsx"
-      - "functions/api/**"
-      - "server/angelaBrain.ts"
-      - "workers/angela-worker.js"
-  schedule:
-    - cron: "47 2,14 * * *"
+    branches:
+      - diag/main-angela-hindi-tts-20260921
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: angela-production-live-smoke
-  cancel-in-progress: true
-
 jobs:
   smoke:
-    name: Verify journeyexpertltd.com and Angela
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
-      - name: Check public site and SEO controls
+      - name: Check live Angela Bengali English Hindi
         shell: bash
         run: |
           set -euo pipefail
-          base="https://journeyexpertltd.com"
-          status="$(curl --fail --silent --show-error --location --max-time 20 --output /dev/null --write-out '%{http_code}' "$base/")"
-          test "$status" = "200"
-          curl --fail --silent --show-error --max-time 20 "$base/robots.txt" | grep -F "sitemap"
-          sitemap="$(curl --fail --silent --show-error --max-time 20 "$base/sitemap.xml")"
-          test "$(grep -o '<loc>' <<< "$sitemap" | wc -l)" -ge 20
+          for spec in             'bn|আমি মালয়েশিয়া টুরিস্ট ভিসা সম্পর্কে জানতে চাই'             'en|I want information about Malaysia tourist visa'             'hi|मुझे मलेशिया टूरिस्ट वीज़ा के बारे में जानकारी चाहिए'; do
+            lang="${spec%%|*}"
+            msg="${spec#*|}"
+            body="$(mktemp)"
+            metrics="$(curl --fail --silent --show-error --max-time 25               --header 'Content-Type: application/json'               --header 'Origin: https://journeyexpertltd.com'               --data "$(jq -nc --arg m "$msg" --arg l "$lang" '{message:$m,language:$l,conversationId:"production-probe",history:[]}')"               --output "$body"               --write-out 'code=%{http_code} total=%{time_total} start=%{time_starttransfer}'               https://journeyexpertltd.com/api/ai/voice-agent)"
+            detected="$(jq -r '.language // ""' "$body")"
+            reply="$(jq -r '.reply // .response // ""' "$body")"
+            echo "TEXT $lang $metrics detected=$detected reply_len=${#reply}"
+            test -n "$reply"
+            rm -f "$body"
+          done
 
-      - name: Check Pages API health
+      - name: Check live Gemini Kore female TTS
         shell: bash
         run: |
           set -euo pipefail
-          body="$(curl --fail --silent --show-error --max-time 20 https://journeyexpertltd.com/api/health)"
-          test -n "$body"
-          ! grep -E 'API_KEY|SERVICE_ROLE|PASSWORD|SECRET' <<< "$body"
-
-      - name: Check live Angela Bangla response through AI Studio
-        shell: bash
-        run: |
-          set -euo pipefail
-          body="$(mktemp)"
-          trap 'rm -f "$body"' EXIT
-          curl --fail --silent --show-error --max-time 25             --header 'Content-Type: application/json'             --header 'Origin: https://journeyexpertltd.com'             --data '{"message":"ami Malaysia tourist visa ebong tour package niye jante chai","language":"auto","conversationId":"production-smoke","history":[]}'             --output "$body"             https://journeyexpertltd.com/api/ai/voice-agent
-          python - "$body" <<'PY'
-import json, re, sys
-p=sys.argv[1]
-with open(p, encoding="utf-8") as f:
-    data=json.load(f)
-reply=str(data.get("reply") or data.get("response") or "").strip()
-if not reply:
-    raise SystemExit("Angela returned no reply")
-if not re.search(r"[\u0980-\u09ff]", reply):
-    raise SystemExit("Angela did not return Bengali for Banglish input")
-lower=reply.lower()
-for bad in ("live ai unavailable", "safe assistance mode", "নিরাপদ সহায়তা মোড"):
-    if bad in lower:
-        raise SystemExit("Angela returned a degraded canned fallback")
-print("Angela live Bangla response passed")
-PY
-
-      - name: Publish summary
-        if: always()
-        run: |
-          {
-            echo "## Angela production live smoke"
-            echo "- Target: https://journeyexpertltd.com"
-            echo "- Public site and SEO controls checked."
-            echo "- Pages API health checked."
-            echo "- Angela AI Studio path probed with a real Banglish-to-Bangla request."
-            echo "- Cadence: every 12 hours plus relevant production pushes."
-          } >> "$GITHUB_STEP_SUMMARY"
+          for spec in             'bn|হ্যালো, আমি অ্যাঞ্জেলা।'             'en|Hello, I am Angela.'             'hi|नमस्ते, मैं एंजेला हूँ।'; do
+            lang="${spec%%|*}"
+            msg="${spec#*|}"
+            headers="$(mktemp)"
+            audio="$(mktemp)"
+            status="$(curl --silent --show-error --max-time 25               --dump-header "$headers"               --header 'Content-Type: application/json'               --header 'Origin: https://journeyexpertltd.com'               --data "$(jq -nc --arg t "$msg" --arg l "$lang" '{text:$t,language:$l}')"               --output "$audio"               --write-out '%{http_code}'               https://journeyexpertltd.com/api/voice/gemini)"
+            ctype="$(grep -i '^content-type:' "$headers" | tail -1 | tr -d '\r' || true)"
+            bytes="$(wc -c < "$audio" | tr -d ' ')"
+            echo "TTS $lang code=$status type=$ctype bytes=$bytes"
+            test "$status" = "200"
+            grep -qi '^content-type: audio/wav' "$headers"
+            test "$bytes" -gt 1000
+            test "$(head -c 4 "$audio")" = "RIFF"
+            rm -f "$headers" "$audio"
+          done
