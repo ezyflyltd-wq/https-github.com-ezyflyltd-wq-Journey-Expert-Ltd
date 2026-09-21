@@ -1,0 +1,35 @@
+name: Main live Angela diagnostic
+
+on:
+  push:
+    branches:
+      - diag/main-live-angela-20260921
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe journeyexpertltd.com live Angela
+        shell: bash
+        run: |
+          set -euo pipefail
+          health="$(mktemp)"
+          body="$(mktemp)"
+          trap 'rm -f "$health" "$body"' EXIT
+          status="$(curl --fail --silent --show-error --location --max-time 20 --output /dev/null --write-out '%{http_code}' https://journeyexpertltd.com/)"
+          echo "homepage_status=$status"
+          curl --fail --silent --show-error --max-time 20 https://journeyexpertltd.com/api/health > "$health"
+          echo "health_bytes=$(wc -c < "$health" | tr -d ' ')"
+          curl --fail --silent --show-error --max-time 25             --header 'Content-Type: application/json'             --header 'Origin: https://journeyexpertltd.com'             --data '{"message":"ami Malaysia tourist visa ebong tour package niye jante chai","language":"auto","conversationId":"production-diagnostic","history":[]}'             https://journeyexpertltd.com/api/ai/voice-agent > "$body"
+          echo "mode=$(jq -r '.mode // ""' "$body")"
+          echo "language=$(jq -r '.language // ""' "$body")"
+          echo "handoff=$(jq -r '.handoffRequired // false' "$body")"
+          reply="$(jq -r '.reply // .response // ""' "$body")"
+          echo "reply_length=${#reply}"
+          if grep -Pq '[\x{0980}-\x{09FF}]' <<< "$reply"; then echo "has_bangla=true"; else echo "has_bangla=false"; fi
+          lower="$(tr '[:upper:]' '[:lower:]' <<< "$reply")"
+          if grep -Eqi 'live ai unavailable|safe assistance mode|নিরাপদ সহায়তা মোড' <<< "$lower"; then echo "degraded=true"; exit 1; else echo "degraded=false"; fi
