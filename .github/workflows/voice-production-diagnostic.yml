@@ -1,0 +1,26 @@
+name: Angela voice production diagnostic
+on:
+  push:
+    branches: [diag/voice-production-20260921]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe AI and female TTS
+        shell: bash
+        run: |
+          set -euo pipefail
+          ai="$(mktemp)"
+          audio="$(mktemp)"
+          trap 'rm -f "$ai" "$audio"' EXIT
+          code="$(curl --silent --show-error --max-time 20 -o "$ai" -w '%{http_code}'             -H 'Content-Type: application/json' -H 'Origin: https://journeyexpertltd.com'             --data '{"message":"বাংলায় মালয়েশিয়া ভিসা সম্পর্কে বলুন","language":"bn","history":[]}'             https://journeyexpertltd.com/api/ai/voice-agent)"
+          echo "ai_status=$code"
+          echo "ai_mode=$(jq -r '.mode // ""' "$ai")"
+          echo "ai_language=$(jq -r '.language // ""' "$ai")"
+          tts="$(curl --silent --show-error --max-time 20 -D /tmp/headers -o "$audio" -w '%{http_code}'             -H 'Content-Type: application/json' -H 'Origin: https://journeyexpertltd.com'             --data '{"text":"আসসালামু আলাইকুম, আমি অ্যাঞ্জেলা।","language":"bn"}'             https://journeyexpertltd.com/api/voice/gemini || true)"
+          echo "tts_status=$tts"
+          echo "tts_type=$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ {gsub("\r",""); print $2}' /tmp/headers | tail -1)"
+          echo "tts_bytes=$(wc -c < "$audio" | tr -d ' ')"
