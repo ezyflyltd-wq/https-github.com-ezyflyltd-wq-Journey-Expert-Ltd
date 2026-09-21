@@ -1,0 +1,29 @@
+name: Angela latency baseline
+
+on:
+  push:
+    branches:
+      - diag/angela-latency-baseline-20260921
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Measure live main Angela
+        shell: bash
+        run: |
+          set -euo pipefail
+          for spec in             'bn|আমি মালয়েশিয়া ভিসা সম্পর্কে জানতে চাই'             'en|I want information about Malaysia tourist visa'             'hi|मुझे मलेशिया टूरिस्ट वीज़ा के बारे में जानकारी चाहिए'; do
+            lang="${spec%%|*}"
+            msg="${spec#*|}"
+            out="$(mktemp)"
+            metrics="$(curl --fail --silent --show-error --max-time 25               --header 'Content-Type: application/json'               --header 'Origin: https://journeyexpertltd.com'               --data "$(jq -nc --arg message "$msg" --arg language "$lang" '{message:$message,language:$language,conversationId:"latency-probe",history:[]}')"               --output "$out"               --write-out 'code=%{http_code} total=%{time_total} start=%{time_starttransfer}'               https://journeyexpertltd.com/api/ai/voice-agent)"
+            reply="$(jq -r '.reply // .response // ""' "$out")"
+            detected="$(jq -r '.language // ""' "$out")"
+            echo "$lang $metrics detected=$detected reply_len=${#reply}"
+            rm -f "$out"
+          done
