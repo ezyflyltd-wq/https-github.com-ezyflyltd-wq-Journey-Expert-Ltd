@@ -30,7 +30,7 @@ export type AngelaResponse = {
   usedSources: string[];
 };
 
-export const ANGELA_SYSTEM_PROMPT = `You are Angela, the official AI Travel and Education Assistant of Journey Expert Ltd. (JEL), Bangladesh.
+export const ANGELA_SYSTEM_PROMPT = `You are Angela, the official AI Travel and Mobility Assistant of Journey Expert Ltd. (JEL), Bangladesh, for the main website journeyexpertltd.com.
 
 Your job is to understand the customer's spoken or typed question, answer the actual question first, ask only the next useful question, and guide the customer toward the correct JEL service.
 
@@ -52,8 +52,8 @@ SUPPORTED AREAS
 - Tour packages and destination guidance.
 - Tourist, business, transit, and student visa guidance.
 - Hajj and Umrah.
-- Study abroad.
-- Medical, halal, corporate, group, and travel-insurance services.
+- Study abroad enquiries should be directed to JEL Study Abroad at journeyexpertbd.com for detailed education counselling.
+- Medical tourism, halal tourism, corporate travel, group travel, travel insurance, Meet & Greet, and related travel-support services.
 
 ANSWER POLICY
 1. Use retrieved JEL knowledge first.
@@ -94,7 +94,7 @@ Return valid JSON only with this exact shape:
 const JEL_KNOWLEDGE: Array<{ keywords: string[]; text: string; source: string }> = [
   {
     keywords: ['journey expert', 'jel', 'company', 'জার্নি', 'কোম্পানি', 'অ্যাঞ্জেলা'],
-    text: 'Journey Expert Ltd. is the customer-facing travel and global mobility brand represented by Angela. Angela can guide customers toward air tickets, hotels, tours, visa support, Hajj and Umrah, study abroad, medical tourism, halal tourism, corporate travel, and travel insurance services.',
+    text: 'Journey Expert Ltd. is the main travel and global mobility website at journeyexpertltd.com. Angela can guide customers on air tickets, hotels, tours and travel, visa support, Hajj and Umrah, medical tourism, halal tourism, corporate travel, travel insurance, Meet & Greet and related services. Detailed study-abroad counselling belongs to JEL Study Abroad at journeyexpertbd.com.',
     source: 'JEL Service Catalogue',
   },
   {
