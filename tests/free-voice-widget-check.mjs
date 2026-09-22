@@ -18,7 +18,7 @@ assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widg
 assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
 assert.equal(widget.includes("setLanguage('auto')"), false, 'Angela must not expose Auto mode');
 assert.equal(widget.includes("setLanguage('hi')"), false, 'Angela must not expose Hindi mode');
-assert.equal(widget.includes("fetch('/api/voice/gemini'"), true, 'Angela must use the dedicated same-origin female TTS route');
+assert.equal(widget.includes("fetch('/angela/speech'"), true, 'Angela must use the Worker-independent same-origin female TTS route');
 assert.equal(server.includes("app.post('/api/voice/gemini'"), true, 'the AI Studio server must expose Gemini female TTS');
 assert.equal(widget.includes('Voice output: Angela female'), true, 'Angela UI must state the female-only voice policy');
 assert.equal(widget.includes('Use the same server-rendered Angela female voice on desktop and mobile.'), true, 'server female TTS must be the cross-device primary path');
@@ -53,7 +53,7 @@ assert.equal(widget.includes('verified female voice is temporarily unavailable')
 const liveVoice = fs.readFileSync(path.join(root, 'src/lib/angelaLiveVoice.ts'), 'utf8');
 assert.equal(widget.includes('fetchAngelaLiveFemaleSpeech'), true, 'corporate Angela must use verified Gemini Live female fallback');
 assert.equal(liveVoice.includes("voiceName: 'Aoede'"), true, 'Live fallback must use Aoede female voice');
-assert.equal(liveVoice.includes('/api/gemini/live-token'), true, 'Live fallback must use dedicated same-origin token route');
+assert.equal(liveVoice.includes('/angela/live-token'), true, 'Live fallback must use Worker-independent same-origin token route');
 assert.equal(pagesWorker.includes("action === 'live-token'"), true, 'Pages Worker must expose Live token action on canonical route');
 
 assert.equal(pagesWorker.includes("action === 'speech'"), true, 'Pages Worker must multiplex verified female speech on the canonical Angela endpoint');
