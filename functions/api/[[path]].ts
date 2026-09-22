@@ -358,7 +358,12 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
   const requestUrl = new URL(request.url);
   const pathname = requestUrl.pathname;
 
-  if (pathname === '/api/ai/voice-agent' || pathname === '/api/ai-assistant') return handleDirectAngela(request, env);
+  if (pathname === '/api/ai/voice-agent' || pathname === '/api/ai-assistant') {
+    const action = requestUrl.searchParams.get('action');
+    if (action === 'speech') return handleGeminiFemaleTts(request, env);
+    if (action === 'live-token') return handleGeminiLiveToken(request, env);
+    return handleDirectAngela(request, env);
+  }
   if (pathname === '/api/voice/gemini') return handleGeminiFemaleTts(request, env);
   if (pathname === '/api/gemini/live-token') return handleGeminiLiveToken(request, env);
 
