@@ -84,6 +84,7 @@ jobs:
           PY
 
       - name: Check live Angela verified female audio
+        if: always() && !cancelled()
         shell: bash
         run: |
           set -euo pipefail
