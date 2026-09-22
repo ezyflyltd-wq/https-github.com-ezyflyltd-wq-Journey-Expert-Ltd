@@ -32,6 +32,8 @@ declare global {
 }
 
 const CONSENT_STORAGE_KEY = 'jel-free-angela-consent-v1';
+const BANGLA_WELCOME = 'আসসালামু আলাইকুম! আমি অ্যাঞ্জেলা, Journey Expert Ltd.-এর AI ভয়েস সহকারী। ভ্রমণ বা বিদেশে উচ্চশিক্ষা নিয়ে আপনাকে কীভাবে সাহায্য করতে পারি?';
+const ENGLISH_WELCOME = "Assalamu Alaikum! I am Angela, Journey Expert Ltd.'s AI voice assistant. How can I help with travel or study abroad?";
 const PUBLIC_WIDGET_PATHS = new Set([
   '/',
   '/flights',
@@ -152,6 +154,7 @@ export function FreeVoiceAngelaWidget() {
   const [history, setHistory] = useState<ConversationTurn[]>([]);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const recognitionSupported = Boolean(getSpeechRecognition());
 
@@ -172,10 +175,51 @@ export function FreeVoiceAngelaWidget() {
     }
   }, [isOpen]);
 
+  const unlockAudio = async () => {
+    if (typeof window === 'undefined' || !window.AudioContext) return null;
+    try {
+      let context = audioContextRef.current;
+      if (!context || context.state === 'closed') {
+        context = new window.AudioContext();
+        audioContextRef.current = context;
+      }
+      if (context.state === 'suspended') await context.resume();
+      if (context.state === 'running') {
+        const buffer = context.createBuffer(1, 1, 22050);
+        const source = context.createBufferSource();
+        const gain = context.createGain();
+        gain.gain.value = 0;
+        source.buffer = buffer;
+        source.connect(gain);
+        gain.connect(context.destination);
+        source.start(0);
+      }
+      return context;
+    } catch {
+      return null;
+    }
+  };
+
+  const welcomeText = () => language === 'bn' ? BANGLA_WELCOME : ENGLISH_WELCOME;
+
   const acceptDisclosure = () => {
+    void unlockAudio();
     storeConsent();
     setHasAcceptedDisclosure(true);
     setIsOpen(true);
+    const greeting = welcomeText();
+    setLastReply(greeting);
+    void speakWithBrowser(greeting);
+  };
+
+  const openAssistant = () => {
+    void unlockAudio();
+    setIsOpen(true);
+    if (!lastReply) {
+      const greeting = welcomeText();
+      setLastReply(greeting);
+      void speakWithBrowser(greeting);
+    }
   };
 
   const speakWithBrowser = async (text: string) => {
@@ -194,16 +238,25 @@ export function FreeVoiceAngelaWidget() {
       });
       if (!response.ok) throw new Error('female_tts_unavailable');
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current?.pause();
-      if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
-      audioRef.current = audio;
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        if (audioRef.current === audio) audioRef.current = null;
-      };
-      await audio.play();
+      const context = await unlockAudio();
+      if (context?.state === 'running') {
+        const decoded = await context.decodeAudioData(await blob.arrayBuffer());
+        const source = context.createBufferSource();
+        source.buffer = decoded;
+        source.connect(context.destination);
+        source.start(0);
+      } else {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current?.pause();
+        if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
+        audioRef.current = audio;
+        audio.onended = () => {
+          URL.revokeObjectURL(url);
+          if (audioRef.current === audio) audioRef.current = null;
+        };
+        await audio.play();
+      }
     } catch {
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
@@ -242,7 +295,7 @@ export function FreeVoiceAngelaWidget() {
     setInput('');
 
     try {
-      const response = await fetch('/api/ai-assistant', {
+      const response = await fetch('https://journeyexpertbd.com/api/main/angela', {
         method: 'POST',
         signal: AbortSignal.timeout(18000),
         headers: { 'Content-Type': 'application/json' },
@@ -402,7 +455,7 @@ export function FreeVoiceAngelaWidget() {
           </div>
         </section>
       ) : (
-        <button type="button" onClick={() => setIsOpen(true)} className="inline-flex min-h-14 items-center gap-3 rounded-xl bg-[#093F31] px-4 py-3 text-left text-white shadow-2xl ring-1 ring-[#C7A44D]/70 transition-colors hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" aria-label="Open Angela free AI voice assistant">
+        <button type="button" onClick={openAssistant} className="inline-flex min-h-14 items-center gap-3 rounded-xl bg-[#093F31] px-4 py-3 text-left text-white shadow-2xl ring-1 ring-[#C7A44D]/70 transition-colors hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" aria-label="Open Angela free AI voice assistant">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C7A44D] text-lg text-[#093F31]" aria-hidden="true">✦</span>
           <span><span className="block text-xs font-bold uppercase tracking-[0.16em] text-[#E6CA65]">JEL Free AI Voice</span><span className="block text-sm font-bold">Talk to Angela · কথা বলুন</span></span>
         </button>
