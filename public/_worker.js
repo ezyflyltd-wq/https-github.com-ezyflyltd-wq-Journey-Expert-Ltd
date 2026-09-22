@@ -28,7 +28,6 @@ async function liveToken(request, env) {
 
   const model = 'gemini-3.8-live';
   const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-  const newSessionExpireTime = new Date(Date.now() + 60 * 1000).toISOString();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -39,23 +38,12 @@ async function liveToken(request, env) {
       body: JSON.stringify({
         uses: 1,
         expireTime,
-        newSessionExpireTime,
-        bidiGenerateContentSetup: {
+        liveConnectConstraints: {
           model: 'models/gemini-3.8-live',
-          generationConfig: {
+          config: {
+            sessionResumption: {},
             responseModalities: ['AUDIO'],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Aoede' },
-              },
-            },
           },
-          systemInstruction: {
-            parts: [{
-              text: 'You are Angela, a professional adult female speech renderer. Speak the supplied transcript verbatim in the same language, including Bangla or English. Do not translate, summarize, answer, or add words.',
-            }],
-          },
-          sessionResumption: {},
         },
       }),
     });
