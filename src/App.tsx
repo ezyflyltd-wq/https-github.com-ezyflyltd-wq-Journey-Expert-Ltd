@@ -44,8 +44,6 @@ const CustomerSupportView = lazy(() => import('./components/CustomerSupportView'
 const InternationalExpansionView = lazy(() => import('./components/InternationalExpansionView').then(({ InternationalExpansionView }) => ({ default: InternationalExpansionView })));
 const InnovationLabView = lazy(() => import('./components/InnovationLabView').then(({ InnovationLabView }) => ({ default: InnovationLabView })));
 const EnterpriseBlueprintView = lazy(() => import('./components/EnterpriseBlueprintView').then(({ EnterpriseBlueprintView }) => ({ default: EnterpriseBlueprintView })));
-const AIAssistantModal = lazy(() => import('./components/AIAssistantModal').then(({ AIAssistantModal: Component }) => ({ default: Component })));
-
 import { MainViewModule, PortalType } from './types';
 import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
 import { RouteMetadata } from './seo/RouteMetadata';
@@ -91,11 +89,14 @@ import {
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isAIModalOpen, setIsAIModalOpen] = useState<boolean>(false);
 
   React.useEffect(() => {
     migrateLegacyHash();
   }, []);
+
+  const openAngela = () => {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('jel:open-angela'));
+  };
 
   const activePortal: PortalType = getPortalForPath(location.pathname);
   const activeMainModule: MainViewModule = getModuleForPath(location.pathname) || 'home';
@@ -130,7 +131,7 @@ export default function App() {
         onPortalChange={navigateToPortal}
         activeModule={activeMainModule}
         onModuleChange={navigateToModule}
-        onOpenAIModal={() => setIsAIModalOpen(true)}
+        onOpenAIModal={openAngela}
       />
 
       {/* Main Content Render Area */}
@@ -145,7 +146,7 @@ export default function App() {
                   navigateToModule(mod);
 
                 }}
-                onOpenAIModal={() => setIsAIModalOpen(true)}
+                onOpenAIModal={openAngela}
                 onSearchFlights={handleHeroFlightSearch}
               />
             ) : (
@@ -156,7 +157,7 @@ export default function App() {
                     <HeroSearch
                       activeModule={activeMainModule}
                       onModuleChange={navigateToModule}
-                      onOpenAIModal={() => setIsAIModalOpen(true)}
+                      onOpenAIModal={openAngela}
                       onSearchFlights={handleHeroFlightSearch}
                     />
                   </Suspense>
@@ -362,16 +363,6 @@ export default function App() {
           </ProtectedPortalGate>
         )}
       </main>
-
-      {/* Global AI Assistant Modal */}
-      {isAIModalOpen && (
-        <Suspense fallback={null}>
-          <AIAssistantModal
-            isOpen={isAIModalOpen}
-            onClose={() => setIsAIModalOpen(false)}
-          />
-        </Suspense>
-      )}
 
       {/* Public Angela widget; protected portal routes intentionally do not mount it. */}
       {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && <FreeVoiceAngelaWidget />}
