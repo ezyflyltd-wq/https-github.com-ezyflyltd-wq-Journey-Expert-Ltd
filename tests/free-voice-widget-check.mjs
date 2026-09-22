@@ -11,14 +11,14 @@ const server = fs.readFileSync(path.join(root, 'server.ts'), 'utf8');
 
 assert.equal(widget.includes('getSpeechRecognition'), true, 'the widget must include browser speech recognition');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
-assert.equal(widget.includes("fetch('/api/ai/voice-agent'"), true, 'the widget must use the responsive Angela voice-agent endpoint');
+assert.equal(widget.includes("fetch('/api/ai-assistant'"), true, 'the widget must use the verified live Angela endpoint');
 assert.equal(widget.includes('This free version does not use ElevenLabs'), true, 'the disclosure must explain the free provider choice');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
 assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
 assert.equal(widget.includes("setLanguage('auto')"), false, 'Angela must not expose Auto mode');
 assert.equal(widget.includes("setLanguage('hi')"), false, 'Angela must not expose Hindi mode');
-assert.equal(widget.includes("fetch('/api/voice/gemini'"), true, 'Angela must use Gemini female TTS when no female system voice is available');
+assert.equal(widget.includes("fetch('https://journeyexpertbd.com/angela/main-speech'"), true, 'Angela must use the verified cross-site Gemini female TTS endpoint');
 assert.equal(server.includes("app.post('/api/voice/gemini'"), true, 'the AI Studio server must expose Gemini female TTS');
 assert.equal(widget.includes('Voice output: Angela female'), true, 'Angela UI must state the female-only voice policy');
 assert.equal(widget.includes('Use the same server-rendered Angela female voice on desktop and mobile.'), true, 'server female TTS must be the cross-device primary path');
