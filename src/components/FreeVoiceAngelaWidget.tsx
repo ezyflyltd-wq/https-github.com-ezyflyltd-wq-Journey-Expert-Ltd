@@ -421,7 +421,7 @@ export function FreeVoiceAngelaWidget() {
           <span className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white/90 bg-white p-1">
             <img src="/logo.svg" alt="" className="h-full w-full object-contain" />
           </span>
-          <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"><Mic className="h-2.5 w-2.5" /></span>
+          <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"><Mic className="h-2.5 w-2.5" /></span><span className="sr-only">Talk to Angela · কথা বলুন</span>
         </button>
 
         {isOpen && (
@@ -503,7 +503,7 @@ export function FreeVoiceAngelaWidget() {
         <button type="button" onClick={openAssistant} className="group relative flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-gradient-to-tr from-[#0B5D3B] via-[#0D7A4D] to-[#D4AF37] text-white shadow-2xl ring-2 ring-white/50 transition-all hover:scale-105 active:scale-95" aria-label="Open Angela AI voice assistant">
           <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 opacity-50 blur-sm transition group-hover:opacity-90 animate-pulse" aria-hidden="true"></span>
           <span className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white/90 bg-white p-1"><img src="/logo.svg" alt="" className="h-full w-full object-contain" /></span>
-          <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"><Mic className="h-2.5 w-2.5" /></span>
+          <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"><Mic className="h-2.5 w-2.5" /></span><span className="sr-only">Talk to Angela · কথা বলুন</span>
         </button>
       )}
     </div>
