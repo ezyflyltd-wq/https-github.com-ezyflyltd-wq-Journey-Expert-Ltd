@@ -222,7 +222,7 @@ export function FreeVoiceAngelaWidget() {
     }
   };
 
-  const speakWithBrowser = async (text: string) => {
+  async function speakWithBrowser(text: string) {
     if (typeof window === 'undefined') return;
     const effectiveLanguage = language;
     const cleanText = text.replace(/[*#_`]/g, '');
@@ -279,7 +279,7 @@ export function FreeVoiceAngelaWidget() {
         ? 'Angela-র বাংলা female voice সাময়িকভাবে পাওয়া যাচ্ছে না। লেখা উত্তরটি দেখুন।'
         : 'Angela female English voice is temporarily unavailable. Please use the text answer.');
     }
-  };
+  }
 
   const speak = async (text: string) => {
     if (!voiceEnabled) return;
