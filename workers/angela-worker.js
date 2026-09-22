@@ -141,11 +141,7 @@ async function handleFemaleTts(request, env) {
       body: JSON.stringify({
         model,
         input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
-        response_format: {
-          type: 'audio',
-          mime_type: 'audio/wav',
-          delivery: 'inline',
-        },
+        response_format: { type: 'audio' },
         generation_config: {
           speech_config: [{ voice: 'Kore' }],
         },
@@ -158,10 +154,11 @@ async function handleFemaleTts(request, env) {
     const audio = findAudio(data);
     if (!audio?.data) return json({ error: 'invalid_audio' }, 502);
     const raw = Uint8Array.from(atob(audio.data), ch => ch.charCodeAt(0));
-    return new Response(raw, {
+    const wav = pcmToWav(raw);
+    return new Response(wav, {
       status: 200,
       headers: {
-        'content-type': audio.mimeType || 'audio/wav',
+        'content-type': 'audio/wav',
         'cache-control': 'no-store',
         'access-control-allow-origin': ALLOWED_ORIGIN,
         'x-content-type-options': 'nosniff',
