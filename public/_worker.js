@@ -18,6 +18,46 @@ const fallback = (language) => language === 'bn'
   ? 'আমি অ্যাঞ্জেলা, Journey Expert Ltd.-এর AI সহকারী। এয়ার টিকিট, ভিসা সহায়তা, ট্যুরস অ্যান্ড ট্রাভেলস, হজ ও ওমরাহ, মেডিকেল ও হালাল ট্যুরিজম, হোটেল, ইন্স্যুরেন্স এবং কর্পোরেট ট্রাভেল সম্পর্কে সাহায্য করতে পারি। আপনার গন্তব্য, তারিখ ও প্রয়োজনীয় সার্ভিস লিখুন।'
   : "I am Angela, Journey Expert Ltd.'s AI assistant. I can help with air tickets, visa assistance, tours and travel, Hajj and Umrah, medical and halal tourism, hotels, insurance and corporate travel. Please share your destination, date and required service.";
 
+async function liveToken(request, env) {
+  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+  const origin = request.headers.get('origin');
+  const url = new URL(request.url);
+  if (origin && origin !== url.origin) return json({ error: 'origin_not_allowed' }, 403);
+  const key = (env.GEMINI_API_KEY || '').trim();
+  if (!key) return json({ error: 'live_voice_not_configured' }, 503);
+
+  const model = 'gemini-3.8-live';
+  const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const newSessionExpireTime = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        uses: 1,
+        expireTime,
+        newSessionExpireTime,
+        liveConnectConstraints: {
+          model: `models/${model}`,
+          config: { sessionResumption: {}, responseModalities: ['AUDIO'] },
+        },
+      }),
+    });
+    if (!upstream.ok) return json({ error: upstream.status === 429 ? 'live_voice_quota_exceeded' : 'live_voice_unavailable' }, upstream.status === 429 ? 429 : 424);
+    const data = await upstream.json();
+    const token = typeof data?.name === 'string' ? data.name : '';
+    if (!token) return json({ error: 'live_voice_unavailable' }, 424);
+    return json({ token, model, expiresAt: expireTime });
+  } catch {
+    return json({ error: controller.signal.aborted ? 'live_voice_timeout' : 'live_voice_unavailable' }, 503);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const pcmToWav = (pcm) => {
   const output = new ArrayBuffer(44 + pcm.length);
   const view = new DataView(output);
@@ -155,11 +195,13 @@ export default {
     });
     if (url.pathname === '/api/ai/voice-agent' || url.pathname === '/api/ai-assistant') return chat(request, env);
     if (url.pathname === '/api/voice/gemini') return speech(request, env);
+    if (url.pathname === '/api/gemini/live-token') return liveToken(request, env);
     if (url.pathname === '/api/health' || url.pathname === '/api/healthz') return json({
       status: 'online',
       service: 'JEL Angela Pages Worker',
       languages: ['bn', 'en'],
       femaleVoiceConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
+      liveFemaleVoiceConfigured: Boolean(env.GEMINI_API_KEY),
       model: 'gemini-3.8-flash',
       googleSearchGrounding: env.GOOGLE_SEARCH_GROUNDING === 'true',
     });
