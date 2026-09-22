@@ -54,3 +54,6 @@ assert.equal(widget.includes('fetchAngelaLiveFemaleSpeech'), true, 'corporate An
 assert.equal(liveVoice.includes("voiceName: 'Aoede'"), true, 'Live fallback must use Aoede female voice');
 assert.equal(liveVoice.includes('/api/gemini/live-token'), true, 'Live fallback must use same-origin ephemeral token endpoint');
 assert.equal(pagesWorker.includes("'/api/gemini/live-token'"), true, 'Pages Worker must expose Live token route');
+
+assert.equal(pagesWorker.includes("thinkingLevel: 'low'"), true, 'Gemini 3.8 chat must use low thinking for responsive voice/chat');
+assert.equal(pagesWorker.includes("maxOutputTokens: 1024"), true, 'Gemini 3.8 chat must have enough output budget after thinking');
