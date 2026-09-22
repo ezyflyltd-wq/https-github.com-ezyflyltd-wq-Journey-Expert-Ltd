@@ -321,7 +321,7 @@ export function FreeVoiceAngelaWidget() {
     setInput('');
 
     try {
-      const response = await fetch('/api/ai/voice-agent', {
+      const response = await fetch('/angela/chat', {
         method: 'POST',
         signal: AbortSignal.timeout(18000),
         headers: { 'Content-Type': 'application/json' },
