@@ -1,3 +1,4 @@
+# Production-approved Angela live smoke repair; validates public endpoints only.
 name: Angela production live smoke
 
 on:
@@ -45,29 +46,34 @@ jobs:
           test -n "$body"
           ! grep -E 'API_KEY|SERVICE_ROLE|PASSWORD|SECRET' <<< "$body"
 
-      - name: Check live Angela Bangla response through AI Studio
+      - name: Check live Angela Bangla response through same-origin API
         shell: bash
         run: |
           set -euo pipefail
           body="$(mktemp)"
           trap 'rm -f "$body"' EXIT
-          curl --fail --silent --show-error --max-time 25             --header 'Content-Type: application/json'             --header 'Origin: https://journeyexpertltd.com'             --data '{"message":"ami Malaysia tourist visa ebong tour package niye jante chai","language":"auto","conversationId":"production-smoke","history":[]}'             --output "$body"             https://journeyexpertltd.com/api/ai/voice-agent
+          curl --fail --silent --show-error --max-time 25 \
+            --header 'Content-Type: application/json' \
+            --header 'Origin: https://journeyexpertltd.com' \
+            --data '{"message":"ami Malaysia tourist visa ebong tour package niye jante chai","language":"bn","conversationId":"production-smoke","history":[]}' \
+            --output "$body" \
+            https://journeyexpertltd.com/api/ai/voice-agent
           python - "$body" <<'PY'
-import json, re, sys
-p=sys.argv[1]
-with open(p, encoding="utf-8") as f:
-    data=json.load(f)
-reply=str(data.get("reply") or data.get("response") or "").strip()
-if not reply:
-    raise SystemExit("Angela returned no reply")
-if not re.search(r"[\u0980-\u09ff]", reply):
-    raise SystemExit("Angela did not return Bengali for Banglish input")
-lower=reply.lower()
-for bad in ("live ai unavailable", "safe assistance mode", "নিরাপদ সহায়তা মোড"):
-    if bad in lower:
-        raise SystemExit("Angela returned a degraded canned fallback")
-print("Angela live Bangla response passed")
-PY
+          import json, re, sys
+          p = sys.argv[1]
+          with open(p, encoding="utf-8") as f:
+              data = json.load(f)
+          reply = str(data.get("reply") or data.get("response") or "").strip()
+          if not reply:
+              raise SystemExit("Angela returned no reply")
+          if not re.search(r"[\u0980-\u09ff]", reply):
+              raise SystemExit("Angela did not return Bengali")
+          lower = reply.lower()
+          for bad in ("live ai unavailable", "safe assistance mode", "নিরাপদ সহায়তা মোড"):
+              if bad in lower:
+                  raise SystemExit("Angela returned a degraded canned fallback")
+          print("Angela live Bangla response passed")
+          PY
 
       - name: Publish summary
         if: always()
@@ -77,6 +83,6 @@ PY
             echo "- Target: https://journeyexpertltd.com"
             echo "- Public site and SEO controls checked."
             echo "- Pages API health checked."
-            echo "- Angela AI Studio path probed with a real Banglish-to-Bangla request."
+            echo "- Angela same-origin API probed with a real Banglish-to-Bangla request."
             echo "- Cadence: every 12 hours plus relevant production pushes."
           } >> "$GITHUB_STEP_SUMMARY"
