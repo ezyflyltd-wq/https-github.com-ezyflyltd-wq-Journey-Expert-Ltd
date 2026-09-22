@@ -97,28 +97,28 @@ ${prompt}`;
           }))
       : [];
 
-    const model = 'gemini-3.8-flash';
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
-    try {
-      const body: any = {
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [...history, { role: 'user', parts: [{ text: message }] }],
-        generationConfig: { thinkingConfig: { thinkingLevel: 'low' }, maxOutputTokens: 1024 }
-      };
-      // Google Search grounding is intentionally opt-in because Gemini 3 search
-      // queries can be billable. Set GOOGLE_SEARCH_GROUNDING=true in production
-      // only when the project is approved for that usage.
-      const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
-      if (groundingEnabled) body.tools = [{ google_search: {} }];
+    const models = ['gemini-3.8-flash', 'gemini-3.5-flash'];
+    const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
+    for (const model of models) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), model === 'gemini-3.8-flash' ? 7500 : 5500);
+      try {
+        const generationConfig: any = { maxOutputTokens: 1024 };
+        if (model === 'gemini-3.8-flash') generationConfig.thinkingConfig = { thinkingLevel: 'low' };
+        const body: any = {
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [...history, { role: 'user', parts: [{ text: message }] }],
+          generationConfig,
+        };
+        if (groundingEnabled) body.tools = [{ google_search: {} }];
 
-      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: 'POST',
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify(body),
-      });
-      if (upstream.ok) {
+        const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify(body),
+        });
+        if (!upstream.ok) continue;
         const data: any = await upstream.json();
         const candidate = data?.candidates?.[0];
         const reply = candidate?.content?.parts
@@ -128,8 +128,12 @@ ${prompt}`;
           .trim();
         const grounded = Boolean(candidate?.groundingMetadata);
         if (reply) return jsonResponse({ reply, language, mode: 'ai', providerModel: model, grounded, groundingEnabled }, 200, request);
+      } catch {
+        // Try the next bounded Gemini Flash model.
+      } finally {
+        clearTimeout(timer);
       }
-    } catch { /* bounded provider failure falls through to verified JEL fallback */ } finally { clearTimeout(timer); }
+    }
   }
 
   // Do not chain another remote AI hop after the bounded direct Gemini attempt.
@@ -201,30 +205,44 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
   const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
   if (!key) return jsonError('Gemini female voice is not configured on Cloudflare Pages.', 503, request, { configured: false });
 
-  const model = env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 6000);
-  try {
-    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: 'Read the following exactly in its original language, naturally and clearly. Do not add or translate text:\n' + text }] }],
-        generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } }
-      })
-    });
-    if (!upstream.ok) return jsonError('Gemini female voice unavailable.', upstream.status === 429 ? 429 : 502, request);
-    const data: any = await upstream.json();
-    const audio = data?.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData?.data)?.inlineData;
-    if (!audio?.data) return jsonError('Invalid audio response.', 502, request);
-    const raw = Uint8Array.from(atob(audio.data), ch => ch.charCodeAt(0));
-    return new Response(pcmToWav(raw), { status: 200, headers: {
-      'Content-Type': 'audio/wav', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
-      'Access-Control-Allow-Origin': 'https://journeyexpertltd.com'
-    }});
-  } catch {
-    return jsonError(controller.signal.aborted ? 'Gemini female voice timeout.' : 'Gemini female voice unavailable.', 503, request);
-  } finally { clearTimeout(timer); }
+  const models = Array.from(new Set([
+    env.GEMINI_TTS_MODEL,
+    'gemini-3.1-flash-tts-preview',
+    'gemini-2.5-flash-preview-tts',
+  ].filter((model): model is string => Boolean(model))));
+  let sawQuota = false;
+  for (const model of models) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5500);
+    try {
+      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST', signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: 'Read the following exactly in its original language, naturally and clearly. Do not add or translate text:\\n' + text }] }],
+          generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } }
+        })
+      });
+      if (!upstream.ok) {
+        if (upstream.status === 429) sawQuota = true;
+        continue;
+      }
+      const data: any = await upstream.json();
+      const audio = data?.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData?.data)?.inlineData;
+      if (!audio?.data) continue;
+      const raw = Uint8Array.from(atob(audio.data), ch => ch.charCodeAt(0));
+      return new Response(pcmToWav(raw), { status: 200, headers: {
+        'Content-Type': 'audio/wav', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+        'Access-Control-Allow-Origin': 'https://journeyexpertltd.com',
+        'X-Angela-Voice-Model': model,
+      }});
+    } catch {
+      // Try the next verified Gemini TTS model.
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return jsonError(sawQuota ? 'Gemini female voice quota exceeded.' : 'Gemini female voice unavailable.', sawQuota ? 429 : 503, request);
 }
 
 function elevenLabsConfigured(env: Record<string, string | undefined>): boolean {
@@ -317,7 +335,12 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
   const requestUrl = new URL(request.url);
   const pathname = requestUrl.pathname;
 
-  if (pathname === '/api/ai/voice-agent' || pathname === '/api/ai-assistant') return handleDirectAngela(request, env);
+  if (pathname === '/api/ai/voice-agent' || pathname === '/api/ai-assistant') {
+    const action = requestUrl.searchParams.get('action');
+    if (action === 'speech') return handleGeminiFemaleTts(request, env);
+    if (action === 'live-token') return handleGeminiLiveToken(request, env);
+    return handleDirectAngela(request, env);
+  }
   if (pathname === '/api/voice/gemini') return handleGeminiFemaleTts(request, env);
   if (pathname === '/api/gemini/live-token') return handleGeminiLiveToken(request, env);
 
