@@ -27,11 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
       - name: Check public site and SEO controls
         shell: bash
         run: |
@@ -80,12 +75,6 @@ jobs:
           print("Angela live Bangla response passed")
           PY
 
-      - name: Check live Angela verified female audio
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/probe-angela-female-voice.mjs https://journeyexpertltd.com
-
       - name: Check live Angela female voice capability
         shell: bash
         run: |
@@ -109,16 +98,72 @@ jobs:
             test "$(head -c 4 "$audio")" = "RIFF"
             echo "Angela primary female TTS passed"
           elif [ "$status" = "429" ] || [ "$status" = "502" ] || [ "$status" = "503" ]; then
-            curl --fail --silent --show-error \
-              --max-time 20 \
-              --header 'Content-Type: application/json' \
-              --header 'Origin: https://journeyexpertltd.com' \
-              --request POST \
-              --output "$token_body" \
-              https://journeyexpertltd.com/api/gemini/live-token
-            grep -q '"token"' "$token_body"
-            grep -q '"model":"gemini-3.8-live"' "$token_body"
-            echo "Angela Gemini Live female fallback token passed"
+            node --input-type=module <<'NODE'
+            const base = 'https://journeyexpertltd.com';
+            const tokenRes = await fetch(base + '/api/gemini/live-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Origin: base },
+            });
+            if (!tokenRes.ok) throw new Error('Live token HTTP ' + tokenRes.status);
+            const tokenData = await tokenRes.json();
+            if (!tokenData.token || tokenData.model !== 'gemini-3.8-live') throw new Error('Invalid Live token response');
+
+            const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=' + encodeURIComponent(tokenData.token);
+            const audioBytes = await new Promise((resolve, reject) => {
+              const ws = new WebSocket(wsUrl);
+              let total = 0;
+              let sent = false;
+              let settled = false;
+              const timer = setTimeout(() => finish(new Error('Gemini Live audio timeout')), 12000);
+              const finish = (err) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                try { ws.close(); } catch {}
+                err ? reject(err) : resolve(total);
+              };
+              ws.onopen = () => ws.send(JSON.stringify({
+                setup: {
+                  model: 'models/gemini-3.8-live',
+                  generationConfig: {
+                    responseModalities: ['AUDIO'],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } },
+                  },
+                  systemInstruction: {
+                    parts: [{ text: 'Speak the supplied transcript verbatim as a professional adult female voice. Do not add words.' }],
+                  },
+                },
+              }));
+              ws.onmessage = async (event) => {
+                const raw = typeof event.data === 'string' ? event.data : await event.data.text?.() ?? String(event.data);
+                const msg = JSON.parse(raw);
+                if (msg.setupComplete && !sent) {
+                  sent = true;
+                  ws.send(JSON.stringify({
+                    clientContent: {
+                      turns: [{ role: 'user', parts: [{ text: 'আসসালামু আলাইকুম, আমি অ্যাঞ্জেলা।' }] }],
+                      turnComplete: true,
+                    },
+                  }));
+                  return;
+                }
+                for (const part of msg.serverContent?.modelTurn?.parts || []) {
+                  if (part?.inlineData?.data && (!part.inlineData.mimeType || String(part.inlineData.mimeType).includes('audio'))) {
+                    total += Buffer.from(part.inlineData.data, 'base64').length;
+                  }
+                }
+                if (msg.serverContent?.generationComplete || msg.serverContent?.turnComplete) {
+                  if (total > 1000) finish();
+                }
+              };
+              ws.onerror = () => finish(new Error('Gemini Live WebSocket error'));
+              ws.onclose = () => {
+                if (!settled) total > 1000 ? finish() : finish(new Error('Gemini Live closed without audio'));
+              };
+            });
+            if (audioBytes <= 1000) throw new Error('Gemini Live returned insufficient audio');
+            console.log('Angela Gemini Live Aoede female audio passed:', audioBytes, 'bytes');
+            NODE
           else
             echo "Unexpected Angela female voice status: $status" >&2
             exit 1
@@ -134,6 +179,6 @@ jobs:
             echo "- Pages API health checked."
             echo "- Angela same-origin API probed with a real Banglish-to-Bangla request."
             echo "- Female voice capability checked through primary Gemini TTS or Gemini 3.8 Live fallback."
-            echo "- Angela female voice probed end-to-end: primary Gemini TTS or verified Gemini Live Aoede fallback."
+            echo "- Angela female voice probed end-to-end: primary Gemini TTS or verified Gemini 3.8 Live Aoede audio."
             echo "- Cadence: every 12 hours plus relevant production pushes."
           } >> "$GITHUB_STEP_SUMMARY"
