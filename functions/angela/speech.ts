@@ -103,4 +103,4 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   return json({
     error: sawQuota ? 'voice_quota_exceeded' : 'voice_provider_unavailable',
   }, sawQuota ? 429 : 503);
-}}
+}
