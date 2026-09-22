@@ -163,10 +163,6 @@ async function handleGeminiLiveToken(request: Request, env: Record<string, strin
         uses: 1,
         expireTime,
         newSessionExpireTime,
-        liveConnectConstraints: {
-          model: `models/${model}`,
-          config: { sessionResumption: {}, responseModalities: ['AUDIO'] },
-        },
       }),
     });
     if (!upstream.ok) {
@@ -200,49 +196,51 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
   if (request.method !== 'POST') return jsonError('Method Not Allowed', 405, request, { allow: 'POST' });
   let payload: any;
   try { payload = await request.json(); } catch { return jsonError('Request body must be valid JSON.', 400, request); }
-  const text = typeof payload?.text === 'string' ? payload.text.trim().slice(0, 1800) : '';
+  const text = typeof payload?.text === 'string' ? payload.text.trim().slice(0, 1200) : '';
   if (!text) return jsonError('Text is required.', 400, request);
   const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
   if (!key) return jsonError('Gemini female voice is not configured on Cloudflare Pages.', 503, request, { configured: false });
 
-  const models = Array.from(new Set([
-    env.GEMINI_TTS_MODEL,
-    'gemini-3.1-flash-tts-preview',
-    'gemini-2.5-flash-preview-tts',
-  ].filter((model): model is string => Boolean(model))));
-  let sawQuota = false;
-  for (const model of models) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5500);
-    try {
-      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: 'POST', signal: controller.signal,
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Read the following exactly in its original language, naturally and clearly. Do not add or translate text:\\n' + text }] }],
-          generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } } }
-        })
-      });
-      if (!upstream.ok) {
-        if (upstream.status === 429) sawQuota = true;
-        continue;
-      }
-      const data: any = await upstream.json();
-      const audio = data?.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData?.data)?.inlineData;
-      if (!audio?.data) continue;
-      const raw = Uint8Array.from(atob(audio.data), ch => ch.charCodeAt(0));
-      return new Response(pcmToWav(raw), { status: 200, headers: {
-        'Content-Type': 'audio/wav', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
-        'Access-Control-Allow-Origin': 'https://journeyexpertltd.com',
-        'X-Angela-Voice-Model': model,
-      }});
-    } catch {
-      // Try the next verified Gemini TTS model.
-    } finally {
-      clearTimeout(timer);
+  const model = env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 9000);
+  const findAudio = (value: any): { data: string; mimeType?: string } | null => {
+    if (!value || typeof value !== 'object') return null;
+    if (value.type === 'audio' && typeof value.data === 'string') return { data: value.data, mimeType: value.mime_type || value.mimeType };
+    if (Array.isArray(value)) {
+      for (const item of value) { const found = findAudio(item); if (found) return found; }
+      return null;
     }
-  }
-  return jsonError(sawQuota ? 'Gemini female voice quota exceeded.' : 'Gemini female voice unavailable.', sawQuota ? 429 : 503, request);
+    for (const item of Object.values(value)) { const found = findAudio(item); if (found) return found; }
+    return null;
+  };
+
+  try {
+    const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        model,
+        input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
+        response_format: { type: 'audio', mime_type: 'audio/wav', sample_rate: 24000, delivery: 'inline' },
+        generation_config: { speech_config: [{ voice: 'Kore' }] },
+      }),
+    });
+    if (!upstream.ok) return jsonError('Gemini female voice unavailable.', upstream.status === 429 ? 429 : 502, request, { providerStatus: upstream.status });
+    const data: any = await upstream.json();
+    const audio = findAudio(data);
+    if (!audio?.data) return jsonError('Invalid audio response.', 502, request);
+    const raw = Uint8Array.from(atob(audio.data), ch => ch.charCodeAt(0));
+    return new Response(raw, { status: 200, headers: {
+      'Content-Type': audio.mimeType || 'audio/wav',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'Access-Control-Allow-Origin': 'https://journeyexpertltd.com',
+    }});
+  } catch {
+    return jsonError(controller.signal.aborted ? 'Gemini female voice timeout.' : 'Gemini female voice unavailable.', 503, request);
+  } finally { clearTimeout(timer); }
 }
 
 function elevenLabsConfigured(env: Record<string, string | undefined>): boolean {
