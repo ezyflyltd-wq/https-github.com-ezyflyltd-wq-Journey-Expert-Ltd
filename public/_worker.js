@@ -28,7 +28,7 @@ async function liveToken(request, env) {
 
   const model = 'gemini-3.8-live';
   const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-  const newSessionExpireTime = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+  const newSessionExpireTime = new Date(Date.now() + 60 * 1000).toISOString();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -40,7 +40,13 @@ async function liveToken(request, env) {
         uses: 1,
         expireTime,
         newSessionExpireTime,
-
+        liveConnectConstraints: {
+          model: 'models/gemini-3.8-live',
+          config: {
+            sessionResumption: {},
+            responseModalities: ['AUDIO'],
+          },
+        },
       }),
     });
     if (!upstream.ok) return json({ error: upstream.status === 429 ? 'live_voice_quota_exceeded' : 'live_voice_unavailable' }, upstream.status === 429 ? 429 : 424);
@@ -175,7 +181,6 @@ async function speech(request, env) {
         response_format: {
           type: 'audio',
           mime_type: 'audio/wav',
-          sample_rate: 24000,
           delivery: 'inline',
         },
         generation_config: {
