@@ -129,7 +129,7 @@ function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' 
     const name = voice.name.toLowerCase();
     const languageMatch = voice.lang.toLowerCase().startsWith(prefix);
     return languageMatch && hints.some((hint) => name.includes(hint));
-  }) || null;
+  }) || voices.find((voice) => voice.lang.toLowerCase().startsWith(prefix)) || null;
 }
 
 function getFallbackReply(_prompt: string, selectedLanguage: 'bn' | 'en'): string {
@@ -262,15 +262,15 @@ export function FreeVoiceAngelaWidget() {
         window.speechSynthesis.cancel();
         const voices = await loadSpeechVoices();
         const femaleVoice = getPreferredFemaleVoice(voices, effectiveLanguage);
-        if (femaleVoice) {
+        {
           const utterance = new SpeechSynthesisUtterance(cleanText);
-          utterance.lang = femaleVoice.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US');
-          utterance.voice = femaleVoice;
+          utterance.lang = femaleVoice?.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US');
+          if (femaleVoice) utterance.voice = femaleVoice;
           utterance.rate = 1;
-          utterance.pitch = 1;
+          utterance.pitch = 1.08;
           utterance.onerror = () => setError(effectiveLanguage === 'bn'
-            ? 'Angela-র female voice এখন চালানো যাচ্ছে না। লেখা উত্তরটি দেখুন।'
-            : 'Angela female voice is unavailable. Please use the text answer.');
+            ? 'ভয়েস চালানো যায়নি। আবার Listen চাপুন।'
+            : 'Voice playback failed. Please press Listen again.');
           window.speechSynthesis.speak(utterance);
           return;
         }
