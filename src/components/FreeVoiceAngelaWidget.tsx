@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Send, Volume2, VolumeX, X } from 'lucide-react';
+import { Mic, MicOff, RefreshCw, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { normalizePath } from '../routing/routes';
 
 type SpeechRecognitionEventLike = {
@@ -144,6 +144,7 @@ export function FreeVoiceAngelaWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [language, setLanguage] = useState<'en' | 'bn'>('bn');
   const [input, setInput] = useState('');
@@ -225,13 +226,13 @@ export function FreeVoiceAngelaWidget() {
   async function speakWithBrowser(text: string) {
     if (typeof window === 'undefined') return;
     const effectiveLanguage = language;
-    const cleanText = text.replace(/[*#_`]/g, '');
+    const cleanText = text.replace(/[*#_`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 700);
 
     // Use the same server-rendered Angela female voice on desktop and mobile.
     // Browser voices differ by OS and must never silently fall back to a male voice.
     try {
       setError('');
-      const response = await fetch('https://journeyexpertbd.com/angela/main-speech', {
+      const response = await fetch('/api/voice/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: cleanText, language: effectiveLanguage }),
@@ -244,6 +245,8 @@ export function FreeVoiceAngelaWidget() {
         const source = context.createBufferSource();
         source.buffer = decoded;
         source.connect(context.destination);
+        source.onended = () => setIsSpeaking(false);
+        setIsSpeaking(true);
         source.start(0);
       } else {
         const url = URL.createObjectURL(blob);
@@ -252,6 +255,7 @@ export function FreeVoiceAngelaWidget() {
         if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
         audioRef.current = audio;
         audio.onended = () => {
+          setIsSpeaking(false);
           URL.revokeObjectURL(url);
           if (audioRef.current === audio) audioRef.current = null;
         };
@@ -268,13 +272,16 @@ export function FreeVoiceAngelaWidget() {
           if (femaleVoice) utterance.voice = femaleVoice;
           utterance.rate = 1;
           utterance.pitch = 1.08;
-          utterance.onerror = () => setError(effectiveLanguage === 'bn'
+          utterance.onstart = () => setIsSpeaking(true);
+          utterance.onend = () => setIsSpeaking(false);
+          utterance.onerror = () => { setIsSpeaking(false); setError(effectiveLanguage === 'bn'
             ? 'ভয়েস চালানো যায়নি। আবার Listen চাপুন।'
-            : 'Voice playback failed. Please press Listen again.');
+            : 'Voice playback failed. Please press Listen again.'); };
           window.speechSynthesis.speak(utterance);
           return;
         }
       }
+      setIsSpeaking(false);
       setError(effectiveLanguage === 'bn'
         ? 'Angela-র বাংলা female voice সাময়িকভাবে পাওয়া যাচ্ছে না। লেখা উত্তরটি দেখুন।'
         : 'Angela female English voice is temporarily unavailable. Please use the text answer.');
@@ -295,7 +302,7 @@ export function FreeVoiceAngelaWidget() {
     setInput('');
 
     try {
-      const response = await fetch('https://journeyexpertbd.com/api/main/angela', {
+      const response = await fetch('/api/ai/voice-agent', {
         method: 'POST',
         signal: AbortSignal.timeout(18000),
         headers: { 'Content-Type': 'application/json' },
@@ -327,13 +334,19 @@ export function FreeVoiceAngelaWidget() {
   };
 
   const startListening = () => {
+    audioRef.current?.pause();
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
     const Recognition = getSpeechRecognition();
     if (!Recognition) {
       setError('Voice input is not available in this browser. You can type your question below.');
       return;
     }
 
-    recognitionRef.current?.stop();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch { /* already ended */ }
+      recognitionRef.current = null;
+    }
     const recognition = new Recognition();
     recognition.lang = language === 'bn' ? 'bn-BD' : 'en-US';
     recognition.interimResults = false;
@@ -344,10 +357,14 @@ export function FreeVoiceAngelaWidget() {
       if (transcript) void askAssistant(transcript);
     };
     recognition.onerror = () => {
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
       setIsListening(false);
       setError('Voice input could not be heard. Please try again or type your question.');
     };
-    recognition.onend = () => setIsListening(false);
+    recognition.onend = () => {
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
+      setIsListening(false);
+    };
     recognitionRef.current = recognition;
     setError('');
     setIsListening(true);
@@ -360,14 +377,19 @@ export function FreeVoiceAngelaWidget() {
   };
 
   const stopListening = () => {
-    recognitionRef.current?.stop();
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    try { recognition?.stop(); } catch { /* already ended */ }
     setIsListening(false);
   };
 
   const resetConversation = () => {
-    recognitionRef.current?.stop();
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    try { recognition?.stop(); } catch { /* already ended */ }
     window.speechSynthesis?.cancel();
     audioRef.current?.pause();
+    setIsSpeaking(false);
     setHistory([]);
     setLastTranscript('');
     setLastReply('');
@@ -375,20 +397,31 @@ export function FreeVoiceAngelaWidget() {
     setIsListening(false);
   };
 
+  useEffect(() => {
+    const openFromSite = () => openAssistant();
+    window.addEventListener('jel:open-angela', openFromSite);
+    return () => window.removeEventListener('jel:open-angela', openFromSite);
+  }, [hasAcceptedDisclosure, lastReply, language]);
+
+  const assistantState = error ? 'ERROR' : isListening ? 'LISTENING' : isLoading ? 'THINKING' : isSpeaking ? 'SPEAKING' : 'READY';
+  const stateText = language === 'bn'
+    ? ({ READY: 'প্রস্তুত', LISTENING: 'শুনছি', THINKING: 'ভাবছি', SPEAKING: 'বলছি', ERROR: 'সমস্যা' } as const)[assistantState]
+    : assistantState;
+
   if (!hasAcceptedDisclosure) {
     return (
       <>
         <button
           type="button"
-          className="fixed bottom-4 right-4 z-[60] inline-flex min-h-14 items-center gap-3 bg-[#093F31] px-4 py-3 text-left text-white shadow-2xl ring-1 ring-[#C7A44D]/70 transition-colors hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2 sm:bottom-6 sm:right-6"
+          className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[60] flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-gradient-to-tr from-[#0B5D3B] via-[#0D7A4D] to-[#D4AF37] text-white shadow-2xl ring-2 ring-white/50 transition-all hover:scale-105 active:scale-95 sm:bottom-6 sm:right-6"
           aria-label="Open free Angela voice assistant"
           onClick={() => setIsOpen(true)}
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C7A44D] text-lg text-[#093F31]" aria-hidden="true">✦</span>
-          <span>
-            <span className="block text-xs font-bold uppercase tracking-[0.16em] text-[#E6CA65]">JEL Free AI Voice</span>
-            <span className="block text-sm font-bold">Talk to Angela · কথা বলুন</span>
+          <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 opacity-50 blur-sm animate-pulse" aria-hidden="true"></span>
+          <span className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white/90 bg-white p-1">
+            <img src="/logo.svg" alt="" className="h-full w-full object-contain" />
           </span>
+          <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"><Mic className="h-2.5 w-2.5" /></span><span className="sr-only">Talk to Angela · কথা বলুন</span>
         </button>
 
         {isOpen && (
@@ -411,27 +444,39 @@ export function FreeVoiceAngelaWidget() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] flex max-w-[calc(100vw-2rem)] flex-col items-end gap-2 sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[60] flex max-w-[calc(100vw-1.5rem)] flex-col items-end gap-2 sm:bottom-6 sm:right-6">
       {isOpen ? (
-        <section role="dialog" aria-label="Angela free AI voice assistant" className="w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-[#C7A44D]/60 bg-[#FFFDF6] shadow-2xl">
-          <header className="flex items-center justify-between bg-[#093F31] px-4 py-3 text-white">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#E6CA65]">JEL Free AI Voice</p>
-              <h2 className="text-sm font-bold">Angela · অ্যাঞ্জেলা</h2>
+        <section role="dialog" aria-label="Angela AI voice assistant" className="flex h-[min(640px,85dvh)] w-[calc(100vw-24px)] max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-2xl">
+          <header className="relative flex items-center justify-between overflow-hidden bg-gradient-to-r from-[#0B5D3B] via-[#0D6D45] to-[#074028] px-3 py-3 text-white shadow-md sm:px-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-[#D4AF37] bg-white p-1 shadow-md"><img src="/logo.svg" alt="" className="h-full w-full object-contain" /></span>
+              <div>
+                <div className="flex items-center gap-1.5"><h2 className="text-sm font-bold sm:text-base">Angela</h2><span className="rounded border border-[#D4AF37]/40 bg-[#D4AF37]/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200">AI Voice</span></div>
+                <p className="text-[10px] text-emerald-200/90 sm:text-[11px]">Journey Expert Limited</p>
+              </div>
             </div>
             <div className="flex items-center gap-1">
-              <button type="button" onClick={resetConversation} className="rounded-lg px-2 py-1 text-[10px] font-bold text-[#E6CA65] hover:bg-white/10">New chat</button>
-              <button type="button" aria-label="Close Angela assistant" onClick={() => setIsOpen(false)} className="rounded-lg p-1.5 hover:bg-white/10"><X className="h-4 w-4" /></button>
+              <div className="mr-1 flex items-center rounded-lg bg-white/10 p-0.5 text-[10px]">
+                <button type="button" className={`rounded px-1.5 py-0.5 ${language === 'en' ? 'bg-white font-bold text-[#0B5D3B]' : 'text-white/80'}`} onClick={() => setLanguage('en')}>EN</button>
+                <button type="button" className={`rounded px-1.5 py-0.5 ${language === 'bn' ? 'bg-white font-bold text-[#0B5D3B]' : 'text-white/80'}`} onClick={() => setLanguage('bn')}>বাংলা</button>
+              </div>
+              <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => setVoiceEnabled((value) => !value)} className="rounded-lg p-1.5 text-amber-300 hover:bg-white/10">{voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-white/60" />}</button>
+              <button type="button" aria-label="New chat" onClick={resetConversation} className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white"><RefreshCw className="h-4 w-4" /></button>
+              <button type="button" aria-label="Close Angela assistant" onClick={() => setIsOpen(false)} className="rounded-lg p-1.5 text-white/80 hover:bg-white/10"><X className="h-5 w-5" /></button>
             </div>
           </header>
-          <div className="space-y-3 p-4 text-xs text-[#333333]">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex gap-1">
-                <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'en' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => setLanguage('en')}>English</button>
-                <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'bn' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => setLanguage('bn')}>বাংলা</button>
-              </div>
-              <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => setVoiceEnabled((value) => !value)} className="rounded-lg border border-[#E8E1CF] p-2 hover:bg-[#F1E9D3]">{voiceEnabled ? <Volume2 className="h-4 w-4 text-[#0B6B53]" /> : <VolumeX className="h-4 w-4 text-[#777777]" />}</button>
-            </div>
+          <div className={`flex items-center gap-2 border-b px-3 py-1.5 text-[11px] font-medium ${
+            assistantState === 'LISTENING' ? 'border-rose-200 bg-rose-50 text-rose-800' :
+            assistantState === 'THINKING' ? 'border-amber-200 bg-amber-50 text-amber-800' :
+            assistantState === 'SPEAKING' ? 'border-blue-200 bg-blue-50 text-blue-800' :
+            assistantState === 'ERROR' ? 'border-red-200 bg-red-50 text-red-700' :
+            'border-emerald-100 bg-emerald-50/70 text-emerald-800'
+          }`}>
+            <span className={`h-2 w-2 rounded-full ${assistantState === 'LISTENING' ? 'bg-rose-500 animate-ping' : assistantState === 'THINKING' ? 'bg-amber-500 animate-pulse' : assistantState === 'SPEAKING' ? 'bg-blue-500 animate-bounce' : assistantState === 'ERROR' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+            <strong className="text-[10px] tracking-wider">{stateText}</strong>
+            <span className="truncate text-slate-500">{language === 'bn' ? (assistantState === 'READY' ? 'মাইক্রোফোনে বলুন অথবা লিখুন' : assistantState === 'LISTENING' ? 'আপনার কথা শুনছি' : assistantState === 'THINKING' ? 'JEL তথ্য দিয়ে উত্তর তৈরি হচ্ছে' : assistantState === 'SPEAKING' ? 'উত্তর পড়ে শোনাচ্ছি' : 'লিখে সহায়তা নিন') : (assistantState === 'READY' ? 'Tap mic or type below' : assistantState === 'LISTENING' ? 'Listening to you' : assistantState === 'THINKING' ? 'Answering with JEL knowledge' : assistantState === 'SPEAKING' ? 'Speaking response' : 'Text chat remains available')}</span>
+          </div>
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-xs text-[#333333]">
             <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{recognitionSupported ? 'Ask Angela a question in Bangla, Banglish, or English. She will keep the conversation context.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0B6B53]" data-testid="voice-provider-status">
               Voice output: Angela female · {language === 'bn' ? 'বাংলা' : 'English'}
@@ -455,9 +500,10 @@ export function FreeVoiceAngelaWidget() {
           </div>
         </section>
       ) : (
-        <button type="button" onClick={openAssistant} className="inline-flex min-h-14 items-center gap-3 rounded-xl bg-[#093F31] px-4 py-3 text-left text-white shadow-2xl ring-1 ring-[#C7A44D]/70 transition-colors hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" aria-label="Open Angela free AI voice assistant">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C7A44D] text-lg text-[#093F31]" aria-hidden="true">✦</span>
-          <span><span className="block text-xs font-bold uppercase tracking-[0.16em] text-[#E6CA65]">JEL Free AI Voice</span><span className="block text-sm font-bold">Talk to Angela · কথা বলুন</span></span>
+        <button type="button" onClick={openAssistant} className="group relative flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-gradient-to-tr from-[#0B5D3B] via-[#0D7A4D] to-[#D4AF37] text-white shadow-2xl ring-2 ring-white/50 transition-all hover:scale-105 active:scale-95" aria-label="Open Angela AI voice assistant">
+          <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 opacity-50 blur-sm transition group-hover:opacity-90 animate-pulse" aria-hidden="true"></span>
+          <span className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white/90 bg-white p-1"><img src="/logo.svg" alt="" className="h-full w-full object-contain" /></span>
+          <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"><Mic className="h-2.5 w-2.5" /></span><span className="sr-only">Talk to Angela · কথা বলুন</span>
         </button>
       )}
     </div>

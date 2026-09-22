@@ -11,19 +11,19 @@ const server = fs.readFileSync(path.join(root, 'server.ts'), 'utf8');
 
 assert.equal(widget.includes('getSpeechRecognition'), true, 'the widget must include browser speech recognition');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
-assert.equal(widget.includes("fetch('https://journeyexpertbd.com/api/main/angela'"), true, 'the widget must use the verified live Angela endpoint');
+assert.equal(widget.includes("fetch('/api/ai/voice-agent'"), true, 'the widget must use the same-origin Angela endpoint');
 assert.equal(widget.includes('This free version does not use ElevenLabs'), true, 'the disclosure must explain the free provider choice');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
 assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
 assert.equal(widget.includes("setLanguage('auto')"), false, 'Angela must not expose Auto mode');
 assert.equal(widget.includes("setLanguage('hi')"), false, 'Angela must not expose Hindi mode');
-assert.equal(widget.includes("fetch('https://journeyexpertbd.com/angela/main-speech'"), true, 'Angela must use the verified cross-site Gemini female TTS endpoint');
+assert.equal(widget.includes("fetch('/api/voice/gemini'"), true, 'Angela must use the same-origin Gemini female TTS endpoint');
 assert.equal(server.includes("app.post('/api/voice/gemini'"), true, 'the AI Studio server must expose Gemini female TTS');
 assert.equal(widget.includes('Voice output: Angela female'), true, 'Angela UI must state the female-only voice policy');
 assert.equal(widget.includes('Use the same server-rendered Angela female voice on desktop and mobile.'), true, 'server female TTS must be the cross-device primary path');
 assert.equal(widget.includes('+8801926400400'), true, 'the human-support phone number must be callable');
-assert.equal(widget.includes('fixed bottom-4 right-4'), true, 'the public launcher must be fixed and floating');
+assert.equal(widget.includes('bottom-[max(0.75rem,env(safe-area-inset-bottom))]'), true, 'the public launcher must respect mobile safe areas');
 assert.equal(widget.includes('Talk to Angela · কথা বলুন'), true, 'the launcher must be customer-visible and bilingual');
 assert.equal(app.includes("activePortal === 'main' && isPublicAngelaRoute(location.pathname)"), true, 'the widget must remain limited to approved public routes');
 assert.equal(app.includes('FreeVoiceAngelaWidget'), true, 'the app must mount the free voice widget');
@@ -40,3 +40,7 @@ assert.equal(pagesWorker.includes("languages: ['bn', 'en']"), true, 'Pages Worke
 
 assert.equal(widget.includes('BANGLA_WELCOME'), true, 'Angela must greet visitors in Bangla by default');
 assert.equal(widget.includes('audioContextRef'), true, 'Angela must unlock reliable audio playback across mobile and desktop');
+
+assert.equal(widget.includes("jel:open-angela"), true, 'site AI triggers must open the canonical Angela widget');
+assert.equal(widget.includes("recognitionRef.current = null"), true, 'speech recognition sessions must be released between turns');
+assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a second competing AI assistant modal');
