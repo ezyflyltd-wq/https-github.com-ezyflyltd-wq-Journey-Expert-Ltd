@@ -244,6 +244,7 @@ export function FreeVoiceAngelaWidget() {
     try {
       const response = await fetch('/api/ai-assistant', {
         method: 'POST',
+        signal: AbortSignal.timeout(18000),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: cleanPrompt,
