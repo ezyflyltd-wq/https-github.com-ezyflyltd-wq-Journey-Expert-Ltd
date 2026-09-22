@@ -47,11 +47,15 @@ async function chat(request, env) {
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
   if (!key) return json({ reply: fallback(language), language, mode: 'fallback' });
 
-  const system = `You are Angela, the official female AI Travel Assistant of Journey Expert Ltd. (JEL), Bangladesh, on journeyexpertltd.com.
-Use these verified JEL facts as your corporate source of truth: slogan "Your Journey, Our Expertise."; office 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215, Bangladesh; WhatsApp/hotline +8801926400400; telephone +8802 9830404; email journeyexpertbd@gmail.com. Core services: air ticketing and fare quotation, reissue/refund support, visa-document assistance, tours and travel, hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, and study-abroad guidance. Detailed education support is also available through JEL Study Abroad at journeyexpertbd.com.
-Answer only in ${language === 'bn' ? 'natural Bengali script' : 'professional English'}, matching the language explicitly selected in the interface. Never switch to Hindi, Arabic, or another language.
-Answer the customer's actual question first. For a voice request, normally use 2-4 short sentences and no more than about 90 spoken words unless the customer explicitly asks for detail. Ask at most one useful follow-up question.
-Never invent or imply live fares, schedules, seats, hotel inventory, package availability, visa rules, fees, processing times, embassy decisions, university partnerships, admission results, scholarships, payments, bookings, or refunds. If information is current, case-specific, or not present in the verified JEL facts, say it requires verification from the relevant official/source system or a JEL consultant. Do not request passport numbers, card/bank details, passwords, OTPs, or sensitive document contents.`;
+  const system = `You are Angela, the official female AI Assistant of Journey Expert Ltd. (JEL), Bangladesh, on journeyexpertltd.com.
+JEL verified knowledge has priority. Slogan: "Your Journey, Our Expertise." Office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215, Bangladesh. WhatsApp/hotline: +8801926400400. Telephone: +8802 9830404. Email: journeyexpertbd@gmail.com.
+Core services: air ticketing and fare quotation, reissue/refund support, visa-document assistance, tours and travel, hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, and Study Abroad. Detailed education counselling is handled by JEL Study Abroad at journeyexpertbd.com.
+Answer only in ${language === 'bn' ? 'natural Bengali script' : 'professional English'}, matching the language explicitly selected in the interface.
+Answer the user's actual question first. Keep normal spoken answers concise: 2-5 short sentences.
+For JEL questions, use the verified facts above as the source of truth. Never invent company facts, partnerships, live fares, schedules, seats, hotel inventory, package availability, visa rules, fees, processing times, embassy decisions, admission results, scholarships, payments, bookings, or refunds.
+You may answer general knowledge questions professionally. For current or time-sensitive public facts, only state them as current when Google Search grounding is actually enabled in this request; otherwise say the detail should be verified.
+Never claim access to all of Google, Wikipedia, or the whole internet unless a search tool was actually used.
+Do not request passport numbers, card/bank details, passwords, OTPs, or sensitive document contents.`;
 
   const history = Array.isArray(body?.history)
     ? body.history
@@ -59,33 +63,35 @@ Never invent or imply live fares, schedules, seats, hotel inventory, package ava
         .slice(-8)
         .map((turn) => ({ role: turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: turn.content.trim().slice(0, 1800) }] }))
     : [];
-  const models = [env.GEMINI_MODEL, 'gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash-lite'].filter(Boolean);
-  for (const model of [...new Set(models)]) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4500);
-    try {
-      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: 'POST',
-        signal: controller.signal,
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [...history, { role: 'user', parts: [{ text: message }] }],
-          generationConfig: { temperature: 0.15, maxOutputTokens: 360 },
-        }),
-      });
-      if (!upstream.ok) continue;
+  const model = 'gemini-3.8-flash';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const requestBody = {
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [...history, { role: 'user', parts: [{ text: message }] }],
+      generationConfig: { temperature: 0.15, maxOutputTokens: 420 },
+    };
+    const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
+    if (groundingEnabled) requestBody.tools = [{ google_search: {} }];
+    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify(requestBody),
+    });
+    if (upstream.ok) {
       const data = await upstream.json();
-      const reply = data?.candidates?.[0]?.content?.parts?.filter((part) => !part.thought).map((part) => part.text || '').join('').trim();
-      if (!reply) continue;
-      if (language === 'bn' && !/[\u0980-\u09FF]/.test(reply)) continue;
-      if (language === 'en' && /[\u0980-\u09FF]/.test(reply)) continue;
-      return json({ reply, language, mode: 'ai', providerModel: model });
-    } catch {
-      // Try the next bounded model.
-    } finally {
-      clearTimeout(timer);
+      const candidate = data?.candidates?.[0];
+      const reply = candidate?.content?.parts?.filter((part) => !part.thought).map((part) => part.text || '').join('').trim();
+      if (reply && !(language === 'bn' && !/[\u0980-\u09FF]/.test(reply)) && !(language === 'en' && /[\u0980-\u09FF]/.test(reply))) {
+        return json({ reply, language, mode: 'ai', providerModel: model, grounded: Boolean(candidate?.groundingMetadata), groundingEnabled });
+      }
     }
+  } catch {
+    // Bounded Gemini failure falls through to verified JEL fallback.
+  } finally {
+    clearTimeout(timer);
   }
   return json({ reply: fallback(language), language, mode: 'fallback' });
 }
@@ -154,6 +160,8 @@ export default {
       service: 'JEL Angela Pages Worker',
       languages: ['bn', 'en'],
       femaleVoiceConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
+      model: 'gemini-3.8-flash',
+      googleSearchGrounding: env.GOOGLE_SEARCH_GROUNDING === 'true',
     });
     return env.ASSETS.fetch(request);
   },
