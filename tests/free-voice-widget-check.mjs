@@ -15,11 +15,13 @@ assert.equal(widget.includes("fetch('/api/ai/voice-agent'"), true, 'the widget m
 assert.equal(widget.includes('This free version does not use ElevenLabs'), true, 'the disclosure must explain the free provider choice');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
-assert.equal(widget.includes("useState<'auto' | 'en' | 'bn' | 'hi'>('auto')"), true, 'Angela must default to Auto language mode with Hindi support');
+assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
+assert.equal(widget.includes("setLanguage('auto')"), false, 'Angela must not expose Auto mode');
+assert.equal(widget.includes("setLanguage('hi')"), false, 'Angela must not expose Hindi mode');
 assert.equal(widget.includes("fetch('/api/voice/gemini'"), true, 'Angela must use Gemini female TTS when no female system voice is available');
 assert.equal(server.includes("app.post('/api/voice/gemini'"), true, 'the AI Studio server must expose Gemini female TTS');
-assert.equal(widget.includes('Female voice preferred'), true, 'Angela UI must state the female-voice preference');
-assert.equal(widget.includes('detectReplyLanguage'), true, 'Auto mode must detect reply language');
+assert.equal(widget.includes('Voice output: Angela female'), true, 'Angela UI must state the female-only voice policy');
+assert.equal(widget.includes('Use the same server-rendered Angela female voice on desktop and mobile.'), true, 'server female TTS must be the cross-device primary path');
 assert.equal(widget.includes('+8801926400400'), true, 'the human-support phone number must be callable');
 assert.equal(widget.includes('fixed bottom-4 right-4'), true, 'the public launcher must be fixed and floating');
 assert.equal(widget.includes('Talk to Angela · কথা বলুন'), true, 'the launcher must be customer-visible and bilingual');
