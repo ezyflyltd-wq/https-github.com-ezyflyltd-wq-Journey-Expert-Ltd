@@ -104,7 +104,7 @@ ${prompt}`;
       const body: any = {
         systemInstruction: { parts: [{ text: system }] },
         contents: [...history, { role: 'user', parts: [{ text: message }] }],
-        generationConfig: { temperature: 0.15, maxOutputTokens: 420 }
+        generationConfig: { thinkingConfig: { thinkingLevel: 'low' }, maxOutputTokens: 1024 }
       };
       // Google Search grounding is intentionally opt-in because Gemini 3 search
       // queries can be billable. Set GOOGLE_SEARCH_GROUNDING=true in production
