@@ -156,7 +156,7 @@ async function speech(request, env) {
   const text = typeof body?.text === 'string' ? body.text.trim().slice(0, 1200) : '';
   if (!text) return json({ error: 'text_required' }, 400);
   const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
-  if (!key) return json({ error: 'female_voice_not_configured' }, 503);
+  if (!key || env.ANGELA_SERVER_VOICE === 'off') return json({ error: 'female_voice_not_configured' }, 503);
 
   const models = [...new Set([
     env.GEMINI_TTS_MODEL,
@@ -202,12 +202,10 @@ async function speech(request, env) {
           },
         }),
       });
-
       if (!upstream.ok) {
         if (upstream.status === 429) sawQuota = true;
         continue;
       }
-
       const data = await upstream.json();
       const audio = findAudio(data);
       if (!audio?.data) continue;
@@ -224,7 +222,7 @@ async function speech(request, env) {
         },
       });
     } catch {
-      // Try the next supported Google TTS model.
+      // Try next supported Google TTS model.
     } finally {
       clearTimeout(timer);
     }
@@ -236,7 +234,7 @@ async function speech(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (request.method === 'OPTIONS' && (url.pathname.startsWith('/api/') || url.pathname.startsWith('/angela/'))) return new Response(null, {
+    if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) return new Response(null, {
       status: 204,
       headers: {
         'access-control-allow-origin': ALLOWED_ORIGIN,
