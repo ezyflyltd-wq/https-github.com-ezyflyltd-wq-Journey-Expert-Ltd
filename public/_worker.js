@@ -214,7 +214,12 @@ export default {
         'access-control-allow-headers': 'Content-Type',
       },
     });
-    if (url.pathname === '/api/ai/voice-agent' || url.pathname === '/api/ai-assistant') return chat(request, env);
+    if (url.pathname === '/api/ai/voice-agent' || url.pathname === '/api/ai-assistant') {
+      const action = url.searchParams.get('action');
+      if (action === 'speech') return speech(request, env);
+      if (action === 'live-token') return liveToken(request, env);
+      return chat(request, env);
+    }
     if (url.pathname === '/api/voice/gemini') return speech(request, env);
     if (url.pathname === '/api/gemini/live-token') return liveToken(request, env);
     if (url.pathname === '/api/health' || url.pathname === '/api/healthz') return json({
