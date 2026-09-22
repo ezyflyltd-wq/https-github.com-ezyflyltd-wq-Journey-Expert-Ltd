@@ -27,9 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -84,11 +81,48 @@ jobs:
           PY
 
       - name: Check live Angela verified female audio
-        if: always() && !cancelled()
         shell: bash
         run: |
           set -euo pipefail
           node scripts/probe-angela-female-voice.mjs https://journeyexpertltd.com
+
+      - name: Check live Angela female voice capability
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$(mktemp)"
+          audio="$(mktemp)"
+          token_body="$(mktemp)"
+          trap 'rm -f "$headers" "$audio" "$token_body"' EXIT
+          status="$(curl --silent --show-error \
+            --max-time 20 \
+            --dump-header "$headers" \
+            --header 'Content-Type: application/json' \
+            --header 'Origin: https://journeyexpertltd.com' \
+            --data '{"text":"আসসালামু আলাইকুম, আমি অ্যাঞ্জেলা।","language":"bn"}' \
+            --output "$audio" \
+            --write-out '%{http_code}' \
+            https://journeyexpertltd.com/api/voice/gemini)"
+          if [ "$status" = "200" ]; then
+            grep -qi '^content-type: audio/wav' "$headers"
+            test "$(wc -c < "$audio")" -gt 1000
+            test "$(head -c 4 "$audio")" = "RIFF"
+            echo "Angela primary female TTS passed"
+          elif [ "$status" = "429" ] || [ "$status" = "502" ] || [ "$status" = "503" ]; then
+            curl --fail --silent --show-error \
+              --max-time 20 \
+              --header 'Content-Type: application/json' \
+              --header 'Origin: https://journeyexpertltd.com' \
+              --request POST \
+              --output "$token_body" \
+              https://journeyexpertltd.com/api/gemini/live-token
+            grep -q '"token"' "$token_body"
+            grep -q '"model":"gemini-3.8-live"' "$token_body"
+            echo "Angela Gemini Live female fallback token passed"
+          else
+            echo "Unexpected Angela female voice status: $status" >&2
+            exit 1
+          fi
 
       - name: Publish summary
         if: always()
@@ -99,6 +133,7 @@ jobs:
             echo "- Public site and SEO controls checked."
             echo "- Pages API health checked."
             echo "- Angela same-origin API probed with a real Banglish-to-Bangla request."
+            echo "- Female voice capability checked through primary Gemini TTS or Gemini 3.8 Live fallback."
             echo "- Angela female voice probed end-to-end: primary Gemini TTS or verified Gemini Live Aoede fallback."
             echo "- Cadence: every 12 hours plus relevant production pushes."
           } >> "$GITHUB_STEP_SUMMARY"
