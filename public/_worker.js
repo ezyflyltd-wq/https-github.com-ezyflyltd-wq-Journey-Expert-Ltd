@@ -40,10 +40,7 @@ async function liveToken(request, env) {
         uses: 1,
         expireTime,
         newSessionExpireTime,
-        liveConnectConstraints: {
-          model: `models/${model}`,
-          config: { sessionResumption: {}, responseModalities: ['AUDIO'] },
-        },
+
       }),
     });
     if (!upstream.ok) return json({ error: upstream.status === 429 ? 'live_voice_quota_exceeded' : 'live_voice_unavailable' }, upstream.status === 429 ? 429 : 424);
