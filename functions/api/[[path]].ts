@@ -59,36 +59,77 @@ async function handleDirectAngela(request: Request, env: Record<string, string |
   const message = typeof payload?.message === 'string' ? payload.message.trim().slice(0, 6000) : '';
   if (!message) return jsonError('Message is required.', 400, request);
   const language = detectAngelaLanguage(message, payload?.language);
-  const key = (env.GEMINI_API_KEY || '').trim();
+  const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
 
   if (key) {
     const prompt = language === 'bn'
-      ? 'Respond in concise natural Bengali script.'
+      ? 'Respond in concise, professional natural Bengali script. Keep common brand and technical names in English where natural.'
       : language === 'hi'
-        ? 'Respond in concise natural Hindi.'
-        : 'Respond in concise natural English.';
-    const system = `You are Angela, the official AI Travel and Mobility Assistant of Journey Expert Ltd. in Bangladesh. Help with air tickets, visa-document guidance, tours and travel, hotels, Hajj and Umrah, medical tourism, halal tourism, insurance, corporate travel and Meet & Greet. Never guarantee visas, fares, seat inventory, consular outcomes, or unverified live prices. For study-abroad counselling, direct users to journeyexpertbd.com. ${prompt}`;
-    const models = [env.GEMINI_EDGE_MODEL || 'gemini-3.5-flash-lite'];
-    for (const model of models) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1800);
-      try {
-        const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-          method: 'POST',
-          signal: controller.signal,
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: system }] },
-            contents: [{ role: 'user', parts: [{ text: message }] }],
-            generationConfig: { temperature: 0.25, maxOutputTokens: 512 }
-          }),
-        });
-        if (!upstream.ok) continue;
+        ? 'Respond in concise professional Hindi.'
+        : 'Respond in concise professional English.';
+
+    const system = `You are Angela, the official AI Assistant of Journey Expert Ltd. (JEL), Bangladesh, on journeyexpertltd.com.
+
+JEL VERIFIED KNOWLEDGE HAS PRIORITY:
+- Slogan: "Your Journey, Our Expertise."
+- Office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215, Bangladesh.
+- WhatsApp/Hotline: +8801926400400. Telephone: +8802 9830404. Email: journeyexpertbd@gmail.com.
+- Core services: air ticketing and fare quotation, reissue/refund support, visa-document assistance, tours and travel, hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, and Study Abroad.
+- Detailed education counselling is handled by JEL Study Abroad at journeyexpertbd.com.
+- JEL Study Abroad covers profile assessment, country/course/university selection, admissions, scholarships, SOP guidance, English tests, student-visa documents, pre-departure and post-arrival guidance.
+
+BEHAVIOUR:
+- Answer the user's actual question first and keep normal voice answers short: usually 2-5 sentences.
+- For JEL questions, use the verified JEL facts above as the source of truth. Never invent company facts, partnerships, prices, availability, booking status, visa outcomes, admission outcomes, or processing times.
+- You may answer general knowledge questions professionally. For current or time-sensitive public facts, only state them as current when web grounding is actually available in this request; otherwise say they should be verified.
+- Never claim access to all of Google, Wikipedia, or the whole internet unless a search tool was actually used.
+- Never guarantee visa approval, fare, seat inventory, hotel inventory, university admission, scholarship, refund, or consular outcome.
+- Do not request passwords, OTPs, card/bank details, or sensitive document contents.
+${prompt}`;
+
+    const history = Array.isArray(payload?.history)
+      ? payload.history
+          .filter((turn: any) => turn && typeof turn.content === 'string' && turn.content.trim())
+          .slice(-8)
+          .map((turn: any) => ({
+            role: turn.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: turn.content.trim().slice(0, 1800) }],
+          }))
+      : [];
+
+    const model = 'gemini-3.8-flash';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const body: any = {
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [...history, { role: 'user', parts: [{ text: message }] }],
+        generationConfig: { temperature: 0.15, maxOutputTokens: 420 }
+      };
+      // Google Search grounding is intentionally opt-in because Gemini 3 search
+      // queries can be billable. Set GOOGLE_SEARCH_GROUNDING=true in production
+      // only when the project is approved for that usage.
+      const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
+      if (groundingEnabled) body.tools = [{ google_search: {} }];
+
+      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(body),
+      });
+      if (upstream.ok) {
         const data: any = await upstream.json();
-        const reply = data?.candidates?.[0]?.content?.parts?.filter((p: any) => !p.thought).map((p: any) => p.text || '').join('').trim();
-        if (reply) return jsonResponse({ reply, language, mode: 'ai', providerModel: model }, 200, request);
-      } catch { /* try next model */ } finally { clearTimeout(timer); }
-    }
+        const candidate = data?.candidates?.[0];
+        const reply = candidate?.content?.parts
+          ?.filter((p: any) => !p.thought && typeof p.text === 'string')
+          .map((p: any) => p.text)
+          .join('')
+          .trim();
+        const grounded = Boolean(candidate?.groundingMetadata);
+        if (reply) return jsonResponse({ reply, language, mode: 'ai', providerModel: model, grounded, groundingEnabled }, 200, request);
+      }
+    } catch { /* bounded provider failure falls through to verified JEL fallback */ } finally { clearTimeout(timer); }
   }
 
   // Do not chain another remote AI hop after the bounded direct Gemini attempt.
@@ -151,7 +192,7 @@ function handleVoiceStatus(request: Request, env: Record<string, string | undefi
   return jsonResponse({
     provider: 'elevenlabs',
     configured: elevenLabsConfigured(env),
-    fallback: 'browser-speech-synthesis',
+    fallback: 'text-only',
     voiceId: env.ELEVENLABS_VOICE_ID ? 'configured' : 'not-configured',
   }, 200, request);
 }
@@ -159,9 +200,9 @@ function handleVoiceStatus(request: Request, env: Record<string, string | undefi
 async function handleElevenLabs(request: Request, env: Record<string, string | undefined>): Promise<Response> {
   if (request.method !== 'POST') return jsonError('Method Not Allowed', 405, request, { allow: 'POST' });
   if (!elevenLabsConfigured(env)) {
-    return jsonError('ElevenLabs is not configured; use browser speech fallback.', 503, request, {
+    return jsonError('ElevenLabs is not configured; use verified Gemini female voice or text.', 503, request, {
       configured: false,
-      fallback: 'browser-speech-synthesis',
+      fallback: 'text-only',
     });
   }
 
