@@ -159,10 +159,7 @@ async function handleGeminiLiveToken(request: Request, env: Record<string, strin
         uses: 1,
         expireTime,
         newSessionExpireTime,
-        liveConnectConstraints: {
-          model: `models/${model}`,
-          config: { sessionResumption: {}, responseModalities: ['AUDIO'] },
-        },
+
       }),
     });
     if (!upstream.ok) {
