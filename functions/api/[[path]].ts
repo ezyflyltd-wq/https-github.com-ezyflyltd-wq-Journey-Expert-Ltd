@@ -268,44 +268,6 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
   }
 }
 
-async function handleGeminiLiveToken(request: Request, env: Record<string, string | undefined>): Promise<Response> {
-  if (request.method !== 'POST') return jsonError('Method Not Allowed', 405, request, { allow: 'POST' });
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin) return jsonError('Origin not allowed.', 403, request);
-
-  const key = (env.GEMINI_API_KEY || '').trim();
-  if (!key) return jsonError('Gemini Live female voice is not configured.', 503, request);
-
-  const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-  const newSessionExpireTime = new Date(Date.now() + 2 * 60 * 1000).toISOString();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
-
-  try {
-    const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        uses: 1,
-        expireTime,
-        newSessionExpireTime,
-      }),
-    });
-    if (!upstream.ok) {
-      return jsonError(upstream.status === 429 ? 'live_voice_quota_exceeded' : 'live_voice_unavailable', upstream.status === 429 ? 429 : 502, request);
-    }
-    const data: any = await upstream.json();
-    const token = typeof data?.name === 'string' ? data.name : '';
-    if (!token) return jsonError('live_voice_unavailable', 502, request);
-    return jsonResponse({ token, model: 'gemini-3.8-live', expiresAt: expireTime }, 200, request);
-  } catch {
-    return jsonError(controller.signal.aborted ? 'live_voice_timeout' : 'live_voice_unavailable', 503, request);
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 function elevenLabsConfigured(env: Record<string, string | undefined>): boolean {
   return Boolean(env.ELEVENLABS_API_KEY && env.ELEVENLABS_VOICE_ID);
 }
