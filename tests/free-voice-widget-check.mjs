@@ -58,5 +58,8 @@ assert.equal(pagesWorker.includes("action === 'live-token'"), true, 'Pages Worke
 assert.equal(pagesWorker.includes("thinkingLevel: 'low'"), true, 'Gemini 3.8 chat must use low thinking for responsive voice/chat');
 assert.equal(pagesWorker.includes("maxOutputTokens: 1024"), true, 'Gemini 3.8 chat must have enough output budget after thinking');
 
-assert.equal(pagesWorker.includes("'gemini-2.5-flash-preview-tts'"), true, 'Angela must have a second verified Gemini TTS model fallback');
+assert.equal(pagesWorker.includes('v1beta/interactions'), true, 'Angela primary female TTS must use the current Gemini Interactions API');
+assert.equal(liveVoice.includes('clientContent'), true, 'Gemini Live fallback must use the current clientContent turn protocol');
+assert.equal(liveVoice.includes('turnComplete: true'), true, 'Gemini Live fallback must explicitly complete the speech-rendering turn');
+assert.equal(liveVoice.includes('realtimeInput: { text:'), false, 'legacy Live text input must not be used');
 assert.equal(pagesWorker.includes("'gemini-3.5-flash'"), true, 'Angela must have a secondary Gemini Flash text model fallback');
