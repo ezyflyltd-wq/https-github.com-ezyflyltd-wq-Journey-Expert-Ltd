@@ -1,3 +1,4 @@
+# Production-approved Angela live smoke repair; validates public endpoints only.
 name: Angela production live smoke
 
 on:
