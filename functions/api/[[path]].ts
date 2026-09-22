@@ -97,28 +97,28 @@ ${prompt}`;
           }))
       : [];
 
-    const models = ['gemini-3.8-flash', 'gemini-3.5-flash'];
-    const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
-    for (const model of models) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), model === 'gemini-3.8-flash' ? 7500 : 5500);
-      try {
-        const generationConfig: any = { maxOutputTokens: 1024 };
-        if (model === 'gemini-3.8-flash') generationConfig.thinkingConfig = { thinkingLevel: 'low' };
-        const body: any = {
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [...history, { role: 'user', parts: [{ text: message }] }],
-          generationConfig,
-        };
-        if (groundingEnabled) body.tools = [{ google_search: {} }];
+    const model = 'gemini-3.8-flash';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const body: any = {
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [...history, { role: 'user', parts: [{ text: message }] }],
+        generationConfig: { temperature: 0.15, maxOutputTokens: 420 }
+      };
+      // Google Search grounding is intentionally opt-in because Gemini 3 search
+      // queries can be billable. Set GOOGLE_SEARCH_GROUNDING=true in production
+      // only when the project is approved for that usage.
+      const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
+      if (groundingEnabled) body.tools = [{ google_search: {} }];
 
-        const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-          method: 'POST',
-          signal: controller.signal,
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-          body: JSON.stringify(body),
-        });
-        if (!upstream.ok) continue;
+      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(body),
+      });
+      if (upstream.ok) {
         const data: any = await upstream.json();
         const candidate = data?.candidates?.[0];
         const reply = candidate?.content?.parts
@@ -128,12 +128,8 @@ ${prompt}`;
           .trim();
         const grounded = Boolean(candidate?.groundingMetadata);
         if (reply) return jsonResponse({ reply, language, mode: 'ai', providerModel: model, grounded, groundingEnabled }, 200, request);
-      } catch {
-        // Try the next bounded Gemini Flash model.
-      } finally {
-        clearTimeout(timer);
       }
-    }
+    } catch { /* bounded provider failure falls through to verified JEL fallback */ } finally { clearTimeout(timer); }
   }
 
   // Do not chain another remote AI hop after the bounded direct Gemini attempt.
@@ -163,6 +159,7 @@ async function handleGeminiLiveToken(request: Request, env: Record<string, strin
         uses: 1,
         expireTime,
         newSessionExpireTime,
+
       }),
     });
     if (!upstream.ok) {
@@ -204,14 +201,23 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
   const model = env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 9000);
+
   const findAudio = (value: any): { data: string; mimeType?: string } | null => {
     if (!value || typeof value !== 'object') return null;
-    if (value.type === 'audio' && typeof value.data === 'string') return { data: value.data, mimeType: value.mime_type || value.mimeType };
+    if (value.type === 'audio' && typeof value.data === 'string') {
+      return { data: value.data, mimeType: value.mime_type || value.mimeType };
+    }
     if (Array.isArray(value)) {
-      for (const item of value) { const found = findAudio(item); if (found) return found; }
+      for (const item of value) {
+        const found = findAudio(item);
+        if (found) return found;
+      }
       return null;
     }
-    for (const item of Object.values(value)) { const found = findAudio(item); if (found) return found; }
+    for (const item of Object.values(value)) {
+      const found = findAudio(item);
+      if (found) return found;
+    }
     return null;
   };
 
@@ -219,28 +225,47 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
     const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
       method: 'POST',
       signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': key,
+      },
       body: JSON.stringify({
         model,
         input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
-        response_format: { type: 'audio', mime_type: 'audio/wav', sample_rate: 24000, delivery: 'inline' },
-        generation_config: { speech_config: [{ voice: 'Kore' }] },
+        response_format: {
+          type: 'audio',
+          mime_type: 'audio/wav',
+          sample_rate: 24000,
+          delivery: 'inline',
+        },
+        generation_config: {
+          speech_config: [{ voice: 'Kore' }],
+        },
       }),
     });
-    if (!upstream.ok) return jsonError('Gemini female voice unavailable.', upstream.status === 429 ? 429 : 502, request, { providerStatus: upstream.status });
+
+    if (!upstream.ok) {
+      return jsonError('Gemini female voice unavailable.', upstream.status === 429 ? 429 : 502, request, { providerStatus: upstream.status });
+    }
+
     const data: any = await upstream.json();
     const audio = findAudio(data);
     if (!audio?.data) return jsonError('Invalid audio response.', 502, request);
     const raw = Uint8Array.from(atob(audio.data), ch => ch.charCodeAt(0));
-    return new Response(raw, { status: 200, headers: {
-      'Content-Type': audio.mimeType || 'audio/wav',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-      'Access-Control-Allow-Origin': 'https://journeyexpertltd.com',
-    }});
+    return new Response(raw, {
+      status: 200,
+      headers: {
+        'Content-Type': audio.mimeType || 'audio/wav',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'Access-Control-Allow-Origin': 'https://journeyexpertltd.com',
+      },
+    });
   } catch {
     return jsonError(controller.signal.aborted ? 'Gemini female voice timeout.' : 'Gemini female voice unavailable.', 503, request);
-  } finally { clearTimeout(timer); }
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function elevenLabsConfigured(env: Record<string, string | undefined>): boolean {
@@ -333,12 +358,7 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
   const requestUrl = new URL(request.url);
   const pathname = requestUrl.pathname;
 
-  if (pathname === '/api/ai/voice-agent' || pathname === '/api/ai-assistant') {
-    const action = requestUrl.searchParams.get('action');
-    if (action === 'speech') return handleGeminiFemaleTts(request, env);
-    if (action === 'live-token') return handleGeminiLiveToken(request, env);
-    return handleDirectAngela(request, env);
-  }
+  if (pathname === '/api/ai/voice-agent' || pathname === '/api/ai-assistant') return handleDirectAngela(request, env);
   if (pathname === '/api/voice/gemini') return handleGeminiFemaleTts(request, env);
   if (pathname === '/api/gemini/live-token') return handleGeminiLiveToken(request, env);
 
@@ -364,6 +384,7 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
       version: '2.6.0-angela-edge',
       directGeminiConfigured: Boolean(env.GEMINI_API_KEY),
       femaleTtsConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
+      femaleLiveFallbackConfigured: Boolean(env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY),
       liveFemaleVoiceConfigured: Boolean(env.GEMINI_API_KEY),
       aiStudioFallbackConfigured: Boolean(env.AI_STUDIO_ORIGIN || DEFAULT_AI_STUDIO_ORIGIN),
     }, 200, request);

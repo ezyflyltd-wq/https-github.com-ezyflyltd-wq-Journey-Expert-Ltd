@@ -40,6 +40,7 @@ async function liveToken(request, env) {
         uses: 1,
         expireTime,
         newSessionExpireTime,
+
       }),
     });
     if (!upstream.ok) return json({ error: upstream.status === 429 ? 'live_voice_quota_exceeded' : 'live_voice_unavailable' }, upstream.status === 429 ? 429 : 424);
@@ -99,38 +100,35 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
         .slice(-8)
         .map((turn) => ({ role: turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: turn.content.trim().slice(0, 1800) }] }))
     : [];
-  const models = ['gemini-3.8-flash', 'gemini-3.5-flash'];
-  const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
-  for (const model of models) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), model === 'gemini-3.8-flash' ? 7500 : 5500);
-    try {
-      const generationConfig = { maxOutputTokens: 1024 };
-      if (model === 'gemini-3.8-flash') generationConfig.thinkingConfig = { thinkingLevel: 'low' };
-      const requestBody = {
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [...history, { role: 'user', parts: [{ text: message }] }],
-        generationConfig,
-      };
-      if (groundingEnabled) requestBody.tools = [{ google_search: {} }];
-      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: 'POST',
-        signal: controller.signal,
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify(requestBody),
-      });
-      if (!upstream.ok) continue;
+  const model = 'gemini-3.8-flash';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const requestBody = {
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [...history, { role: 'user', parts: [{ text: message }] }],
+      generationConfig: { temperature: 0.15, maxOutputTokens: 420 },
+    };
+    const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
+    if (groundingEnabled) requestBody.tools = [{ google_search: {} }];
+    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify(requestBody),
+    });
+    if (upstream.ok) {
       const data = await upstream.json();
       const candidate = data?.candidates?.[0];
       const reply = candidate?.content?.parts?.filter((part) => !part.thought).map((part) => part.text || '').join('').trim();
       if (reply && !(language === 'bn' && !/[\u0980-\u09FF]/.test(reply)) && !(language === 'en' && /[\u0980-\u09FF]/.test(reply))) {
         return json({ reply, language, mode: 'ai', providerModel: model, grounded: Boolean(candidate?.groundingMetadata), groundingEnabled });
       }
-    } catch {
-      // Try the next bounded Gemini Flash model.
-    } finally {
-      clearTimeout(timer);
     }
+  } catch {
+    // Bounded Gemini failure falls through to verified JEL fallback.
+  } finally {
+    clearTimeout(timer);
   }
   return json({ reply: fallback(language), language, mode: 'fallback' });
 }
@@ -148,12 +146,20 @@ async function speech(request, env) {
   const timer = setTimeout(() => controller.abort(), 9000);
   const findAudio = (value) => {
     if (!value || typeof value !== 'object') return null;
-    if (value.type === 'audio' && typeof value.data === 'string') return { data: value.data, mimeType: value.mime_type || value.mimeType };
+    if (value.type === 'audio' && typeof value.data === 'string') {
+      return { data: value.data, mimeType: value.mime_type || value.mimeType };
+    }
     if (Array.isArray(value)) {
-      for (const item of value) { const found = findAudio(item); if (found) return found; }
+      for (const item of value) {
+        const found = findAudio(item);
+        if (found) return found;
+      }
       return null;
     }
-    for (const item of Object.values(value)) { const found = findAudio(item); if (found) return found; }
+    for (const item of Object.values(value)) {
+      const found = findAudio(item);
+      if (found) return found;
+    }
     return null;
   };
 
@@ -166,8 +172,15 @@ async function speech(request, env) {
       body: JSON.stringify({
         model,
         input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
-        response_format: { type: 'audio', mime_type: 'audio/wav', sample_rate: 24000, delivery: 'inline' },
-        generation_config: { speech_config: [{ voice: 'Kore' }] },
+        response_format: {
+          type: 'audio',
+          mime_type: 'audio/wav',
+          sample_rate: 24000,
+          delivery: 'inline',
+        },
+        generation_config: {
+          speech_config: [{ voice: 'Kore' }],
+        },
       }),
     });
     if (!upstream.ok) return json({ error: upstream.status === 429 ? 'voice_quota_exceeded' : 'female_voice_unavailable' }, upstream.status === 429 ? 429 : 502);
@@ -175,15 +188,19 @@ async function speech(request, env) {
     const audio = findAudio(data);
     if (!audio?.data) return json({ error: 'invalid_audio' }, 502);
     const raw = Uint8Array.from(atob(audio.data), (character) => character.charCodeAt(0));
-    return new Response(raw, { headers: {
-      'content-type': audio.mimeType || 'audio/wav',
-      'cache-control': 'no-store',
-      'access-control-allow-origin': ALLOWED_ORIGIN,
-      'x-content-type-options': 'nosniff',
-    }});
+    return new Response(raw, {
+      headers: {
+        'content-type': audio.mimeType || 'audio/wav',
+        'cache-control': 'no-store',
+        'access-control-allow-origin': ALLOWED_ORIGIN,
+        'x-content-type-options': 'nosniff',
+      },
+    });
   } catch {
     return json({ error: controller.signal.aborted ? 'female_voice_timeout' : 'female_voice_unavailable' }, 503);
-  } finally { clearTimeout(timer); }
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export default {
@@ -197,12 +214,7 @@ export default {
         'access-control-allow-headers': 'Content-Type',
       },
     });
-    if (url.pathname === '/api/ai/voice-agent' || url.pathname === '/api/ai-assistant') {
-      const action = url.searchParams.get('action');
-      if (action === 'speech') return speech(request, env);
-      if (action === 'live-token') return liveToken(request, env);
-      return chat(request, env);
-    }
+    if (url.pathname === '/api/ai/voice-agent' || url.pathname === '/api/ai-assistant') return chat(request, env);
     if (url.pathname === '/api/voice/gemini') return speech(request, env);
     if (url.pathname === '/api/gemini/live-token') return liveToken(request, env);
     if (url.pathname === '/api/health' || url.pathname === '/api/healthz') return json({
@@ -210,6 +222,7 @@ export default {
       service: 'JEL Angela Pages Worker',
       languages: ['bn', 'en'],
       femaleVoiceConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
+      femaleLiveFallbackConfigured: Boolean(env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY),
       liveFemaleVoiceConfigured: Boolean(env.GEMINI_API_KEY),
       model: 'gemini-3.8-flash',
       googleSearchGrounding: env.GOOGLE_SEARCH_GROUNDING === 'true',
