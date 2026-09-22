@@ -422,6 +422,7 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
       version: '2.6.0-angela-edge',
       directGeminiConfigured: Boolean(env.GEMINI_API_KEY),
       femaleTtsConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
+      femaleLiveFallbackConfigured: Boolean(env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY),
       liveFemaleVoiceConfigured: Boolean(env.GEMINI_API_KEY),
       aiStudioFallbackConfigured: Boolean(env.AI_STUDIO_ORIGIN || DEFAULT_AI_STUDIO_ORIGIN),
     }, 200, request);
