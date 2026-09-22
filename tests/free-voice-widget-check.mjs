@@ -45,7 +45,7 @@ assert.equal(widget.includes("jel:open-angela"), true, 'site AI triggers must op
 assert.equal(widget.includes("recognitionRef.current = null"), true, 'speech recognition sessions must be released between turns');
 assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a second competing AI assistant modal');
 
-assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
+assert.equal(pagesWorker.includes("const models = ['gemini-3.8-flash', 'gemini-3.5-flash']"), true, 'Pages Angela must keep Gemini 3.8 primary with Gemini 3.5 fallback');
 assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
 assert.equal(widget.includes('verified female voice is temporarily unavailable'), true, 'voice failure must degrade to text instead of an unknown OS voice');
 
