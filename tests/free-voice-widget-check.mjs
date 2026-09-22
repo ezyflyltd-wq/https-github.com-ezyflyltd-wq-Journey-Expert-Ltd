@@ -48,3 +48,9 @@ assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a
 assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
 assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
 assert.equal(widget.includes('verified female voice is temporarily unavailable'), true, 'voice failure must degrade to text instead of an unknown OS voice');
+
+const liveVoice = fs.readFileSync(path.join(root, 'src/lib/angelaLiveVoice.ts'), 'utf8');
+assert.equal(widget.includes('fetchAngelaLiveFemaleSpeech'), true, 'corporate Angela must use verified Gemini Live female fallback');
+assert.equal(liveVoice.includes("voiceName: 'Aoede'"), true, 'Live fallback must use Aoede female voice');
+assert.equal(liveVoice.includes('/api/gemini/live-token'), true, 'Live fallback must use same-origin ephemeral token endpoint');
+assert.equal(pagesWorker.includes("'/api/gemini/live-token'"), true, 'Pages Worker must expose Live token route');

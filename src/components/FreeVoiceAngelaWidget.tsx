@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, RefreshCw, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { normalizePath } from '../routing/routes';
+import { fetchAngelaLiveFemaleSpeech } from '../lib/angelaLiveVoice';
 
 type SpeechRecognitionEventLike = {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -262,14 +263,47 @@ export function FreeVoiceAngelaWidget() {
         await audio.play();
       }
     } catch {
-      // Cross-device invariant: never let the OS/browser silently substitute
-      // an unknown or male voice. If the verified server female TTS is unavailable,
-      // keep the answer visible as text and report voice-only degradation.
-      if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
-      setIsSpeaking(false);
-      setError(effectiveLanguage === 'bn'
-        ? 'Angela-র verified female voice সাময়িকভাবে পাওয়া যাচ্ছে না। উত্তরটি লেখা আকারে দেখানো হচ্ছে।'
-        : 'Angela verified female voice is temporarily unavailable. The answer remains available as text.');
+      // Primary Gemini TTS may hit quota or a transient timeout. Before degrading
+      // to text, try a second verified Google female voice through Gemini Live.
+      try {
+        const liveController = new AbortController();
+        const liveTimer = window.setTimeout(() => liveController.abort(), 6500);
+        const liveBlob = await fetchAngelaLiveFemaleSpeech(cleanText, liveController.signal);
+        window.clearTimeout(liveTimer);
+        const context = await unlockAudio();
+        if (context?.state === 'running') {
+          const decoded = await context.decodeAudioData(await liveBlob.arrayBuffer());
+          const source = context.createBufferSource();
+          source.buffer = decoded;
+          source.connect(context.destination);
+          source.onended = () => setIsSpeaking(false);
+          setIsSpeaking(true);
+          source.start(0);
+          return;
+        }
+        const url = URL.createObjectURL(liveBlob);
+        const audio = new Audio(url);
+        audioRef.current?.pause();
+        if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
+        audioRef.current = audio;
+        audio.onended = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(url);
+          if (audioRef.current === audio) audioRef.current = null;
+        };
+        setIsSpeaking(true);
+        await audio.play();
+        return;
+      } catch {
+        // Cross-device invariant: never let the OS/browser silently substitute
+        // an unknown or male voice. If both verified female cloud paths fail,
+        // keep the answer visible as text.
+        if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
+        setIsSpeaking(false);
+        setError(effectiveLanguage === 'bn'
+          ? 'Angela-র verified female voice সাময়িকভাবে পাওয়া যাচ্ছে না। উত্তরটি লেখা আকারে দেখানো হচ্ছে।'
+          : 'Angela verified female voice is temporarily unavailable. The answer remains available as text.');
+      }
     }
   }
 

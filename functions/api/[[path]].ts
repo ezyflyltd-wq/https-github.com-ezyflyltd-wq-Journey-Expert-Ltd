@@ -137,6 +137,49 @@ ${prompt}`;
   return jsonResponse(fastFallback(message, language), 200, request);
 }
 
+async function handleGeminiLiveToken(request: Request, env: Record<string, string | undefined>): Promise<Response> {
+  if (request.method !== 'POST') return jsonError('Method Not Allowed', 405, request, { allow: 'POST' });
+  const origin = request.headers.get('origin');
+  const url = new URL(request.url);
+  if (origin && origin !== url.origin) return jsonError('Origin not allowed.', 403, request);
+  const key = (env.GEMINI_API_KEY || '').trim();
+  if (!key) return jsonError('Gemini Live female voice is not configured.', 503, request, { configured: false });
+
+  const model = 'gemini-3.8-live';
+  const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const newSessionExpireTime = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        uses: 1,
+        expireTime,
+        newSessionExpireTime,
+        liveConnectConstraints: {
+          model: `models/${model}`,
+          config: { sessionResumption: {}, responseModalities: ['AUDIO'] },
+        },
+      }),
+    });
+    if (!upstream.ok) {
+      if (upstream.status === 429) return jsonError('live_voice_quota_exceeded', 429, request);
+      return jsonError('live_voice_unavailable', 424, request);
+    }
+    const data: any = await upstream.json();
+    const token = typeof data?.name === 'string' ? data.name : '';
+    if (!token) return jsonError('live_voice_unavailable', 424, request);
+    return jsonResponse({ token, model, expiresAt: expireTime }, 200, request);
+  } catch {
+    return jsonError(controller.signal.aborted ? 'live_voice_timeout' : 'live_voice_unavailable', 503, request);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function pcmToWav(pcm: Uint8Array): ArrayBuffer {
   const output = new ArrayBuffer(44 + pcm.length);
   const view = new DataView(output);
@@ -276,6 +319,7 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
 
   if (pathname === '/api/ai/voice-agent' || pathname === '/api/ai-assistant') return handleDirectAngela(request, env);
   if (pathname === '/api/voice/gemini') return handleGeminiFemaleTts(request, env);
+  if (pathname === '/api/gemini/live-token') return handleGeminiLiveToken(request, env);
 
   if (pathname === '/api/voice/status') {
     if (request.method !== 'GET' && request.method !== 'HEAD') return jsonError('Method Not Allowed', 405, request, { allow: 'GET, HEAD' });
@@ -299,6 +343,7 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
       version: '2.6.0-angela-edge',
       directGeminiConfigured: Boolean(env.GEMINI_API_KEY),
       femaleTtsConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
+      liveFemaleVoiceConfigured: Boolean(env.GEMINI_API_KEY),
       aiStudioFallbackConfigured: Boolean(env.AI_STUDIO_ORIGIN || DEFAULT_AI_STUDIO_ORIGIN),
     }, 200, request);
   }

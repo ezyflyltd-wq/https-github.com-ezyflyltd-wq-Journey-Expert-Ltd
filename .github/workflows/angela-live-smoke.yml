@@ -27,6 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Check public site and SEO controls
         shell: bash
         run: |
@@ -75,6 +80,12 @@ jobs:
           print("Angela live Bangla response passed")
           PY
 
+      - name: Check live Angela verified female audio
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/probe-angela-female-voice.mjs https://journeyexpertltd.com
+
       - name: Publish summary
         if: always()
         run: |
@@ -84,5 +95,6 @@ jobs:
             echo "- Public site and SEO controls checked."
             echo "- Pages API health checked."
             echo "- Angela same-origin API probed with a real Banglish-to-Bangla request."
+            echo "- Angela female voice probed end-to-end: primary Gemini TTS or verified Gemini Live Aoede fallback."
             echo "- Cadence: every 12 hours plus relevant production pushes."
           } >> "$GITHUB_STEP_SUMMARY"
