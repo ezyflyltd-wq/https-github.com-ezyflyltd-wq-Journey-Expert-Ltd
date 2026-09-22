@@ -130,8 +130,8 @@ function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' 
   }) || null;
 }
 
-function getFallbackReply(prompt: string): string {
-  const bn = detectReplyLanguage(prompt) === 'bn';
+function getFallbackReply(_prompt: string, selectedLanguage: 'bn' | 'en'): string {
+  const bn = selectedLanguage === 'bn';
   return bn
     ? 'আমি অ্যাঞ্জেলা, Journey Expert Ltd.-এর AI সহকারী। এয়ার টিকিট, ভিসা, ট্যুরস অ্যান্ড ট্রাভেলস, হজ ও ওমরাহ, মেডিকেল ট্যুরিজম, হালাল ট্যুরিজম, হোটেল, ইন্স্যুরেন্স ও কর্পোরেট ট্রাভেল সম্পর্কে সাধারণ তথ্য দিতে পারি। যাচাই করা লাইভ কোটেশন বা কেস রিভিউয়ের জন্য +8801926400400 নম্বরে যোগাযোগ করুন।'
     : 'I am Angela, Journey Expert Ltd.\'s AI assistant. I can help with air tickets, visas, tours and travel, Hajj and Umrah, medical tourism, halal tourism, hotels, insurance and corporate travel. For a verified live quotation or case review, contact +8801926400400.';
@@ -187,7 +187,7 @@ export function FreeVoiceAngelaWidget() {
     // Browser voices differ by OS and must never silently fall back to a male voice.
     try {
       setError('');
-      const response = await fetch('/api/voice/gemini', {
+      const response = await fetch('https://journeyexpertbd.com/angela/main-speech', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: cleanText, language: effectiveLanguage }),
@@ -242,7 +242,7 @@ export function FreeVoiceAngelaWidget() {
     setInput('');
 
     try {
-      const response = await fetch('/api/ai/voice-agent', {
+      const response = await fetch('/api/ai-assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -254,7 +254,7 @@ export function FreeVoiceAngelaWidget() {
       });
       if (!response.ok) throw new Error('AI endpoint unavailable');
       const data = await response.json();
-      const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt));
+      const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt, language));
       setHistory((turns) => [
         ...turns,
         { role: 'user', content: cleanPrompt },
@@ -263,7 +263,7 @@ export function FreeVoiceAngelaWidget() {
       setLastReply(reply);
       void speak(reply);
     } catch {
-      const fallback = getFallbackReply(cleanPrompt);
+      const fallback = getFallbackReply(cleanPrompt, language);
       setLastReply(fallback);
       setError('Live AI is temporarily unavailable, so a safe support message is shown.');
       void speak(fallback);
