@@ -11,7 +11,7 @@ const server = fs.readFileSync(path.join(root, 'server.ts'), 'utf8');
 
 assert.equal(widget.includes('getSpeechRecognition'), true, 'the widget must include browser speech recognition');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
-assert.equal(widget.includes("fetch('/api/ai-assistant'"), true, 'the widget must use the verified live Angela endpoint');
+assert.equal(widget.includes("fetch('https://journeyexpertbd.com/api/main/angela'"), true, 'the widget must use the verified live Angela endpoint');
 assert.equal(widget.includes('This free version does not use ElevenLabs'), true, 'the disclosure must explain the free provider choice');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
@@ -37,3 +37,6 @@ const pagesWorker = fs.readFileSync('public/_worker.js', 'utf8');
 assert.equal(pagesWorker.includes("'/api/ai/voice-agent'"), true, 'Pages Worker must expose Angela chat');
 assert.equal(pagesWorker.includes("'/api/voice/gemini'"), true, 'Pages Worker must expose female TTS');
 assert.equal(pagesWorker.includes("languages: ['bn', 'en']"), true, 'Pages Worker health must declare only Bangla and English');
+
+assert.equal(widget.includes('BANGLA_WELCOME'), true, 'Angela must greet visitors in Bangla by default');
+assert.equal(widget.includes('audioContextRef'), true, 'Angela must unlock reliable audio playback across mobile and desktop');
