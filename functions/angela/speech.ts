@@ -32,10 +32,12 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
 
   const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
   if (!key || env.ANGELA_SERVER_VOICE === 'off') return json({ error: 'voice_not_configured' }, 503);
-  const model = env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 9000);
+  const models = Array.from(new Set([
+    env.GEMINI_TTS_MODEL,
+    'gemini-3.1-flash-tts-preview',
+    'gemini-2.5-flash-preview-tts',
+    'gemini-2.5-pro-preview-tts',
+  ].filter((model): model is string => Boolean(model))));
   const findAudio = (value: any): { data: string } | null => {
     if (!value || typeof value !== 'object') return null;
     if (value.type === 'audio' && typeof value.data === 'string') return { data: value.data };
@@ -53,44 +55,52 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
     return null;
   };
 
-  try {
-    const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        model,
-        input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
-        response_format: { type: 'audio' },
-        generation_config: { speech_config: [{ voice: 'Kore' }] },
-      }),
-    });
+  let sawQuota = false;
+  for (const model of models) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6500);
+    try {
+      const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          model,
+          input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
+          response_format: { type: 'audio' },
+          generation_config: { speech_config: [{ voice: 'Kore' }] },
+        }),
+      });
 
-    if (!upstream.ok) {
-      return json({
-        error: upstream.status === 429 ? 'voice_quota_exceeded' : 'voice_provider_unavailable',
-        providerStatus: upstream.status,
-      }, upstream.status === 429 ? 429 : 503);
+      if (!upstream.ok) {
+        if (upstream.status === 429) sawQuota = true;
+        continue;
+      }
+
+      const data: any = await upstream.json();
+      const audio = findAudio(data);
+      if (!audio?.data) continue;
+      const pcm = Uint8Array.from(atob(audio.data), (c) => c.charCodeAt(0));
+      if (!pcm.length) continue;
+
+      return new Response(pcmToWav(pcm), {
+        status: 200,
+        headers: {
+          'Content-Type': 'audio/wav',
+          'Cache-Control': 'no-store',
+          'X-Content-Type-Options': 'nosniff',
+          'X-Angela-Voice': 'Kore',
+          'X-Angela-Voice-Model': model,
+        },
+      });
+    } catch {
+      if (controller.signal.aborted) continue;
+    } finally {
+      clearTimeout(timer);
     }
-
-    const data: any = await upstream.json();
-    const audio = findAudio(data);
-    if (!audio?.data) return json({ error: 'voice_provider_unavailable' }, 503);
-    const pcm = Uint8Array.from(atob(audio.data), (c) => c.charCodeAt(0));
-    if (!pcm.length) return json({ error: 'voice_provider_unavailable' }, 503);
-
-    return new Response(pcmToWav(pcm), {
-      status: 200,
-      headers: {
-        'Content-Type': 'audio/wav',
-        'Cache-Control': 'no-store',
-        'X-Content-Type-Options': 'nosniff',
-        'X-Angela-Voice': 'Kore',
-      },
-    });
-  } catch {
-    return json({ error: controller.signal.aborted ? 'voice_timeout' : 'voice_provider_unavailable' }, 503);
-  } finally {
-    clearTimeout(timer);
   }
+
+  return json({
+    error: sawQuota ? 'voice_quota_exceeded' : 'voice_provider_unavailable',
+  }, sawQuota ? 429 : 503);
 }

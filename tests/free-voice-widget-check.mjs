@@ -8,10 +8,13 @@ const appPath = path.join(root, 'src/App.tsx');
 const widget = fs.readFileSync(widgetPath, 'utf8');
 const app = fs.readFileSync(appPath, 'utf8');
 const server = fs.readFileSync(path.join(root, 'server.ts'), 'utf8');
+const pagesChat = fs.readFileSync(path.join(root, 'functions/angela/chat.ts'), 'utf8');
+const pagesSpeech = fs.readFileSync(path.join(root, 'functions/angela/speech.ts'), 'utf8');
+const pagesLiveToken = fs.readFileSync(path.join(root, 'functions/angela/live-token.ts'), 'utf8');
 
 assert.equal(widget.includes('getSpeechRecognition'), true, 'the widget must include browser speech recognition');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
-assert.equal(widget.includes("fetch('/api/ai/voice-agent'"), true, 'the widget must use the same-origin Angela endpoint');
+assert.equal(widget.includes("fetch('/angela/chat'"), true, 'the widget must use the Worker-independent Pages Angela brain');
 assert.equal(widget.includes('unknown browser default voice is never substituted'), true, 'the disclosure must explain the verified female-only voice policy');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
@@ -60,3 +63,9 @@ assert.equal(pagesWorker.includes("action === 'speech'"), true, 'Pages Worker mu
 
 assert.equal(worker.includes('sample_rate: 24000'), false, 'standalone Worker must use current TTS schema');
 assert.equal(worker.includes('liveConnectConstraints'), true, 'standalone Worker must constrain Gemini Live tokens');
+
+assert.equal(pagesChat.includes("'gemini-3.8-flash'"), true, 'Pages-native Angela chat must use Gemini 3.8 Flash');
+assert.equal(pagesChat.includes('VERIFIED JEL SOURCE OF TRUTH'), true, 'Pages-native Angela chat must prioritize verified JEL knowledge');
+assert.equal(pagesSpeech.includes("'gemini-2.5-flash-preview-tts'"), true, 'female TTS must include the Gemini 2.5 Flash fallback');
+assert.equal(pagesSpeech.includes("'gemini-2.5-pro-preview-tts'"), true, 'female TTS must include the Gemini 2.5 Pro fallback');
+assert.equal(pagesLiveToken.includes('bidiGenerateContentSetup'), true, 'Live token REST request must use the native Bidi setup field');
