@@ -3,7 +3,7 @@ const text = 'হ্যালো, আমি অ্যাঞ্জেলা।';
 const origin = new URL(base).origin;
 
 async function primary() {
-  const response = await fetch(origin + '/api/voice/gemini', {
+  const response = await fetch(origin + '/angela/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: origin },
     body: JSON.stringify({ text, language: 'bn' }),
@@ -20,7 +20,7 @@ async function primary() {
 }
 
 async function liveFallback() {
-  const tokenResponse = await fetch(origin + '/api/gemini/live-token', {
+  const tokenResponse = await fetch(origin + '/angela/live-token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: origin },
   });
