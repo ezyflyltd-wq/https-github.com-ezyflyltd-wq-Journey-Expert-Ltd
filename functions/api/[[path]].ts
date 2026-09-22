@@ -238,11 +238,7 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
       body: JSON.stringify({
         model,
         input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
-        response_format: {
-          type: 'audio',
-          mime_type: 'audio/wav',
-          delivery: 'inline',
-        },
+        response_format: { type: 'audio' },
         generation_config: {
           speech_config: [{ voice: 'Kore' }],
         },
@@ -257,10 +253,11 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
     const audio = findAudio(data);
     if (!audio?.data) return jsonError('Invalid audio response.', 502, request);
     const raw = Uint8Array.from(atob(audio.data), ch => ch.charCodeAt(0));
-    return new Response(raw, {
+    const wav = pcmToWav(raw);
+    return new Response(wav, {
       status: 200,
       headers: {
-        'Content-Type': audio.mimeType || 'audio/wav',
+        'Content-Type': 'audio/wav',
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
         'Access-Control-Allow-Origin': 'https://journeyexpertltd.com',

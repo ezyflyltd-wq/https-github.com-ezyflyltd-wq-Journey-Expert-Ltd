@@ -1,0 +1,55 @@
+name: Deploy Angela API Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "workers/angela-worker.js"
+      - ".github/workflows/deploy-angela-worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-angela-api-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy journey-expert-ltd-main Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@v4
+
+      - name: Verify deployment credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "::error::CLOUDFLARE_API_TOKEN repository secret is not configured."; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "::error::CLOUDFLARE_ACCOUNT_ID repository secret is not configured."; exit 1; }
+          echo "Cloudflare deployment credentials are configured."
+
+      - name: Deploy reviewed Angela Worker source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy workers/angela-worker.js \
+            --name journey-expert-ltd-main \
+            --compatibility-date 2026-09-01 \
+            --keep-vars
+
+      - name: Verify public API route
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 5
+          body="$(curl --fail --silent --show-error --max-time 20 https://journeyexpertltd.com/api/health)"
+          echo "$body" | jq -e '.service == "Angela API Gateway"'
+          echo "$body" | jq -e '.femaleTtsConfigured == true'
+          echo "Attached Angela Worker is live."

@@ -156,41 +156,64 @@ async function startServer() {
     });
   });
 
-  // Production-reviewed Gemini female TTS fallback for browsers/devices without a female system voice.
-  // Kore is an explicitly female Gemini prebuilt voice.
+  // Production-reviewed Gemini female TTS. Keep the AI Studio/server runtime
+  // aligned with the public Worker and Pages implementations.
   app.post('/api/voice/gemini', async (req: Request, res: Response) => {
-    const apiKey = process.env.GEMINI_API_KEY;
-    const text = typeof req.body?.text === 'string' ? req.body.text.trim().slice(0, 1800) : '';
-    const language = req.body?.language === 'bn' ? 'bn' : req.body?.language === 'hi' ? 'hi' : 'en';
+    const apiKey = (process.env.GEMINI_TTS_API_KEY || process.env.GEMINI_API_KEY || '').trim();
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim().slice(0, 1200) : '';
+    const language = req.body?.language === 'bn' ? 'bn' : 'en';
     if (!text) return res.status(400).json({ error: 'Text is required' });
     if (!apiKey) return res.status(503).json({ error: 'Gemini voice is not configured' });
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 12000);
+    const timer = setTimeout(() => controller.abort(), 9000);
+    const findAudio = (value: any): { data: string } | null => {
+      if (!value || typeof value !== 'object') return null;
+      if (value.type === 'audio' && typeof value.data === 'string') return { data: value.data };
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          const found = findAudio(item);
+          if (found) return found;
+        }
+        return null;
+      }
+      for (const item of Object.values(value)) {
+        const found = findAudio(item);
+        if (found) return found;
+      }
+      return null;
+    };
+
     try {
       const model = process.env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
       const prompt = language === 'bn'
-        ? 'Read this Bengali transcript naturally and exactly as written. Do not translate or add text:\n'
-        : language === 'hi'
-          ? 'Read this Hindi transcript naturally and exactly as written. Do not translate or add text:\n'
-          : 'Read this English transcript naturally and exactly as written. Do not add text:\n';
-      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        ? 'Speak this Bengali transcript naturally and exactly as written. Do not translate, answer, summarize, or add text:\n'
+        : 'Speak this English transcript naturally and exactly as written. Do not answer, summarize, or add text:\n';
+      const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
         method: 'POST',
         signal: controller.signal,
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt + text }] }],
-          generationConfig: {
-            responseModalities: ['AUDIO'],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+          model,
+          input: prompt + text,
+          response_format: { type: 'audio' },
+          generation_config: {
+            speech_config: [{ voice: 'Kore' }],
           },
         }),
       });
-      if (!upstream.ok) return res.status(upstream.status === 429 ? 429 : 502).json({ error: 'Gemini voice unavailable' });
+      if (!upstream.ok) {
+        return res.status(upstream.status === 429 ? 429 : 502).json({
+          error: upstream.status === 429 ? 'voice_quota_exceeded' : 'voice_provider_unavailable',
+          providerStatus: upstream.status,
+        });
+      }
       const data: any = await upstream.json();
-      const inline = data?.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData?.data)?.inlineData;
-      if (!inline?.data) return res.status(502).json({ error: 'No audio returned' });
-      const raw = Buffer.from(inline.data, 'base64');
+      const audio = findAudio(data);
+      if (!audio?.data) return res.status(502).json({ error: 'invalid_audio' });
+      const raw = Buffer.from(audio.data, 'base64');
+      if (!raw.length) return res.status(502).json({ error: 'invalid_audio' });
+
       const wav = Buffer.alloc(44 + raw.length);
       wav.write('RIFF', 0); wav.writeUInt32LE(36 + raw.length, 4); wav.write('WAVE', 8);
       wav.write('fmt ', 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
@@ -198,9 +221,12 @@ async function startServer() {
       wav.write('data', 36); wav.writeUInt32LE(raw.length, 40); raw.copy(wav, 44);
       res.setHeader('Content-Type', 'audio/wav');
       res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
       return res.send(wav);
     } catch {
-      return res.status(controller.signal.aborted ? 503 : 502).json({ error: controller.signal.aborted ? 'Gemini voice timeout' : 'Gemini voice unavailable' });
+      return res.status(controller.signal.aborted ? 503 : 502).json({
+        error: controller.signal.aborted ? 'voice_timeout' : 'voice_provider_unavailable',
+      });
     } finally {
       clearTimeout(timer);
     }
