@@ -67,7 +67,15 @@ async function liveFallback() {
         const message = JSON.parse(raw);
         if (message.setupComplete && !sent) {
           sent = true;
-          socket.send(JSON.stringify({ realtimeInput: { text: 'Speak this transcript exactly as written:\n' + text } }));
+          socket.send(JSON.stringify({
+            clientContent: {
+              turns: [{
+                role: 'user',
+                parts: [{ text: 'Speak this transcript exactly as written:\n' + text }],
+              }],
+              turnComplete: true,
+            },
+          }));
           return;
         }
         const parts = message.serverContent?.modelTurn?.parts || [];

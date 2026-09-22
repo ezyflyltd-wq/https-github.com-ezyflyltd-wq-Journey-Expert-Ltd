@@ -1,7 +1,7 @@
 const ALLOWED_ORIGIN = 'https://journeyexpertltd.com';
 const PRIMARY_MODEL = 'gemini-3.8-flash';
-const FALLBACK_MODEL = 'gemini-3.7-flash';
-const GEMINI_TIMEOUT_MS = 2500;
+const FALLBACK_MODEL = 'gemini-3.5-flash';
+const GEMINI_TIMEOUT_MS = 8500;
 
 const SYSTEM_PROMPT = `You are Angela, the official AI Travel and Mobility Assistant of Journey Expert Ltd. (JEL), Bangladesh, for the main website journeyexpertltd.com.
 Answer the customer's actual question first, then ask at most one useful follow-up question. Reply only in the explicitly selected language: natural Bangla when language=bn, or English when language=en. Never reply in Hindi, Arabic, or any other language. Be warm, concise, professional, and easy to understand aloud.
@@ -105,44 +105,112 @@ async function handleFemaleTts(request, env) {
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
-  const text = String(body?.text || '').trim().slice(0, 1800);
+  const text = String(body?.text || '').trim().slice(0, 1200);
   if (!text) return json({ error: 'Text is required' }, 400);
-  if (!env.GEMINI_API_KEY) return json({ error: 'voice_not_configured' }, 503);
+  const key = String(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
+  if (!key) return json({ error: 'voice_not_configured' }, 503);
 
   const model = env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 9000);
+
+  const findAudio = (value) => {
+    if (!value || typeof value !== 'object') return null;
+    if (value.type === 'audio' && typeof value.data === 'string') {
+      return { data: value.data, mimeType: value.mime_type || value.mimeType };
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = findAudio(item);
+        if (found) return found;
+      }
+      return null;
+    }
+    for (const item of Object.values(value)) {
+      const found = findAudio(item);
+      if (found) return found;
+    }
+    return null;
+  };
+
   try {
-    const response = await fetchWithTimeout(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`,
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Read this transcript exactly in its original language, warmly and clearly. Do not translate or add text:\n' + text }] }],
-          generationConfig: {
-            responseModalities: ['AUDIO'],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-          },
-        }),
-      },
-      6000,
-    );
-    if (!response.ok) return json({ error: response.status === 429 ? 'voice_quota_exceeded' : 'voice_provider_unavailable' }, response.status === 429 ? 429 : 502);
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        model,
+        input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
+        response_format: {
+          type: 'audio',
+          mime_type: 'audio/wav',
+          sample_rate: 24000,
+          delivery: 'inline',
+        },
+        generation_config: {
+          speech_config: [{ voice: 'Kore' }],
+        },
+      }),
+    });
+    if (!response.ok) {
+      return json({ error: response.status === 429 ? 'voice_quota_exceeded' : 'voice_provider_unavailable' }, response.status === 429 ? 429 : 502);
+    }
     const data = await response.json();
-    const audio = data?.candidates?.[0]?.content?.parts?.find((part) => part?.inlineData?.data)?.inlineData;
+    const audio = findAudio(data);
     if (!audio?.data) return json({ error: 'invalid_audio' }, 502);
-    const raw = atob(audio.data);
-    const pcm = Uint8Array.from(raw, (ch) => ch.charCodeAt(0));
-    return new Response(pcmToWav(pcm), {
+    const raw = Uint8Array.from(atob(audio.data), ch => ch.charCodeAt(0));
+    return new Response(raw, {
       status: 200,
       headers: {
-        'content-type': 'audio/wav',
+        'content-type': audio.mimeType || 'audio/wav',
         'cache-control': 'no-store',
         'access-control-allow-origin': ALLOWED_ORIGIN,
         'x-content-type-options': 'nosniff',
       },
     });
   } catch {
-    return json({ error: 'voice_provider_unavailable' }, 503);
+    return json({ error: controller.signal.aborted ? 'voice_timeout' : 'voice_provider_unavailable' }, 503);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function handleLiveToken(request, env) {
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+  const origin = request.headers.get('origin');
+  const url = new URL(request.url);
+  if (origin && origin !== url.origin) return json({ error: 'origin_not_allowed' }, 403);
+
+  const key = String(env.GEMINI_API_KEY || '').trim();
+  if (!key) return json({ error: 'live_voice_not_configured' }, 503);
+
+  const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const newSessionExpireTime = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        uses: 1,
+        expireTime,
+        newSessionExpireTime,
+      }),
+    });
+    if (!upstream.ok) {
+      return json({ error: upstream.status === 429 ? 'live_voice_quota_exceeded' : 'live_voice_unavailable' }, upstream.status === 429 ? 429 : 502);
+    }
+    const data = await upstream.json();
+    const token = typeof data?.name === 'string' ? data.name : '';
+    if (!token) return json({ error: 'live_voice_unavailable' }, 502);
+    return json({ token, model: 'gemini-3.8-live', expiresAt: expireTime });
+  } catch {
+    return json({ error: controller.signal.aborted ? 'live_voice_timeout' : 'live_voice_unavailable' }, 503);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -152,7 +220,11 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'access-control-allow-origin': ALLOWED_ORIGIN, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'Content-Type' } });
     if (url.pathname === '/api/health' || url.pathname === '/api/healthz' || url.pathname === '/api/ai/health') return json({ status: 'online', service: 'Angela API Gateway', version: '4.1.0', aiConfigured: Boolean(env.GEMINI_API_KEY), femaleTtsConfigured: Boolean(env.GEMINI_API_KEY), models: [env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL], timestamp: new Date().toISOString() });
     if (url.pathname === '/api/voice/gemini') return handleFemaleTts(request, env);
+    if (url.pathname === '/api/gemini/live-token') return handleLiveToken(request, env);
     if (url.pathname !== '/api/ai-assistant' && url.pathname !== '/api/ai/voice-agent') return json({ error: 'Not found' }, 404);
+    const action = url.searchParams.get('action');
+    if (action === 'speech') return handleFemaleTts(request, env);
+    if (action === 'live-token') return handleLiveToken(request, env);
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
     let body;
     try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }

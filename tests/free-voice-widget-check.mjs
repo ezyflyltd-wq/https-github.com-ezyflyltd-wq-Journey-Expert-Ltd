@@ -63,3 +63,9 @@ assert.equal(liveVoice.includes('clientContent'), true, 'Gemini Live fallback mu
 assert.equal(liveVoice.includes('turnComplete: true'), true, 'Gemini Live fallback must explicitly complete the speech-rendering turn');
 assert.equal(liveVoice.includes('realtimeInput: { text:'), false, 'legacy Live text input must not be used');
 assert.equal(pagesWorker.includes("'gemini-3.5-flash'"), true, 'Angela must have a secondary Gemini Flash text model fallback');
+
+const legacyWorker = fs.readFileSync('workers/angela-worker.js', 'utf8');
+assert.equal(legacyWorker.includes("action === 'speech'"), true, 'legacy Worker must multiplex canonical female speech');
+assert.equal(legacyWorker.includes("action === 'live-token'"), true, 'legacy Worker must multiplex canonical Live token');
+assert.equal(legacyWorker.includes('v1beta/interactions'), true, 'legacy Worker female TTS must use current Interactions API');
+assert.equal(legacyWorker.includes("gemini-3.8-live"), true, 'legacy Worker Live fallback must use Gemini 3.8 Live');
