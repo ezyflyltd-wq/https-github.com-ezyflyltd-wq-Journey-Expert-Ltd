@@ -12,7 +12,7 @@ const server = fs.readFileSync(path.join(root, 'server.ts'), 'utf8');
 assert.equal(widget.includes('getSpeechRecognition'), true, 'the widget must include browser speech recognition');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
 assert.equal(widget.includes("fetch('/api/ai/voice-agent'"), true, 'the widget must use the same-origin Angela endpoint');
-assert.equal(widget.includes('This free version does not use ElevenLabs'), true, 'the disclosure must explain the free provider choice');
+assert.equal(widget.includes('unknown browser default voice is never substituted'), true, 'the disclosure must explain the verified female-only voice policy');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
 assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
@@ -44,3 +44,7 @@ assert.equal(widget.includes('audioContextRef'), true, 'Angela must unlock relia
 assert.equal(widget.includes("jel:open-angela"), true, 'site AI triggers must open the canonical Angela widget');
 assert.equal(widget.includes("recognitionRef.current = null"), true, 'speech recognition sessions must be released between turns');
 assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a second competing AI assistant modal');
+
+assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
+assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
+assert.equal(widget.includes('verified female voice is temporarily unavailable'), true, 'voice failure must degrade to text instead of an unknown OS voice');
