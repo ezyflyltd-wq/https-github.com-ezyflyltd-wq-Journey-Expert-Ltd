@@ -225,13 +225,13 @@ export function FreeVoiceAngelaWidget() {
   async function speakWithBrowser(text: string) {
     if (typeof window === 'undefined') return;
     const effectiveLanguage = language;
-    const cleanText = text.replace(/[*#_`]/g, '');
+    const cleanText = text.replace(/[*#_`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 700);
 
     // Use the same server-rendered Angela female voice on desktop and mobile.
     // Browser voices differ by OS and must never silently fall back to a male voice.
     try {
       setError('');
-      const response = await fetch('https://journeyexpertbd.com/angela/main-speech', {
+      const response = await fetch('/api/voice/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: cleanText, language: effectiveLanguage }),
@@ -295,7 +295,7 @@ export function FreeVoiceAngelaWidget() {
     setInput('');
 
     try {
-      const response = await fetch('https://journeyexpertbd.com/api/main/angela', {
+      const response = await fetch('/api/ai/voice-agent', {
         method: 'POST',
         signal: AbortSignal.timeout(18000),
         headers: { 'Content-Type': 'application/json' },
@@ -333,7 +333,10 @@ export function FreeVoiceAngelaWidget() {
       return;
     }
 
-    recognitionRef.current?.stop();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch { /* already ended */ }
+      recognitionRef.current = null;
+    }
     const recognition = new Recognition();
     recognition.lang = language === 'bn' ? 'bn-BD' : 'en-US';
     recognition.interimResults = false;
@@ -344,10 +347,14 @@ export function FreeVoiceAngelaWidget() {
       if (transcript) void askAssistant(transcript);
     };
     recognition.onerror = () => {
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
       setIsListening(false);
       setError('Voice input could not be heard. Please try again or type your question.');
     };
-    recognition.onend = () => setIsListening(false);
+    recognition.onend = () => {
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
+      setIsListening(false);
+    };
     recognitionRef.current = recognition;
     setError('');
     setIsListening(true);
@@ -360,12 +367,16 @@ export function FreeVoiceAngelaWidget() {
   };
 
   const stopListening = () => {
-    recognitionRef.current?.stop();
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    try { recognition?.stop(); } catch { /* already ended */ }
     setIsListening(false);
   };
 
   const resetConversation = () => {
-    recognitionRef.current?.stop();
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    try { recognition?.stop(); } catch { /* already ended */ }
     window.speechSynthesis?.cancel();
     audioRef.current?.pause();
     setHistory([]);
@@ -374,6 +385,12 @@ export function FreeVoiceAngelaWidget() {
     setError('');
     setIsListening(false);
   };
+
+  useEffect(() => {
+    const openFromSite = () => openAssistant();
+    window.addEventListener('jel:open-angela', openFromSite);
+    return () => window.removeEventListener('jel:open-angela', openFromSite);
+  }, [hasAcceptedDisclosure, lastReply, language]);
 
   if (!hasAcceptedDisclosure) {
     return (
@@ -411,9 +428,9 @@ export function FreeVoiceAngelaWidget() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] flex max-w-[calc(100vw-2rem)] flex-col items-end gap-2 sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[60] flex max-w-[calc(100vw-1.5rem)] flex-col items-end gap-2 sm:bottom-6 sm:right-6">
       {isOpen ? (
-        <section role="dialog" aria-label="Angela free AI voice assistant" className="w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-[#C7A44D]/60 bg-[#FFFDF6] shadow-2xl">
+        <section role="dialog" aria-label="Angela free AI voice assistant" className="w-[min(calc(100vw-1.5rem),380px)] max-h-[min(78dvh,680px)] overflow-y-auto overscroll-contain rounded-2xl border border-[#C7A44D]/60 bg-[#FFFDF6] shadow-2xl">
           <header className="flex items-center justify-between bg-[#093F31] px-4 py-3 text-white">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#E6CA65]">JEL Free AI Voice</p>
