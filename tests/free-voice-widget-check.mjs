@@ -32,3 +32,8 @@ assert.equal(server.includes("app.get('/api/voice/status'"), true, 'the server m
 assert.equal(server.includes("'xi-api-key': apiKey"), true, 'the ElevenLabs key must be sent server-side');
 
 console.log('Free Angela voice widget checks passed.');
+
+const pagesWorker = fs.readFileSync('public/_worker.js', 'utf8');
+assert.equal(pagesWorker.includes("'/api/ai/voice-agent'"), true, 'Pages Worker must expose Angela chat');
+assert.equal(pagesWorker.includes("'/api/voice/gemini'"), true, 'Pages Worker must expose female TTS');
+assert.equal(pagesWorker.includes("languages: ['bn', 'en']"), true, 'Pages Worker health must declare only Bangla and English');
