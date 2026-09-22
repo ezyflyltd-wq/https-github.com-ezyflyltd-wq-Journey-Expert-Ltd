@@ -73,6 +73,6 @@ assert.equal(pagesLiveToken.includes('liveConnectConstraints'), true, 'Live toke
 assert.equal(pagesWorker.includes("url.pathname === '/angela/chat'"), true, 'Pages advanced Worker must expose /angela/chat');
 assert.equal(pagesWorker.includes("url.pathname === '/angela/speech'"), true, 'Pages advanced Worker must expose /angela/speech');
 assert.equal(pagesWorker.includes("url.pathname === '/angela/live-token'"), true, 'Pages advanced Worker must expose /angela/live-token');
-assert.equal(pagesWorker.includes('bidiGenerateContentSetup'), true, 'Pages advanced Worker must use the native Gemini Live REST token field');
+assert.equal(pagesWorker.includes('liveConnectConstraints'), true, 'Pages advanced Worker must use the official Gemini Live token constraints payload');
 assert.equal(pagesWorker.includes("'gemini-2.5-flash-preview-tts'"), true, 'Pages advanced Worker must include Gemini 2.5 Flash TTS fallback');
 assert.equal(pagesWorker.includes("'gemini-2.5-pro-preview-tts'"), true, 'Pages advanced Worker must include Gemini 2.5 Pro TTS fallback');
