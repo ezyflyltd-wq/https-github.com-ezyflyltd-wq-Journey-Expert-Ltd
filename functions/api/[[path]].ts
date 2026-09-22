@@ -147,7 +147,7 @@ async function handleGeminiLiveToken(request: Request, env: Record<string, strin
 
   const model = 'gemini-3.8-live';
   const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-  const newSessionExpireTime = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+  const newSessionExpireTime = new Date(Date.now() + 60 * 1000).toISOString();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -159,7 +159,13 @@ async function handleGeminiLiveToken(request: Request, env: Record<string, strin
         uses: 1,
         expireTime,
         newSessionExpireTime,
-
+        liveConnectConstraints: {
+          model: 'models/gemini-3.8-live',
+          config: {
+            sessionResumption: {},
+            responseModalities: ['AUDIO'],
+          },
+        },
       }),
     });
     if (!upstream.ok) {
@@ -235,7 +241,6 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
         response_format: {
           type: 'audio',
           mime_type: 'audio/wav',
-          sample_rate: 24000,
           delivery: 'inline',
         },
         generation_config: {
