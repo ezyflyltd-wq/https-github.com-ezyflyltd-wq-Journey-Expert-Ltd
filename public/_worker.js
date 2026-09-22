@@ -141,35 +141,59 @@ async function speech(request, env) {
   let body;
   try { body = await readJson(request); } catch { return json({ error: 'invalid_json' }, 400); }
   const text = typeof body?.text === 'string' ? body.text.trim().slice(0, 1200) : '';
-  const language = languageFor(body?.language);
   if (!text) return json({ error: 'text_required' }, 400);
   const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
   if (!key) return json({ error: 'female_voice_not_configured' }, 503);
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
+  const timer = setTimeout(() => controller.abort(), 9000);
+  const findAudio = (value) => {
+    if (!value || typeof value !== 'object') return null;
+    if (value.type === 'audio' && typeof value.data === 'string') {
+      return { data: value.data, mimeType: value.mime_type || value.mimeType };
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = findAudio(item);
+        if (found) return found;
+      }
+      return null;
+    }
+    for (const item of Object.values(value)) {
+      const found = findAudio(item);
+      if (found) return found;
+    }
+    return null;
+  };
+
   try {
     const model = env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
-    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
       method: 'POST',
       signal: controller.signal,
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `Speak this ${language === 'bn' ? 'Bengali' : 'English'} transcript exactly, warmly and clearly. Do not translate or add words:\n${text}` }] }],
-        generationConfig: {
-          responseModalities: ['AUDIO'],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+        model,
+        input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
+        response_format: {
+          type: 'audio',
+          mime_type: 'audio/wav',
+          sample_rate: 24000,
+          delivery: 'inline',
+        },
+        generation_config: {
+          speech_config: [{ voice: 'Kore' }],
         },
       }),
     });
     if (!upstream.ok) return json({ error: upstream.status === 429 ? 'voice_quota_exceeded' : 'female_voice_unavailable' }, upstream.status === 429 ? 429 : 502);
     const data = await upstream.json();
-    const audio = data?.candidates?.[0]?.content?.parts?.find((part) => part.inlineData?.data)?.inlineData;
+    const audio = findAudio(data);
     if (!audio?.data) return json({ error: 'invalid_audio' }, 502);
     const raw = Uint8Array.from(atob(audio.data), (character) => character.charCodeAt(0));
-    return new Response(pcmToWav(raw), {
+    return new Response(raw, {
       headers: {
-        'content-type': 'audio/wav',
+        'content-type': audio.mimeType || 'audio/wav',
         'cache-control': 'no-store',
         'access-control-allow-origin': ALLOWED_ORIGIN,
         'x-content-type-options': 'nosniff',
