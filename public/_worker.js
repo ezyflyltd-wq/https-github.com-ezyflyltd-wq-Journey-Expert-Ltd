@@ -222,6 +222,7 @@ export default {
       service: 'JEL Angela Pages Worker',
       languages: ['bn', 'en'],
       femaleVoiceConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
+      femaleLiveFallbackConfigured: Boolean(env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY),
       liveFemaleVoiceConfigured: Boolean(env.GEMINI_API_KEY),
       model: 'gemini-3.8-flash',
       googleSearchGrounding: env.GOOGLE_SEARCH_GROUNDING === 'true',
