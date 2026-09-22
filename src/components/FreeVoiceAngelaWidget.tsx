@@ -226,7 +226,7 @@ export function FreeVoiceAngelaWidget() {
   async function speakWithBrowser(text: string) {
     if (typeof window === 'undefined') return;
     const effectiveLanguage = language;
-    const cleanText = text.replace(/[*#_`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 700);
+    const cleanText = text.replace(/[*#_`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 520);
 
     // Use the same server-rendered Angela female voice on desktop and mobile.
     // Browser voices differ by OS and must never silently fall back to a male voice.
@@ -262,29 +262,14 @@ export function FreeVoiceAngelaWidget() {
         await audio.play();
       }
     } catch {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        const voices = await loadSpeechVoices();
-        const femaleVoice = getPreferredFemaleVoice(voices, effectiveLanguage);
-        {
-          const utterance = new SpeechSynthesisUtterance(cleanText);
-          utterance.lang = femaleVoice?.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US');
-          if (femaleVoice) utterance.voice = femaleVoice;
-          utterance.rate = 1;
-          utterance.pitch = 1.08;
-          utterance.onstart = () => setIsSpeaking(true);
-          utterance.onend = () => setIsSpeaking(false);
-          utterance.onerror = () => { setIsSpeaking(false); setError(effectiveLanguage === 'bn'
-            ? 'ভয়েস চালানো যায়নি। আবার Listen চাপুন।'
-            : 'Voice playback failed. Please press Listen again.'); };
-          window.speechSynthesis.speak(utterance);
-          return;
-        }
-      }
+      // Cross-device invariant: never let the OS/browser silently substitute
+      // an unknown or male voice. If the verified server female TTS is unavailable,
+      // keep the answer visible as text and report voice-only degradation.
+      if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
       setIsSpeaking(false);
       setError(effectiveLanguage === 'bn'
-        ? 'Angela-র বাংলা female voice সাময়িকভাবে পাওয়া যাচ্ছে না। লেখা উত্তরটি দেখুন।'
-        : 'Angela female English voice is temporarily unavailable. Please use the text answer.');
+        ? 'Angela-র verified female voice সাময়িকভাবে পাওয়া যাচ্ছে না। উত্তরটি লেখা আকারে দেখানো হচ্ছে।'
+        : 'Angela verified female voice is temporarily unavailable. The answer remains available as text.');
     }
   }
 
@@ -326,7 +311,7 @@ export function FreeVoiceAngelaWidget() {
     } catch {
       const fallback = getFallbackReply(cleanPrompt, language);
       setLastReply(fallback);
-      setError('Live AI is temporarily unavailable, so a safe support message is shown.');
+      setError(language === 'bn' ? 'লাইভ AI সাময়িকভাবে অনুপলব্ধ; যাচাইকৃত JEL fallback দেখানো হচ্ছে।' : 'Live AI is temporarily unavailable; a verified JEL fallback is shown.');
       void speak(fallback);
     } finally {
       setIsLoading(false);
@@ -429,8 +414,8 @@ export function FreeVoiceAngelaWidget() {
             <aside role="dialog" aria-modal="true" aria-labelledby="free-angela-disclosure-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[#C7A44D]/60 bg-[#FFFDF6] p-5 text-left shadow-2xl sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0B6B53]">Journey Expert Ltd. AI support</p>
               <h2 id="free-angela-disclosure-title" className="mt-1 text-xl font-bold text-[#093F31]">Before you talk with Angela</h2>
-              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input may be processed by your browser’s speech service, and the transcript is sent to Journey Expert’s AI endpoint to generate a reply. This free version does not use ElevenLabs.</p>
-              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনার ব্রাউজারের speech service ভয়েস ইনপুট প্রক্রিয়া করতে পারে এবং উত্তর তৈরির জন্য transcript Journey Expert-এর AI endpoint-এ পাঠানো হয়। এই free version-এ ElevenLabs ব্যবহার করা হয় না।</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input may be processed by your browser’s speech service, and the transcript is sent to Journey Expert’s AI endpoint to generate a reply. Angela uses Journey Expert's server-rendered female voice when available; an unknown browser default voice is never substituted.</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনার ব্রাউজারের speech service ভয়েস ইনপুট প্রক্রিয়া করতে পারে এবং উত্তর তৈরির জন্য transcript Journey Expert-এর AI endpoint-এ পাঠানো হয়। Angela server-rendered female voice ব্যবহার করে; অজানা browser default voice কখনো substitute করা হয় না।</p>
               <p className="mt-3 text-xs leading-5 text-[#555555]">Replies may be incomplete or inaccurate. Do not share passport, bank, payment, password, or other sensitive information. For verified support, call <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
               <div className="mt-4 flex flex-col gap-3 border-t border-[#E8E1CF] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button type="button" className="inline-flex min-h-11 items-center justify-center bg-[#093F31] px-5 py-3 text-sm font-bold text-white hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" onClick={acceptDisclosure}>Agree and continue / সম্মত হয়ে চালিয়ে যান</button>
