@@ -18,7 +18,7 @@ assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widg
 assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
 assert.equal(widget.includes("setLanguage('auto')"), false, 'Angela must not expose Auto mode');
 assert.equal(widget.includes("setLanguage('hi')"), false, 'Angela must not expose Hindi mode');
-assert.equal(widget.includes("fetch('/api/voice/gemini'"), true, 'Angela must use the same-origin Gemini female TTS endpoint');
+assert.equal(widget.includes("fetch('/api/ai/voice-agent?action=speech'"), true, 'Angela must route female TTS through the canonical same-origin Angela endpoint');
 assert.equal(server.includes("app.post('/api/voice/gemini'"), true, 'the AI Studio server must expose Gemini female TTS');
 assert.equal(widget.includes('Voice output: Angela female'), true, 'Angela UI must state the female-only voice policy');
 assert.equal(widget.includes('Use the same server-rendered Angela female voice on desktop and mobile.'), true, 'server female TTS must be the cross-device primary path');
@@ -45,15 +45,18 @@ assert.equal(widget.includes("jel:open-angela"), true, 'site AI triggers must op
 assert.equal(widget.includes("recognitionRef.current = null"), true, 'speech recognition sessions must be released between turns');
 assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a second competing AI assistant modal');
 
-assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
+assert.equal(pagesWorker.includes("const models = ['gemini-3.8-flash', 'gemini-3.5-flash']"), true, 'Pages Angela must keep Gemini 3.8 primary with Gemini 3.5 fallback');
 assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
 assert.equal(widget.includes('verified female voice is temporarily unavailable'), true, 'voice failure must degrade to text instead of an unknown OS voice');
 
 const liveVoice = fs.readFileSync(path.join(root, 'src/lib/angelaLiveVoice.ts'), 'utf8');
 assert.equal(widget.includes('fetchAngelaLiveFemaleSpeech'), true, 'corporate Angela must use verified Gemini Live female fallback');
 assert.equal(liveVoice.includes("voiceName: 'Aoede'"), true, 'Live fallback must use Aoede female voice');
-assert.equal(liveVoice.includes('/api/gemini/live-token'), true, 'Live fallback must use same-origin ephemeral token endpoint');
-assert.equal(pagesWorker.includes("'/api/gemini/live-token'"), true, 'Pages Worker must expose Live token route');
+assert.equal(liveVoice.includes('/api/ai/voice-agent?action=live-token'), true, 'Live fallback must use the canonical same-origin Angela endpoint');
+assert.equal(pagesWorker.includes("action === 'live-token'"), true, 'Pages Worker must multiplex Live token through the canonical Angela route');
 
 assert.equal(pagesWorker.includes("thinkingLevel: 'low'"), true, 'Gemini 3.8 chat must use low thinking for responsive voice/chat');
 assert.equal(pagesWorker.includes("maxOutputTokens: 1024"), true, 'Gemini 3.8 chat must have enough output budget after thinking');
+
+assert.equal(pagesWorker.includes("'gemini-2.5-flash-preview-tts'"), true, 'Angela must have a second verified Gemini TTS model fallback');
+assert.equal(pagesWorker.includes("'gemini-3.5-flash'"), true, 'Angela must have a secondary Gemini Flash text model fallback');
