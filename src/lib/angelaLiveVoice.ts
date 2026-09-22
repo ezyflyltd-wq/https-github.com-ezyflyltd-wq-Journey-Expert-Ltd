@@ -46,7 +46,7 @@ function pcmChunksToWav(chunks: Uint8Array[]): Blob {
 }
 
 export async function fetchAngelaLiveFemaleSpeech(text: string, signal: AbortSignal): Promise<Blob> {
-  const tokenResponse = await fetch('/api/gemini/live-token', {
+  const tokenResponse = await fetch('/angela/live-token', {
     method: 'POST',
     signal,
     headers: { 'Content-Type': 'application/json' },
