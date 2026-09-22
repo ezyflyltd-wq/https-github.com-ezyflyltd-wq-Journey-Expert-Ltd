@@ -85,17 +85,15 @@ function getSpeechRecognition(): SpeechRecognitionConstructor | null {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
-function detectReplyLanguage(text: string): 'bn' | 'en' | 'hi' {
+function detectReplyLanguage(text: string): 'bn' | 'en' {
   if (/[\u0980-\u09FF]/.test(text)) return 'bn';
-  if (/[\u0900-\u097F]/.test(text)) return 'hi';
   if (/\b(ami|amar|amake|apni|apnar|tumi|tomar|chai|jabo|jete|koto|kivabe|ki|keno|kobe|hobe|korbo|korte|lagbe|bolen|diben|pari|parbo|visa|ticket|tour|umrah|hajj)\b/i.test(text)) return 'bn';
   return 'en';
 }
 
-const FEMALE_VOICE_HINTS: Record<'en' | 'bn' | 'hi', string[]> = {
+const FEMALE_VOICE_HINTS: Record<'en' | 'bn', string[]> = {
   bn: ['nabanita', 'female', 'woman', 'heera'],
   en: ['zira', 'aria', 'jenny', 'sonia', 'samantha', 'victoria', 'ava', 'allison', 'karen', 'susan', 'hazel', 'libby', 'natasha', 'serena', 'moira', 'fiona', 'tessa', 'veena', 'female', 'woman', 'google uk english female'],
-  hi: ['heera', 'swara', 'female', 'woman'],
 };
 
 async function loadSpeechVoices(): Promise<SpeechSynthesisVoice[]> {
@@ -122,8 +120,8 @@ async function loadSpeechVoices(): Promise<SpeechSynthesisVoice[]> {
   return voices;
 }
 
-function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' | 'bn' | 'hi'): SpeechSynthesisVoice | null {
-  const prefix = language === 'bn' ? 'bn' : language === 'hi' ? 'hi' : 'en';
+function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' | 'bn'): SpeechSynthesisVoice | null {
+  const prefix = language === 'bn' ? 'bn' : 'en';
   const hints = FEMALE_VOICE_HINTS[language];
   return voices.find((voice) => {
     const name = voice.name.toLowerCase();
@@ -145,7 +143,7 @@ export function FreeVoiceAngelaWidget() {
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [language, setLanguage] = useState<'auto' | 'en' | 'bn' | 'hi'>('auto');
+  const [language, setLanguage] = useState<'en' | 'bn'>('bn');
   const [input, setInput] = useState('');
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastReply, setLastReply] = useState('');
@@ -182,25 +180,11 @@ export function FreeVoiceAngelaWidget() {
 
   const speakWithBrowser = async (text: string) => {
     if (typeof window === 'undefined') return;
-    const effectiveLanguage: 'bn' | 'en' | 'hi' = language === 'auto' ? detectReplyLanguage(text) : language;
+    const effectiveLanguage = language;
     const cleanText = text.replace(/[*#_`]/g, '');
 
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const voices = await loadSpeechVoices();
-      const femaleVoice = getPreferredFemaleVoice(voices, effectiveLanguage);
-      if (femaleVoice) {
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = femaleVoice.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : effectiveLanguage === 'hi' ? 'hi-IN' : 'en-US');
-        utterance.voice = femaleVoice;
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        utterance.onerror = () => setError('Female voice playback failed. Trying server voice next time may help.');
-        window.speechSynthesis.speak(utterance);
-        return;
-      }
-    }
-
+    // Use the same server-rendered Angela female voice on desktop and mobile.
+    // Browser voices differ by OS and must never silently fall back to a male voice.
     try {
       setError('');
       const response = await fetch('/api/voice/gemini', {
@@ -221,11 +205,26 @@ export function FreeVoiceAngelaWidget() {
       };
       await audio.play();
     } catch {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const voices = await loadSpeechVoices();
+        const femaleVoice = getPreferredFemaleVoice(voices, effectiveLanguage);
+        if (femaleVoice) {
+          const utterance = new SpeechSynthesisUtterance(cleanText);
+          utterance.lang = femaleVoice.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US');
+          utterance.voice = femaleVoice;
+          utterance.rate = 1;
+          utterance.pitch = 1;
+          utterance.onerror = () => setError(effectiveLanguage === 'bn'
+            ? 'Angela-র female voice এখন চালানো যাচ্ছে না। লেখা উত্তরটি দেখুন।'
+            : 'Angela female voice is unavailable. Please use the text answer.');
+          window.speechSynthesis.speak(utterance);
+          return;
+        }
+      }
       setError(effectiveLanguage === 'bn'
-        ? 'Female বাংলা voice সাময়িকভাবে পাওয়া যাচ্ছে না। Text answer ব্যবহার করুন।'
-        : effectiveLanguage === 'hi'
-          ? 'Female Hindi voice is temporarily unavailable. Please use the text answer.'
-          : 'Female English voice is temporarily unavailable. Please use the text answer.');
+        ? 'Angela-র বাংলা female voice সাময়িকভাবে পাওয়া যাচ্ছে না। লেখা উত্তরটি দেখুন।'
+        : 'Angela female English voice is temporarily unavailable. Please use the text answer.');
     }
   };
 
@@ -282,7 +281,7 @@ export function FreeVoiceAngelaWidget() {
 
     recognitionRef.current?.stop();
     const recognition = new Recognition();
-    recognition.lang = language === 'bn' ? 'bn-BD' : language === 'hi' ? 'hi-IN' : language === 'en' ? 'en-US' : (navigator.language?.toLowerCase().startsWith('bn') ? 'bn-BD' : navigator.language?.toLowerCase().startsWith('hi') ? 'hi-IN' : 'en-US');
+    recognition.lang = language === 'bn' ? 'bn-BD' : 'en-US';
     recognition.interimResults = false;
     recognition.continuous = false;
     recognition.onresult = (event) => {
@@ -374,16 +373,14 @@ export function FreeVoiceAngelaWidget() {
           <div className="space-y-3 p-4 text-xs text-[#333333]">
             <div className="flex items-center justify-between gap-2">
               <div className="flex gap-1">
-                <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'auto' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => setLanguage('auto')}>Auto</button>
                 <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'en' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => setLanguage('en')}>English</button>
                 <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'bn' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => setLanguage('bn')}>বাংলা</button>
-                <button type="button" className={`rounded-lg px-2.5 py-1.5 font-bold ${language === 'hi' ? 'bg-[#0B6B53] text-white' : 'bg-[#F1E9D3]'}`} onClick={() => setLanguage('hi')}>हिंदी</button>
               </div>
               <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => setVoiceEnabled((value) => !value)} className="rounded-lg border border-[#E8E1CF] p-2 hover:bg-[#F1E9D3]">{voiceEnabled ? <Volume2 className="h-4 w-4 text-[#0B6B53]" /> : <VolumeX className="h-4 w-4 text-[#777777]" />}</button>
             </div>
             <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{recognitionSupported ? 'Ask Angela a question in Bangla, Banglish, or English. She will keep the conversation context.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0B6B53]" data-testid="voice-provider-status">
-              Voice output: Female voice preferred · browser speech
+              Voice output: Angela female · {language === 'bn' ? 'বাংলা' : 'English'}
             </p>
             <div className="flex justify-center">
               {isListening ? (
@@ -397,7 +394,7 @@ export function FreeVoiceAngelaWidget() {
             {error && <p className="rounded-lg bg-[#FFF1F0] p-2 text-[#B42318]">{error}</p>}
             <form onSubmit={(event) => { event.preventDefault(); void askAssistant(input); }} className="flex gap-2 border-t border-[#E8E1CF] pt-3">
               <label htmlFor="free-angela-query" className="sr-only">Ask Angela</label>
-              <input id="free-angela-query" value={input} onChange={(event) => setInput(event.target.value)} placeholder={language === 'bn' ? 'আপনার প্রশ্ন লিখুন…' : language === 'hi' ? 'अपना प्रश्न लिखें…' : language === 'auto' ? 'বাংলা, English বা हिंदी-তে লিখুন…' : 'Type your question…'} className="min-w-0 flex-1 rounded-xl border border-[#E8E1CF] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#0B6B53]" />
+              <input id="free-angela-query" value={input} onChange={(event) => setInput(event.target.value)} placeholder={language === 'bn' ? 'আপনার প্রশ্ন লিখুন…' : 'Type your question…'} className="min-w-0 flex-1 rounded-xl border border-[#E8E1CF] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#0B6B53]" />
               <button type="submit" aria-label="Send question" disabled={isLoading || !input.trim()} className="rounded-xl bg-[#0B6B53] p-2.5 text-white disabled:opacity-50"><Send className="h-4 w-4 text-[#E6CA65]" /></button>
             </form>
             <p className="text-[10px] leading-4 text-[#666666]">For bookings, payments, visa decisions, or sensitive cases, call human support: <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
