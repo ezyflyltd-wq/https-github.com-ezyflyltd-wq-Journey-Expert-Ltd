@@ -9,6 +9,7 @@ on:
       - "src/components/FreeVoiceAngelaWidget.tsx"
       - "functions/api/**"
       - "functions/angela/**"
+      - "scripts/probe-angela-female-voice.mjs"
       - "server/angelaBrain.ts"
       - "workers/angela-worker.js"
   schedule:
