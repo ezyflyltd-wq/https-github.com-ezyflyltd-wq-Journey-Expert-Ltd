@@ -233,7 +233,7 @@ export function FreeVoiceAngelaWidget() {
     // Browser voices differ by OS and must never silently fall back to a male voice.
     try {
       setError('');
-      const response = await fetch('/api/ai/voice-agent?action=speech', {
+      const response = await fetch('/api/voice/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: cleanText, language: effectiveLanguage }),
