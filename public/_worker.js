@@ -15,8 +15,8 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
 const languageFor = (value) => value === 'en' ? 'en' : 'bn';
 
 const fallback = (language) => language === 'bn'
-  ? 'আমি অ্যাঞ্জেলা, Journey Expert Ltd.-এর AI সহকারী। এয়ার টিকিট, ভিসা সহায়তা, ট্যুরস অ্যান্ড ট্রাভেলস, হজ ও ওমরাহ, মেডিকেল ও হালাল ট্যুরিজম, হোটেল, ইন্স্যুরেন্স এবং কর্পোরেট ট্রাভেল সম্পর্কে সাহায্য করতে পারি। আপনার গন্তব্য, তারিখ ও প্রয়োজনীয় সার্ভিস লিখুন।'
-  : "I am Angela, Journey Expert Ltd.'s AI assistant. I can help with air tickets, visa assistance, tours and travel, Hajj and Umrah, medical and halal tourism, hotels, insurance and corporate travel. Please share your destination, date and required service.";
+  ? 'আমি অ্যাঞ্জেলা, Journey Expert Limited-এর AI সহকারী। এয়ার টিকিট, fare quotation, reissue/refund, ভিসা সহায়তা, ট্যুর ও হোটেল, হজ ও ওমরাহ, হালাল ট্যুরিজম, মেডিকেল ট্যুরিজম, ট্রাভেল ইন্স্যুরেন্স, কর্পোরেট ট্রাভেল, Meet & Greet এবং Study Abroad সম্পর্কে JEL-এর যাচাইকৃত তথ্য দিয়ে সাহায্য করতে পারি। আপনার নির্দিষ্ট প্রশ্নটি বলুন।'
+  : "I am Angela, Journey Expert Limited's AI assistant. I can help with air tickets and fare quotation, reissue/refund, visa assistance, tours and hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel, Meet & Greet, and Study Abroad using verified JEL information. Please ask your specific question.";
 
 async function liveToken(request, env) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
