@@ -69,7 +69,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
           model,
           input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
           response_format: { type: 'audio' },
-          generation_config: { speech_config: [{ voice: 'Kore' }] },
+          generation_config: { speech_config: [{ voice: 'Aoede' }] },
         }),
       });
 
@@ -90,7 +90,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
           'Content-Type': 'audio/wav',
           'Cache-Control': 'no-store',
           'X-Content-Type-Options': 'nosniff',
-          'X-Angela-Voice': 'Kore',
+          'X-Angela-Voice': 'Aoede',
           'X-Angela-Voice-Model': model,
         },
       });
@@ -120,7 +120,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
             'Content-Type': 'audio/wav',
             'Cache-Control': 'no-store',
             'X-Content-Type-Options': 'nosniff',
-            'X-Angela-Voice': shared.headers.get('X-Angela-Voice') || 'Kore',
+            'X-Angela-Voice': shared.headers.get('X-Angela-Voice') || 'Aoede',
             'X-Angela-Voice-Model': 'jel-study-shared-' + (shared.headers.get('X-Angela-Voice-Model') || 'tts'),
           },
         });
