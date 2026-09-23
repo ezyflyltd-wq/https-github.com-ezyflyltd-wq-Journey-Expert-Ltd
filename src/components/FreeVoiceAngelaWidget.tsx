@@ -104,8 +104,21 @@ const MALE_VOICE_HINTS: Record<'en' | 'bn', string[]> = {
 };
 
 function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' | 'bn'): SpeechSynthesisVoice | null {
+  // STRICT_FEMALE_ONLY: never use a language-only/default match. If the browser
+  // cannot identify a known female voice, Angela remains text-only rather than
+  // ever falling back to a male/default system voice.
   const hints = FEMALE_VOICE_HINTS[language];
   const maleHints = MALE_VOICE_HINTS[language];
+  const eligible = voices.filter((voice) => {
+    const name = voice.name.toLowerCase();
+    const lang = voice.lang.toLowerCase();
+    const femaleNamed = hints.some((hint) => name.includes(hint));
+    const maleNamed = maleHints.some((hint) => name.includes(hint));
+    const languageMatch = language === 'bn'
+      ? (lang.startsWith('bn') || /bangla|bengali/.test(name))
+      : lang.startsWith('en');
+    return femaleNamed && !maleNamed && languageMatch;
+  });
   const score = (voice: SpeechSynthesisVoice) => {
     const name = voice.name.toLowerCase();
     const lang = voice.lang.toLowerCase();
@@ -114,21 +127,18 @@ function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' 
       if (lang.startsWith('bn-bd')) value += 130;
       else if (lang.startsWith('bn-in')) value += 120;
       else if (lang.startsWith('bn')) value += 110;
-      else if (/bangla|bengali/.test(name)) value += 85;
+      else if (/bangla|bengali/.test(name)) value += 90;
     } else if (lang.startsWith('en')) {
       value += 110;
     }
-    if (hints.some((hint) => name.includes(hint))) value += 90;
-    if (maleHints.some((hint) => name.includes(hint))) value -= 220;
+    if (hints.some((hint) => name.includes(hint))) value += 100;
     if (voice.default) value += 4;
     if (voice.localService) value += 3;
     return value;
   };
-  const ranked = voices
+  return eligible
     .map((voice) => ({ voice, score: score(voice) }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score);
-  return ranked[0]?.voice || null;
+    .sort((a, b) => b.score - a.score)[0]?.voice || null;
 }
 
 function getFallbackReply(prompt: string, selectedLanguage: 'bn' | 'en'): string {
@@ -385,14 +395,18 @@ export function FreeVoiceAngelaWidget() {
         ? voiceCatalogRef.current
         : window.speechSynthesis.getVoices();
       const preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+      if (!preferred) {
+        setIsSpeaking(false);
+        setError(effectiveLanguage === 'bn'
+          ? 'Verified female device voice পাওয়া যায়নি। Male/default voice ব্যবহার না করে উত্তরটি text হিসেবে রাখা হয়েছে।'
+          : 'A verified female device voice is unavailable. Angela will stay text-only rather than use a male/default voice.');
+        return;
+      }
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US';
+      utterance.lang = preferred.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US');
       utterance.rate = effectiveLanguage === 'bn' ? 1.03 : 1.0;
       utterance.pitch = effectiveLanguage === 'bn' ? 1.12 : 1.04;
-      if (preferred) {
-        utterance.voice = preferred;
-        utterance.lang = preferred.lang || utterance.lang;
-      }
+      utterance.voice = preferred;
 
       utterance.onstart = () => {
         setIsSpeaking(true);
