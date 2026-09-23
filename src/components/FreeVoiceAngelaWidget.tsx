@@ -245,117 +245,51 @@ export function FreeVoiceAngelaWidget() {
     if (typeof window === 'undefined') return;
     const effectiveLanguage = language;
     const cleanText = text.replace(/[*#_`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 520);
+    if (!cleanText) return;
 
-    // Use the same server-rendered Angela female voice on desktop and mobile.
-    // Browser voices differ by OS and must never silently fall back to a male voice.
+    setError('');
+
+    // DEVICE_FIRST_ANGELA_VOICE
+    // Gemini TTS/Live can return quota errors. Do not make audible speech wait on
+    // those providers: speak immediately with the best localized device voice.
     try {
-      setError('');
-      const response = await fetch('/angela/speech', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText, language: effectiveLanguage }),
-      });
-      if (!response.ok) throw new Error('female_tts_unavailable');
-      const blob = await response.blob();
-      const context = await unlockAudio();
-      if (context?.state === 'running') {
-        const decoded = await context.decodeAudioData(await blob.arrayBuffer());
-        const source = context.createBufferSource();
-        source.buffer = decoded;
-        source.connect(context.destination);
-        source.onended = () => setIsSpeaking(false);
-        setIsSpeaking(true);
-        source.start(0);
-      } else {
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audioRef.current?.pause();
-        if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
-        audioRef.current = audio;
-        audio.onended = () => {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(url);
-          if (audioRef.current === audio) audioRef.current = null;
-        };
-        await audio.play();
+      if (!window.speechSynthesis) throw new Error('speech_synthesis_unavailable');
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume?.();
+
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US';
+      utterance.rate = 0.98;
+      utterance.pitch = 1.02;
+      if (preferred) {
+        utterance.voice = preferred;
+        utterance.lang = preferred.lang || utterance.lang;
       }
-    } catch {
-      // Primary Gemini TTS may hit quota or a transient timeout. Before degrading
-      // to text, try a second verified Google female voice through Gemini Live.
-      try {
-        const liveController = new AbortController();
-        const liveTimer = window.setTimeout(() => liveController.abort(), 6500);
-        const liveBlob = await fetchAngelaLiveFemaleSpeech(cleanText, liveController.signal);
-        window.clearTimeout(liveTimer);
-        const context = await unlockAudio();
-        if (context?.state === 'running') {
-          const decoded = await context.decodeAudioData(await liveBlob.arrayBuffer());
-          const source = context.createBufferSource();
-          source.buffer = decoded;
-          source.connect(context.destination);
-          source.onended = () => setIsSpeaking(false);
-          setIsSpeaking(true);
-          source.start(0);
-          return;
-        }
-        const url = URL.createObjectURL(liveBlob);
-        const audio = new Audio(url);
-        audioRef.current?.pause();
-        if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
-        audioRef.current = audio;
-        audio.onended = () => {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(url);
-          if (audioRef.current === audio) audioRef.current = null;
-        };
+
+      utterance.onstart = () => {
         setIsSpeaking(true);
-        await audio.play();
-        return;
-      } catch {
-        // Free third-line fallback: when Gemini TTS and Gemini Live quota/provider
-        // paths are unavailable, use the device speech engine instead of muting Angela.
-        // Prefer a female/localized voice; if the OS exposes only a locale voice,
-        // use that so the customer can still hear the answer.
-        try {
-          if (typeof window !== 'undefined' && window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-            const voices = await loadSpeechVoices();
-            const preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US';
-            utterance.rate = 0.98;
-            utterance.pitch = 1.02;
-            if (preferred) {
-              utterance.voice = preferred;
-              utterance.lang = preferred.lang || utterance.lang;
-            }
-            utterance.onstart = () => {
-              setIsSpeaking(true);
-              setError(effectiveLanguage === 'bn'
-                ? 'Cloud voice quota ব্যস্ত—Angela এই ডিভাইসের voice fallback ব্যবহার করছে।'
-                : 'Cloud voice quota is busy—Angela is using this device voice fallback.');
-            };
-            utterance.onend = () => {
-              setIsSpeaking(false);
-              setError('');
-            };
-            utterance.onerror = () => {
-              setIsSpeaking(false);
-              setError(effectiveLanguage === 'bn'
-                ? 'Voice provider ও device voice দুটোই এখন পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে আছে।'
-                : 'Cloud and device voice are both unavailable; the answer remains visible as text.');
-            };
-            window.speechSynthesis.speak(utterance);
-            return;
-          }
-        } catch {
-          // Keep the text reply visible below.
-        }
+        setError('');
+      };
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setError('');
+      };
+      utterance.onerror = () => {
         setIsSpeaking(false);
         setError(effectiveLanguage === 'bn'
-          ? 'Voice provider ও device voice দুটোই এখন পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে আছে।'
-          : 'Cloud and device voice are both unavailable; the answer remains visible as text.');
-      }
+          ? 'এই ডিভাইসের voice চালানো যায়নি। Browser/OS voice settings পরীক্ষা করুন।'
+          : 'This device could not start speech output. Check the browser/OS voice settings.');
+      };
+
+      window.speechSynthesis.speak(utterance);
+      return;
+    } catch {
+      setIsSpeaking(false);
+      setError(effectiveLanguage === 'bn'
+        ? 'এই ব্রাউজারে device voice পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে দেখানো হচ্ছে।'
+        : 'Device voice is unavailable in this browser; the answer remains visible as text.');
     }
   }
 
