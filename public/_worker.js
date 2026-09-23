@@ -12,40 +12,21 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   },
 });
 
-const languageFor = () => 'bn';
+const languageFor = (message, requested) => {
+  if (requested === 'bn' || requested === 'en') return requested;
+  if (/[\u0980-\u09FF]/.test(message)) return 'bn';
+  if (/\b(ami|amar|amake|apni|apnar|tumi|tomar|chai|jabo|jete|koto|kivabe|ki|keno|kobe|hobe|korbo|korte|lagbe|bolen|diben|pari|parbo|porte|bidesh)\b/i.test(message)) return 'bn';
+  return 'en';
+};
 
-const fallback = (message = '') => {
-  const query = String(message || '').toLowerCase();
-  const asksContact = /যোগাযোগ|ফোন|নাম্বার|হোয়াটসঅ্যাপ|ঠিকানা|অফিস|contact|phone|address|office/.test(query);
-  const asksCompany = /journey expert|জার্নি এক্সপার্ট|company|কোম্পানি|about|স্লোগান/.test(query);
-  const asksStudy = /study|student|university|course|admission|scholarship|sop|ielts|masters|bachelor|স্টাডি|স্টুডেন্ট|বিশ্ববিদ্যাল|অ্যাডমিশন|স্কলারশিপ/.test(query);
-  const asksVisa = /visa|ভিসা|embassy|এম্বাসি|document|ডকুমেন্ট/.test(query);
-  const asksTicket = /ticket|flight|fare|reissue|refund|টিকিট|ফ্লাইট|ভাড়া|ফেয়ার|রিইস্যু|রিফান্ড/.test(query);
-  const asksHajj = /hajj|umrah|হজ|ওমরাহ|উমরাহ/.test(query);
-  const asksTour = /tour|hotel|package|ট্যুর|হোটেল|প্যাকেজ/.test(query);
-  const asksMedical = /medical tourism|medical|মেডিকেল ট্যুরিজম|মেডিকেল/.test(query);
-  const asksHalal = /halal tourism|halal|হালাল ট্যুরিজম|হালাল/.test(query);
-  const asksCorporate = /corporate travel|corporate|কর্পোরেট/.test(query);
-  const asksInsurance = /insurance|ইন্স্যুরেন্স|বীমা/.test(query);
-  const asksMeet = /meet.*greet|meet & greet|মিট.*গ্রিট/.test(query);
-  const asksBrand = /craft bangla|compliance|advisory|brand|ব্র্যান্ড|ক্রাফট বাংলা/.test(query);
-  const asksGuarantee = /guarantee|guaranteed|গ্যারান্টি|নিশ্চিত|100%|১০০%/.test(query);
-
-  if (asksGuarantee) return 'Journey Expert Limited ভিসা, admission, scholarship, fare, seat, hotel inventory, refund বা কোনো সরকারি/consular সিদ্ধান্তের গ্যারান্টি দেয় না। আমরা যাচাইকৃত তথ্য, document guidance, application/travel support এবং প্রয়োজনীয় coordination দিই; চূড়ান্ত সিদ্ধান্ত সংশ্লিষ্ট কর্তৃপক্ষ বা supplier-এর।';
-  if (asksContact) return 'Journey Expert Limited-এর অফিস: ১৮৯/এ (২য় তলা), আব্দুল মতিন কমপ্লেক্স, হাজী মরণ আলী রোড, নাবিস্কো মোড়, তেজগাঁও, ঢাকা-১২১৫। WhatsApp/হটলাইন: +8801926400400, টেলিফোন: +8802 9830404, ইমেইল: journeyexpertbd@gmail.com।';
-  if (asksStudy) return 'JEL Study Abroad প্রোফাইল মূল্যায়ন, দেশ/কোর্স/বিশ্ববিদ্যালয় নির্বাচন, admission guidance, scholarship guidance, SOP, English-language test guidance, student-visa document preparation এবং pre-departure/post-arrival guidance দেয়। আপনার বর্তমান qualification ও পছন্দের দেশ বললে পরবর্তী ধাপ সাজিয়ে দিতে পারি।';
-  if (asksVisa) return 'Journey Expert Limited tourist, business, medical ও student visa-document assistance দেয়। Checklist দেশ ও visa type অনুযায়ী বদলে যায়; passport, photo, financial evidence, academic/employment records ও travel-purpose evidence সাধারণভাবে লাগতে পারে। চূড়ান্ত requirement সংশ্লিষ্ট embassy বা official source থেকে যাচাই করতে হবে।';
-  if (asksTicket) return 'Journey Expert Limited air ticketing, fare quotation, reissue এবং refund support দেয়। Live fare, seat availability ও booking status পরিবর্তনশীল, তাই destination, travel date এবং passenger count দিলে পরবর্তী verified quotation workflow বলা যাবে।';
-  if (asksHajj) return 'Journey Expert Limited Hajj ও Umrah service দেয়। Package, flight, hotel এবং visa-related requirement সময়ভেদে বদলাতে পারে; intended travel period ও traveller count দিলে প্রয়োজনীয় পরবর্তী ধাপ বলা যাবে।';
-  if (asksMedical) return 'Journey Expert Limited medical tourism support দেয়। Hospital/doctor selection, appointment coordination ও travel preparation-এ সহায়তা করা যায়; treatment availability বা medical outcome official provider-এর মাধ্যমে যাচাই করতে হবে।';
-  if (asksHalal) return 'Journey Expert Limited halal tourism support দেয়। Destination, travel date, family/group size এবং halal-friendly preference অনুযায়ী trip framework সাজানো যায়; live supplier availability আলাদাভাবে যাচাই করতে হবে।';
-  if (asksCorporate) return 'Journey Expert Limited corporate travel management দেয়—business travel planning, ticketing coordination, hotel support, itinerary assistance এবং corporate travel workflow-এর সহায়তা করা হয়। Route, traveller count ও company travel policy requirement দিলে আরও নির্দিষ্টভাবে বলা যাবে।';
-  if (asksInsurance) return 'Journey Expert Limited travel insurance assistance দেয়। Coverage, premium ও eligibility insurer এবং trip অনুযায়ী পরিবর্তিত হয়; destination, trip duration এবং traveller age দিলে কোন তথ্যগুলো যাচাই করতে হবে তা বলতে পারি।';
-  if (asksMeet) return 'JEL Meet & Greet হলো Journey Expert Limited-এর একটি service/co-brand। Airport arrival/departure support বা related assistance-এর প্রয়োজন হলে airport, date, flight এবং passenger details অনুযায়ী service scope যাচাই করা যায়।';
-  if (asksBrand) return 'Journey Expert Limited-এর পরিচিত brand/co-brand-এর মধ্যে JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory এবং Craft Bangla রয়েছে। কোন brand বা service সম্পর্কে জানতে চান বললে নির্দিষ্ট তথ্য দেব।';
-  if (asksTour) return 'Journey Expert Limited tours, hotels এবং travel package support দেয়। Destination, approximate date, traveller count ও budget দিলে উপযোগী plan-এর কাঠামো দিতে পারি; live hotel/flight availability supplier থেকে যাচাই করতে হবে।';
-  if (asksCompany) return 'Journey Expert Limited বাংলাদেশের একটি travel ও education service company। Slogan: “Your Journey, Our Expertise.” Core services-এর মধ্যে air ticketing, visa assistance, tours/hotels, Hajj & Umrah, halal tourism, medical tourism, insurance, corporate travel, Meet & Greet এবং Study Abroad রয়েছে।';
-  return 'আমি অ্যাঞ্জেলা, Journey Expert Limited-এর বাংলা AI সহকারী। JEL-এর air ticketing, visa assistance, tours/hotels, Hajj & Umrah, halal tourism, medical tourism, insurance, corporate travel, Meet & Greet, Study Abroad এবং company information সম্পর্কে প্রশ্ন করুন—আমি প্রশ্ন অনুযায়ী নির্দিষ্ট উত্তর দেব।';
+const fallback = (language, message = '') => {
+  const asksHajj = /hajj|umrah|হজ|ওমরাহ|উমরাহ|মক্কা|মদিনা|ziyarat|জিয়ারত|জিয়ারত/i.test(message);
+  if (asksHajj) return language === 'bn'
+    ? 'Journey Expert Limited হজ ও ওমরাহ বিষয়ে package planning, air travel coordination, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination এবং visa/document guidance-এ সহায়তা করে। নির্দিষ্ট package price, availability, Saudi visa/permit/health rules, quota ও dates পরিবর্তনশীল—বর্তমান official source বা supplier থেকে যাচাই করতে হবে। আপনি Hajj না Umrah, সম্ভাব্য সময় এবং যাত্রীর সংখ্যা বলুন।'
+    : 'Journey Expert Limited supports Hajj and Umrah package planning, air-travel coordination, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination, and visa/document guidance. Exact package inclusions, prices, availability, Saudi visa/permit/health rules, quotas, and dates are time-sensitive and must be verified from current official or supplier sources. Tell me whether you mean Hajj or Umrah, your likely travel period, and the number of travellers.';
+  return language === 'bn'
+  ? 'আমি অ্যাঞ্জেলা, Journey Expert Limited-এর AI সহকারী। এয়ার টিকিট, fare quotation, reissue/refund, ভিসা সহায়তা, ট্যুর ও হোটেল, হজ ও ওমরাহ, হালাল ট্যুরিজম, মেডিকেল ট্যুরিজম, ট্রাভেল ইন্স্যুরেন্স, কর্পোরেট ট্রাভেল, Meet & Greet এবং Study Abroad সম্পর্কে JEL-এর যাচাইকৃত তথ্য দিয়ে সাহায্য করতে পারি। আপনার নির্দিষ্ট প্রশ্নটি বলুন।'
+  : "I am Angela, Journey Expert Limited's AI assistant. I can help with air tickets and fare quotation, reissue/refund, visa assistance, tours and hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel, Meet & Greet, and Study Abroad using verified JEL information. Please ask your specific question.";
 };
 
 async function liveToken(request, env) {
@@ -114,14 +95,16 @@ async function chat(request, env) {
   try { body = await readJson(request); } catch { return json({ error: 'invalid_json' }, 400); }
   const message = typeof body?.message === 'string' ? body.message.trim().slice(0, 5000) : '';
   if (!message) return json({ error: 'message_required' }, 400);
-  const language = languageFor();
+  const language = languageFor(message, body?.language);
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
-  if (!key) return json({ reply: fallback(message), language, mode: 'fallback' });
+  if (!key) return json({ reply: fallback(language, message), language, mode: 'fallback' });
 
   const system = `You are Angela, the official female AI Assistant of Journey Expert Ltd. (JEL), Bangladesh, on journeyexpertltd.com.
 JEL verified knowledge has priority. Slogan: "Your Journey, Our Expertise." Office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215, Bangladesh. WhatsApp/hotline: +8801926400400. Telephone: +8802 9830404. Email: journeyexpertbd@gmail.com.
 Core services: air ticketing and fare quotation, reissue/refund support, visa-document assistance, tours and travel, hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, and Study Abroad. Detailed education counselling is handled by JEL Study Abroad at journeyexpertbd.com.
-Always answer in natural Bengali script. The user may speak or type Bangla, Banglish, or English, but Angela is Bangla-only in production.
+Hajj & Umrah verified service scope: pilgrimage package planning, air travel coordination, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination, and visa/document guidance. Exact package inclusions, prices, availability, Saudi visa/permit/health requirements, quotas and dates are time-sensitive and must be verified before being presented as current.
+If a query mentions Hajj or Umrah together with visa, hotel, flight, package, transport, Nusuk, permit, Makkah, Madinah or Ziyarat, treat Hajj/Umrah as the primary service context.
+Answer only in ${language === 'bn' ? 'natural Bengali script' : 'professional English'}, matching the language explicitly selected in the interface.
 Answer the user's actual question first. Keep normal spoken answers concise: 2-5 short sentences.
 For JEL questions, use the verified facts above as the source of truth. Never invent company facts, partnerships, live fares, schedules, seats, hotel inventory, package availability, visa rules, fees, processing times, embassy decisions, admission results, scholarships, payments, bookings, or refunds.
 You may answer general knowledge questions professionally. For current or time-sensitive public facts, only state them as current when Google Search grounding is actually enabled in this request; otherwise say the detail should be verified.
@@ -155,7 +138,7 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
       const data = await upstream.json();
       const candidate = data?.candidates?.[0];
       const reply = candidate?.content?.parts?.filter((part) => !part.thought).map((part) => part.text || '').join('').trim();
-      if (reply && /[\u0980-\u09FF]/.test(reply)) {
+      if (reply && !(language === 'bn' && !/[\u0980-\u09FF]/.test(reply)) && !(language === 'en' && /[\u0980-\u09FF]/.test(reply))) {
         return json({ reply, language, mode: 'ai', providerModel: model, grounded: Boolean(candidate?.groundingMetadata), groundingEnabled });
       }
     }
@@ -164,7 +147,7 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
   } finally {
     clearTimeout(timer);
   }
-  return json({ reply: fallback(message), language, mode: 'fallback' });
+  return json({ reply: fallback(language, message), language, mode: 'fallback' });
 }
 
 async function transcribe(request, env) {
@@ -178,7 +161,7 @@ async function transcribe(request, env) {
   let body;
   try { body = JSON.parse(raw); } catch { return json({ error: 'invalid_json' }, 400); }
   const audio = typeof body?.audio === 'string' ? body.audio.trim() : '';
-  const language = 'bn';
+  const language = body?.language === 'en' ? 'en' : 'bn';
   const mimeTypeRaw = typeof body?.mimeType === 'string' ? body.mimeType : 'audio/webm';
   const mimeType = mimeTypeRaw.split(';')[0].toLowerCase();
   if (!audio) return json({ error: 'audio_required' }, 400);
@@ -187,7 +170,9 @@ async function transcribe(request, env) {
   const keys = [...new Set([env.GEMINI_API_KEY, env.GEMINI_TTS_API_KEY].map((value) => String(value || '').trim()).filter(Boolean))];
   if (!keys.length) return json({ error: 'transcription_not_configured' }, 503);
 
-  const prompt = 'Transcribe this customer speech accurately. The customer may use Bangla, Banglish, or English. Return only a natural Bengali-script transcript where possible, preserving proper names and brand names such as Journey Expert, JEL, visa, ticket, university and country names when appropriate. Do not answer the question and do not add commentary.';
+  const prompt = language === 'bn'
+    ? 'Transcribe this customer speech accurately. The customer is using Bangla or Banglish. Return only the transcript in natural Bengali script, preserving proper names and brand names such as Journey Expert, JEL, visa, ticket, university and country names when appropriate. Do not answer the question and do not add commentary.'
+    : 'Transcribe this customer speech accurately in English. Return only the transcript. Do not answer the question and do not add commentary.';
 
   const models = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash'];
   for (const model of models) {
@@ -219,7 +204,8 @@ async function transcribe(request, env) {
           .replace(/^[\"'\s]+|[\"'\s]+$/g, '')
           .trim();
         if (!transcript) continue;
-        if (!/[\u0980-\u09FF]/.test(transcript)) continue;
+        if (language === 'bn' && !/[\u0980-\u09FF]/.test(transcript)) continue;
+        if (language === 'en' && /[\u0980-\u09FF]/.test(transcript)) continue;
         return json({ transcript: transcript.slice(0, 1200), language, mode: 'ai', providerModel: model });
       } catch {
         // Try the next configured model/key.
@@ -340,7 +326,7 @@ export default {
     if (url.pathname === '/api/health' || url.pathname === '/api/healthz') return json({
       status: 'online',
       service: 'JEL Angela Pages Worker',
-      languages: ['bn'],
+      languages: ['bn', 'en'],
       femaleVoiceConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
       femaleLiveFallbackConfigured: Boolean(env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY),
       liveFemaleVoiceConfigured: Boolean(env.GEMINI_API_KEY),
