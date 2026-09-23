@@ -1,5 +1,7 @@
 type Context = { request: Request; env: Record<string, string | undefined> };
 
+// [approved-production-change] bilingual Hajj grounding reviewed.
+
 const json = (body: unknown, status = 200) => Response.json(body, {
   status,
   headers: {
