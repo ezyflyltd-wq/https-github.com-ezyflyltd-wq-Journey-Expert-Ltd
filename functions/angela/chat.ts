@@ -127,7 +127,7 @@ function retrieveJelKnowledge(query) {
       score: entry.keywords.reduce((total, keyword) => normalized.includes(keyword.toLocaleLowerCase()) ? total + (keyword.includes(' ') ? 4 : 1) : total, 0),
     }))
     .filter((item) => item.score > 0)
-    .sort((a, b) => (b.score - a.score) || (b.entry.priority - a.entry.priority));
+    .sort((a, b) => (b.entry.priority - a.entry.priority) || (b.score - a.score));
   const primary = scored[0]?.entry || null;
   const selected = scored.slice(0, 3).map((item) => item.entry);
   return {
