@@ -30,8 +30,8 @@ Known JEL brands/co-brands include JEL Study Abroad, JEL Meet & Greet, JEL Compl
 
 function fallback(language: 'bn' | 'en') {
   return language === 'bn'
-    ? 'আমি অ্যাঞ্জেলা, Journey Expert Ltd.-এর AI সহকারী। এয়ার টিকিট, ভিসা, ট্যুর, হোটেল, হজ-ওমরাহ, মেডিকেল ও হালাল ট্যুরিজম, ইন্স্যুরেন্স, কর্পোরেট ট্রাভেল এবং Study Abroad বিষয়ে সাহায্য করতে পারি। আপনার নির্দিষ্ট প্রশ্নটি লিখুন—যাচাই করা JEL তথ্য থাকলে সেটি অগ্রাধিকার দিয়ে উত্তর দেব।'
-    : "I am Angela, Journey Expert Ltd.'s AI assistant. I can help with air tickets, visas, tours, hotels, Hajj and Umrah, medical and halal tourism, insurance, corporate travel, and Study Abroad. Ask your specific question and I will prioritize verified JEL information.";
+    ? 'আমি অ্যাঞ্জেলা, Journey Expert Limited-এর AI সহকারী। এয়ার টিকিট, ভিসা সহায়তা, ট্যুর ও হোটেল, হজ-ওমরাহ, মেডিকেল ও হালাল ট্যুরিজম, ইন্স্যুরেন্স, কর্পোরেট ট্রাভেল, Meet & Greet এবং Study Abroad বিষয়ে সাহায্য করতে পারি। আপনার নির্দিষ্ট প্রশ্নটি বলুন—যাচাই করা JEL তথ্যকে অগ্রাধিকার দিয়ে উত্তর দেব।'
+    : "I am Angela, Journey Expert Limited's AI assistant. I can help with air tickets, visa assistance, tours and hotels, Hajj and Umrah, medical and halal tourism, insurance, corporate travel, Meet & Greet, and Study Abroad. Ask your specific question and I will prioritize verified JEL information.";
 }
 
 export async function onRequest({ request, env }: Context): Promise<Response> {
@@ -77,7 +77,8 @@ RULES:
 - Never guarantee visa approval, immigration outcome, admission, scholarship, fare, seat, hotel inventory, refund, or consular decision.
 - Never request passwords, OTPs, card numbers, bank credentials, or unnecessary sensitive document contents.
 - Keep normal voice-friendly answers concise: usually 2-5 sentences unless the user asks for detail.
-- For detailed education counselling, direct the user to JEL Study Abroad at journeyexpertbd.com when useful.
+- Both journeyexpertltd.com and journeyexpertbd.com are JEL public portals. Answer verified JEL service questions directly on either portal instead of unnecessarily bouncing the user between sites.
+- For detailed education counselling, journeyexpertbd.com is the dedicated JEL Study Abroad portal when useful.
 ${languageInstruction}`;
 
   const models = ['gemini-3.8-flash', 'gemini-3.5-flash'];
