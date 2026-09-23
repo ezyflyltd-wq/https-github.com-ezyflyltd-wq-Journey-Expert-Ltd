@@ -155,14 +155,26 @@ export function FreeVoiceAngelaWidget() {
   const [conversationId] = useState(() => `angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
   const [history, setHistory] = useState<ConversationTurn[]>([]);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const mediaChunksRef = useRef<Blob[]>([]);
+  const recordingTimeoutRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const recognitionSupported = Boolean(getSpeechRecognition());
+  const recordingSupported = typeof window !== 'undefined'
+    && typeof MediaRecorder !== 'undefined'
+    && Boolean(navigator.mediaDevices?.getUserMedia);
+  const voiceInputSupported = recordingSupported || Boolean(getSpeechRecognition());
 
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
+      if (recordingTimeoutRef.current) window.clearTimeout(recordingTimeoutRef.current);
+      if (mediaRecorderRef.current?.state === 'recording') {
+        try { mediaRecorderRef.current.stop(); } catch { /* already stopped */ }
+      }
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
       audioRef.current?.pause();
       if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
       if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
@@ -173,6 +185,11 @@ export function FreeVoiceAngelaWidget() {
   useEffect(() => {
     if (!isOpen) {
       recognitionRef.current?.stop();
+      if (recordingTimeoutRef.current) window.clearTimeout(recordingTimeoutRef.current);
+      if (mediaRecorderRef.current?.state === 'recording') {
+        try { mediaRecorderRef.current.stop(); } catch { /* already stopped */ }
+      }
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
       setIsListening(false);
     }
   }, [isOpen]);
@@ -352,16 +369,46 @@ export function FreeVoiceAngelaWidget() {
     }
   };
 
-  const startListening = () => {
-    audioRef.current?.pause();
-    window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
+  const blobToBase64 = async (blob: Blob): Promise<string> => {
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length)));
+    }
+    return btoa(binary);
+  };
+
+  const transcribeRecordedAudio = async (blob: Blob) => {
+    if (!blob.size) throw new Error('empty_audio');
+    if (blob.size > 2_500_000) throw new Error('audio_too_large');
+    const audio = await blobToBase64(blob);
+    const response = await fetch('/angela/transcribe', {
+      method: 'POST',
+      signal: AbortSignal.timeout(15000),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audio,
+        mimeType: (blob.type || 'audio/webm').split(';')[0],
+        language,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    const transcript = typeof data.transcript === 'string' ? data.transcript.trim() : '';
+    if (!response.ok || !transcript) throw new Error(data.error || 'transcription_failed');
+    return transcript;
+  };
+
+  const startBrowserRecognitionFallback = () => {
     const Recognition = getSpeechRecognition();
     if (!Recognition) {
-      setError('Voice input is not available in this browser. You can type your question below.');
+      setError(language === 'bn'
+        ? 'এই ব্রাউজারে microphone transcription চালু করা যাচ্ছে না। নিচে লিখে প্রশ্ন করুন।'
+        : 'Microphone transcription is unavailable in this browser. Please type your question.');
+      setIsListening(false);
       return;
     }
-
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch { /* already ended */ }
       recognitionRef.current = null;
@@ -378,7 +425,7 @@ export function FreeVoiceAngelaWidget() {
     recognition.onerror = () => {
       if (recognitionRef.current === recognition) recognitionRef.current = null;
       setIsListening(false);
-      setError('Voice input could not be heard. Please try again or type your question.');
+      setError(language === 'bn' ? 'আপনার কথা শোনা যায়নি। আবার চেষ্টা করুন বা লিখে প্রশ্ন করুন।' : 'Voice input could not be heard. Please try again or type your question.');
     };
     recognition.onend = () => {
       if (recognitionRef.current === recognition) recognitionRef.current = null;
@@ -391,11 +438,87 @@ export function FreeVoiceAngelaWidget() {
       recognition.start();
     } catch {
       setIsListening(false);
-      setError('Microphone access could not be started. Please use the text box instead.');
+      setError(language === 'bn' ? 'Microphone চালু করা যায়নি। নিচে লিখে প্রশ্ন করুন।' : 'Microphone access could not be started. Please use the text box instead.');
+    }
+  };
+
+  const startListening = async () => {
+    audioRef.current?.pause();
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+    setError('');
+    void unlockAudio();
+
+    if (!recordingSupported) {
+      startBrowserRecognitionFallback();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+      const mimeType = candidates.find((type) => MediaRecorder.isTypeSupported(type)) || '';
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      mediaChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) mediaChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        setIsListening(false);
+        setError(language === 'bn' ? 'Microphone recording-এ সমস্যা হয়েছে। আবার চেষ্টা করুন।' : 'Microphone recording failed. Please try again.');
+      };
+      recorder.onstop = async () => {
+        if (recordingTimeoutRef.current) window.clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+        mediaRecorderRef.current = null;
+        stream.getTracks().forEach((track) => track.stop());
+        if (mediaStreamRef.current === stream) mediaStreamRef.current = null;
+        const blob = new Blob(mediaChunksRef.current, { type: recorder.mimeType || mimeType || 'audio/webm' });
+        mediaChunksRef.current = [];
+        setIsListening(false);
+        try {
+          setIsLoading(true);
+          const transcript = await transcribeRecordedAudio(blob);
+          setIsLoading(false);
+          await askAssistant(transcript);
+        } catch {
+          setIsLoading(false);
+          setError(language === 'bn'
+            ? 'আপনার কথাটি লেখা হিসেবে ধরতে পারিনি। আবার বলুন বা লিখে প্রশ্ন করুন।'
+            : 'I could not transcribe that recording. Please try again or type your question.');
+        }
+      };
+
+      recorder.start(250);
+      setIsListening(true);
+      recordingTimeoutRef.current = window.setTimeout(() => {
+        if (recorder.state === 'recording') recorder.stop();
+      }, 12000);
+    } catch (error: any) {
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+      setIsListening(false);
+      if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
+        setError(language === 'bn'
+          ? 'Microphone permission বন্ধ আছে। Browser settings থেকে microphone Allow করুন, অথবা লিখে প্রশ্ন করুন।'
+          : 'Microphone permission is blocked. Allow microphone access in browser settings, or type your question.');
+        return;
+      }
+      startBrowserRecognitionFallback();
     }
   };
 
   const stopListening = () => {
+    if (recordingTimeoutRef.current) window.clearTimeout(recordingTimeoutRef.current);
+    recordingTimeoutRef.current = null;
+    const recorder = mediaRecorderRef.current;
+    if (recorder?.state === 'recording') {
+      try { recorder.stop(); } catch { /* already stopped */ }
+      return;
+    }
     const recognition = recognitionRef.current;
     recognitionRef.current = null;
     try { recognition?.stop(); } catch { /* already ended */ }
@@ -448,8 +571,8 @@ export function FreeVoiceAngelaWidget() {
             <aside role="dialog" aria-modal="true" aria-labelledby="free-angela-disclosure-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[#C7A44D]/60 bg-[#FFFDF6] p-5 text-left shadow-2xl sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0B6B53]">Journey Expert Ltd. AI support</p>
               <h2 id="free-angela-disclosure-title" className="mt-1 text-xl font-bold text-[#093F31]">Before you talk with Angela</h2>
-              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input may be processed by your browser’s speech service, and the transcript is sent to Journey Expert’s AI endpoint to generate a reply. Angela uses Journey Expert's server-rendered female voice when available; an unknown browser default voice is never substituted.</p>
-              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনার ব্রাউজারের speech service ভয়েস ইনপুট প্রক্রিয়া করতে পারে এবং উত্তর তৈরির জন্য transcript Journey Expert-এর AI endpoint-এ পাঠানো হয়। Angela server-rendered female voice ব্যবহার করে; অজানা browser default voice কখনো substitute করা হয় না।</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input is recorded only after you tap the microphone and is sent to Journey Expert’s Gemini endpoint for transcription and reply generation; browser speech recognition is used only as a compatibility fallback. Angela uses Journey Expert's server-rendered female voice when available; an unknown browser default voice is never substituted.</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর ভয়েস রেকর্ডিং Journey Expert-এর Gemini endpoint-এ transcription ও উত্তর তৈরির জন্য পাঠানো হয়; browser speech recognition শুধু compatibility fallback হিসেবে ব্যবহৃত হতে পারে। Angela server-rendered female voice ব্যবহার করে; অজানা browser default voice কখনো substitute করা হয় না।</p>
               <p className="mt-3 text-xs leading-5 text-[#555555]">Replies may be incomplete or inaccurate. Do not share passport, bank, payment, password, or other sensitive information. For verified support, call <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
               <div className="mt-4 flex flex-col gap-3 border-t border-[#E8E1CF] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button type="button" className="inline-flex min-h-11 items-center justify-center bg-[#093F31] px-5 py-3 text-sm font-bold text-white hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" onClick={acceptDisclosure}>Agree and continue / সম্মত হয়ে চালিয়ে যান</button>
@@ -496,7 +619,7 @@ export function FreeVoiceAngelaWidget() {
             <span className="truncate text-slate-500">{language === 'bn' ? (assistantState === 'READY' ? 'মাইক্রোফোনে বলুন অথবা লিখুন' : assistantState === 'LISTENING' ? 'আপনার কথা শুনছি' : assistantState === 'THINKING' ? 'JEL তথ্য দিয়ে উত্তর তৈরি হচ্ছে' : assistantState === 'SPEAKING' ? 'উত্তর পড়ে শোনাচ্ছি' : 'লিখে সহায়তা নিন') : (assistantState === 'READY' ? 'Tap mic or type below' : assistantState === 'LISTENING' ? 'Listening to you' : assistantState === 'THINKING' ? 'Answering with JEL knowledge' : assistantState === 'SPEAKING' ? 'Speaking response' : 'Text chat remains available')}</span>
           </div>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-xs text-[#333333]">
-            <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{recognitionSupported ? 'Ask Angela a question in Bangla, Banglish, or English. She will keep the conversation context.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
+            <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{voiceInputSupported ? 'Ask Angela a question in Bangla, Banglish, or English. She will keep the conversation context.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0B6B53]" data-testid="voice-provider-status">
               Voice output: Angela female · {language === 'bn' ? 'বাংলা' : 'English'}
             </p>
