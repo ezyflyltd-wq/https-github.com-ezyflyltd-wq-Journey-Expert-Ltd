@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, RefreshCw, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { normalizePath } from '../routing/routes';
-import { fetchAngelaLiveFemaleSpeech } from '../lib/angelaLiveVoice';
 
 type SpeechRecognitionEventLike = {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -245,117 +244,51 @@ export function FreeVoiceAngelaWidget() {
     if (typeof window === 'undefined') return;
     const effectiveLanguage = language;
     const cleanText = text.replace(/[*#_`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 520);
+    if (!cleanText) return;
 
-    // Use the same server-rendered Angela female voice on desktop and mobile.
-    // Browser voices differ by OS and must never silently fall back to a male voice.
+    setError('');
+
+    // DEVICE_FIRST_ANGELA_VOICE — device voice fallback is the production primary.
+    // Gemini TTS/Live can return quota errors. Do not make audible speech wait on
+    // those providers: speak immediately with the best localized device voice.
     try {
-      setError('');
-      const response = await fetch('/angela/speech', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText, language: effectiveLanguage }),
-      });
-      if (!response.ok) throw new Error('female_tts_unavailable');
-      const blob = await response.blob();
-      const context = await unlockAudio();
-      if (context?.state === 'running') {
-        const decoded = await context.decodeAudioData(await blob.arrayBuffer());
-        const source = context.createBufferSource();
-        source.buffer = decoded;
-        source.connect(context.destination);
-        source.onended = () => setIsSpeaking(false);
-        setIsSpeaking(true);
-        source.start(0);
-      } else {
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audioRef.current?.pause();
-        if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
-        audioRef.current = audio;
-        audio.onended = () => {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(url);
-          if (audioRef.current === audio) audioRef.current = null;
-        };
-        await audio.play();
+      if (!window.speechSynthesis) throw new Error('speech_synthesis_unavailable');
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume?.();
+
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US';
+      utterance.rate = 0.98;
+      utterance.pitch = 1.02;
+      if (preferred) {
+        utterance.voice = preferred;
+        utterance.lang = preferred.lang || utterance.lang;
       }
-    } catch {
-      // Primary Gemini TTS may hit quota or a transient timeout. Before degrading
-      // to text, try a second verified Google female voice through Gemini Live.
-      try {
-        const liveController = new AbortController();
-        const liveTimer = window.setTimeout(() => liveController.abort(), 6500);
-        const liveBlob = await fetchAngelaLiveFemaleSpeech(cleanText, liveController.signal);
-        window.clearTimeout(liveTimer);
-        const context = await unlockAudio();
-        if (context?.state === 'running') {
-          const decoded = await context.decodeAudioData(await liveBlob.arrayBuffer());
-          const source = context.createBufferSource();
-          source.buffer = decoded;
-          source.connect(context.destination);
-          source.onended = () => setIsSpeaking(false);
-          setIsSpeaking(true);
-          source.start(0);
-          return;
-        }
-        const url = URL.createObjectURL(liveBlob);
-        const audio = new Audio(url);
-        audioRef.current?.pause();
-        if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
-        audioRef.current = audio;
-        audio.onended = () => {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(url);
-          if (audioRef.current === audio) audioRef.current = null;
-        };
+
+      utterance.onstart = () => {
         setIsSpeaking(true);
-        await audio.play();
-        return;
-      } catch {
-        // Free third-line fallback: when Gemini TTS and Gemini Live quota/provider
-        // paths are unavailable, use the device speech engine instead of muting Angela.
-        // Prefer a female/localized voice; if the OS exposes only a locale voice,
-        // use that so the customer can still hear the answer.
-        try {
-          if (typeof window !== 'undefined' && window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-            const voices = await loadSpeechVoices();
-            const preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US';
-            utterance.rate = 0.98;
-            utterance.pitch = 1.02;
-            if (preferred) {
-              utterance.voice = preferred;
-              utterance.lang = preferred.lang || utterance.lang;
-            }
-            utterance.onstart = () => {
-              setIsSpeaking(true);
-              setError(effectiveLanguage === 'bn'
-                ? 'Cloud voice quota ব্যস্ত—Angela এই ডিভাইসের voice fallback ব্যবহার করছে।'
-                : 'Cloud voice quota is busy—Angela is using this device voice fallback.');
-            };
-            utterance.onend = () => {
-              setIsSpeaking(false);
-              setError('');
-            };
-            utterance.onerror = () => {
-              setIsSpeaking(false);
-              setError(effectiveLanguage === 'bn'
-                ? 'Voice provider ও device voice দুটোই এখন পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে আছে।'
-                : 'Cloud and device voice are both unavailable; the answer remains visible as text.');
-            };
-            window.speechSynthesis.speak(utterance);
-            return;
-          }
-        } catch {
-          // Keep the text reply visible below.
-        }
+        setError('');
+      };
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setError('');
+      };
+      utterance.onerror = () => {
         setIsSpeaking(false);
         setError(effectiveLanguage === 'bn'
-          ? 'Voice provider ও device voice দুটোই এখন পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে আছে।'
-          : 'Cloud and device voice are both unavailable; the answer remains visible as text.');
-      }
+          ? 'এই ডিভাইসের voice চালানো যায়নি। Browser/OS voice settings পরীক্ষা করুন।'
+          : 'This device could not start speech output. Check the browser/OS voice settings.');
+      };
+
+      window.speechSynthesis.speak(utterance);
+      return;
+    } catch {
+      setIsSpeaking(false);
+      setError(effectiveLanguage === 'bn'
+        ? 'এই ব্রাউজারে device voice পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে দেখানো হচ্ছে।'
+        : 'Device voice is unavailable in this browser; the answer remains visible as text.');
     }
   }
 
@@ -606,8 +539,8 @@ export function FreeVoiceAngelaWidget() {
             <aside role="dialog" aria-modal="true" aria-labelledby="free-angela-disclosure-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[#C7A44D]/60 bg-[#FFFDF6] p-5 text-left shadow-2xl sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0B6B53]">Journey Expert Ltd. AI support</p>
               <h2 id="free-angela-disclosure-title" className="mt-1 text-xl font-bold text-[#093F31]">Before you talk with Angela</h2>
-              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input is recorded only after you tap the microphone and is sent to Journey Expert’s Gemini endpoint for transcription and reply generation; browser speech recognition is used only as a compatibility fallback. Angela uses Journey Expert's cloud female voice when available. If free cloud voice quota is unavailable, the device speech engine may be used as a fallback so the assistant can still speak.</p>
-              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর ভয়েস রেকর্ডিং Journey Expert-এর Gemini endpoint-এ transcription ও উত্তর তৈরির জন্য পাঠানো হয়; browser speech recognition শুধু compatibility fallback হিসেবে ব্যবহৃত হতে পারে। Angela cloud female voice ব্যবহার করে; free cloud voice quota পাওয়া না গেলে কথা চালু রাখতে device speech engine fallback হিসেবে ব্যবহার হতে পারে।</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input is recorded only after you tap the microphone and is sent to Journey Expert’s Gemini endpoint for transcription and reply generation; browser speech recognition is used only as a compatibility fallback. Angela uses the device speech engine as the primary voice path so cloud quota cannot make the assistant silent. A localized/female device voice is preferred when the browser or operating system provides one.</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর ভয়েস রেকর্ডিং Journey Expert-এর Gemini endpoint-এ transcription ও উত্তর তৈরির জন্য পাঠানো হয়; browser speech recognition শুধু compatibility fallback হিসেবে ব্যবহৃত হতে পারে। Angela প্রথমে device speech engine ব্যবহার করে, যাতে cloud quota শেষ হলেও কথা বন্ধ না হয়। Browser বা operating system-এ localized/female voice থাকলে সেটি অগ্রাধিকার পায়।</p>
               <p className="mt-3 text-xs leading-5 text-[#555555]">Replies may be incomplete or inaccurate. Do not share passport, bank, payment, password, or other sensitive information. For verified support, call <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
               <div className="mt-4 flex flex-col gap-3 border-t border-[#E8E1CF] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button type="button" className="inline-flex min-h-11 items-center justify-center bg-[#093F31] px-5 py-3 text-sm font-bold text-white hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" onClick={acceptDisclosure}>Agree and continue / সম্মত হয়ে চালিয়ে যান</button>
@@ -656,7 +589,7 @@ export function FreeVoiceAngelaWidget() {
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-xs text-[#333333]">
             <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{voiceInputSupported ? 'Ask Angela a question in Bangla, Banglish, or English. She will keep the conversation context.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0B6B53]" data-testid="voice-provider-status">
-              Voice output: Angela female · {language === 'bn' ? 'বাংলা' : 'English'}
+              Voice output: Angela · device-first · {language === 'bn' ? 'বাংলা' : 'English'}
             </p>
             <div className="flex justify-center">
               {isListening ? (
