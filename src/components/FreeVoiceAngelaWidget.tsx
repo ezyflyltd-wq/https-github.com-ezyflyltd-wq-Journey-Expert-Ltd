@@ -145,7 +145,7 @@ export function FreeVoiceAngelaWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [language, setLanguage] = useState<'en' | 'bn'>('bn');
+  const [language] = useState<'en' | 'bn'>('bn');
   const [input, setInput] = useState('');
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastReply, setLastReply] = useState('');
@@ -233,7 +233,7 @@ export function FreeVoiceAngelaWidget() {
     }
   };
 
-  const welcomeText = () => language === 'bn' ? BANGLA_WELCOME : ENGLISH_WELCOME;
+  const welcomeText = () => BANGLA_WELCOME;
 
   const acceptDisclosure = () => {
     void unlockAudio();
@@ -257,7 +257,7 @@ export function FreeVoiceAngelaWidget() {
 
   async function speakWithBrowser(text: string) {
     if (typeof window === 'undefined') return;
-    const effectiveLanguage = language;
+    const effectiveLanguage: 'bn' = 'bn';
     const cleanText = text.replace(/[*#_`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 520);
     if (!cleanText) return;
 
@@ -447,7 +447,7 @@ export function FreeVoiceAngelaWidget() {
       recognitionRef.current = null;
     }
     const recognition = new Recognition();
-    recognition.lang = language === 'bn' ? 'bn-BD' : 'en-US';
+    recognition.lang = 'bn-BD';
     recognition.interimResults = false;
     recognition.continuous = false;
     recognition.onresult = (event) => {
@@ -608,7 +608,7 @@ export function FreeVoiceAngelaWidget() {
           <span className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white/90 bg-white p-1">
             <img src="/logo.svg" alt="" className="h-full w-full object-contain" />
           </span>
-          <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"><Mic className="h-2.5 w-2.5" /></span><span className="sr-only">Talk to Angela · কথা বলুন</span>
+          <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"><Mic className="h-2.5 w-2.5" /></span><span className="sr-only">অ্যাঞ্জেলার সঙ্গে কথা বলুন</span>
         </button>
 
         {isOpen && (
@@ -633,7 +633,7 @@ export function FreeVoiceAngelaWidget() {
   return (
     <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[60] flex max-w-[calc(100vw-1.5rem)] flex-col items-end gap-2 sm:bottom-6 sm:right-6" data-voice-contract="cloud female primary; device voice fallback">
       {isOpen ? (
-        <section role="dialog" aria-label="Angela AI voice assistant" className="flex h-[min(640px,85dvh)] w-[calc(100vw-24px)] max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-2xl">
+        <section role="dialog" aria-label="অ্যাঞ্জেলা বাংলা AI ভয়েস সহকারী" className="flex h-[min(640px,85dvh)] w-[calc(100vw-24px)] max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-2xl">
           <header className="relative flex items-center justify-between overflow-hidden bg-gradient-to-r from-[#0B5D3B] via-[#0D6D45] to-[#074028] px-3 py-3 text-white shadow-md sm:px-4">
             <div className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-[#D4AF37] bg-white p-1 shadow-md"><img src="/logo.svg" alt="" className="h-full w-full object-contain" /></span>
@@ -643,10 +643,7 @@ export function FreeVoiceAngelaWidget() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <div className="mr-1 flex items-center rounded-lg bg-white/10 p-0.5 text-[10px]">
-                <button type="button" className={`rounded px-1.5 py-0.5 ${language === 'en' ? 'bg-white font-bold text-[#0B5D3B]' : 'text-white/80'}`} onClick={() => setLanguage('en')}>EN</button>
-                <button type="button" className={`rounded px-1.5 py-0.5 ${language === 'bn' ? 'bg-white font-bold text-[#0B5D3B]' : 'text-white/80'}`} onClick={() => setLanguage('bn')}>বাংলা</button>
-              </div>
+              <div className="mr-1 rounded-lg bg-white/15 px-2 py-1 text-[10px] font-bold text-white" data-language-contract="bangla-only">বাংলা</div>
               <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => setVoiceEnabled((value) => !value)} className="rounded-lg p-1.5 text-amber-300 hover:bg-white/10">{voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-white/60" />}</button>
               <button type="button" aria-label="New chat" onClick={resetConversation} className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white"><RefreshCw className="h-4 w-4" /></button>
               <button type="button" aria-label="Close Angela assistant" onClick={() => setIsOpen(false)} className="rounded-lg p-1.5 text-white/80 hover:bg-white/10"><X className="h-5 w-5" /></button>
