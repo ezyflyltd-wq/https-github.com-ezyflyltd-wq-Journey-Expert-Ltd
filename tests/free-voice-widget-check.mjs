@@ -54,6 +54,11 @@ assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a
 assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
 assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
 assert.equal(widget.includes('device voice fallback'), true, 'voice output must remain device-capable when cloud quota is unavailable');
+assert.equal(widget.includes('FEMALE_FIRST_CROSS_PLATFORM'), true, 'Angela must rank localized female voices across device families');
+assert.equal(widget.includes('MALE_VOICE_HINTS'), true, 'Angela must penalize known male voice names');
+assert.equal(widget.includes('voiceCatalogRef'), true, 'Angela must warm the browser/OS voice catalogue before use');
+assert.equal(widget.includes('আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা'), true, 'Bangla greeting must introduce Angela consistently');
+assert.equal(widget.includes('আমি আপনাকে কীভাবে সাহায্য করতে পারি?'), true, 'Bangla greeting must ask how Angela can help');
 
 const liveVoice = fs.readFileSync(path.join(root, 'src/lib/angelaLiveVoice.ts'), 'utf8');
 assert.equal(liveVoice.includes('fetchAngelaLiveFemaleSpeech'), true, 'optional Gemini Live female capability must remain available for future provider recovery');
