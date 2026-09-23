@@ -13,6 +13,8 @@ const pagesSpeech = fs.readFileSync(path.join(root, 'functions/angela/speech.ts'
 const pagesLiveToken = fs.readFileSync(path.join(root, 'functions/angela/live-token.ts'), 'utf8');
 
 assert.equal(widget.includes('getSpeechRecognition'), true, 'the widget must include browser speech recognition');
+assert.equal(widget.includes('MediaRecorder'), true, 'the widget must prefer browser microphone recording for cross-device voice input');
+assert.equal(widget.includes("fetch('/angela/transcribe'"), true, 'the widget must send recorded audio to the same-origin Gemini transcription route');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
 assert.equal(widget.includes("fetch('/angela/chat'"), true, 'the widget must use the Worker-independent Pages Angela brain');
 assert.equal(widget.includes('unknown browser default voice is never substituted'), true, 'the disclosure must explain the verified female-only voice policy');
@@ -71,6 +73,7 @@ assert.equal(pagesSpeech.includes("'gemini-2.5-pro-preview-tts'"), true, 'female
 assert.equal(pagesLiveToken.includes('liveConnectConstraints'), true, 'Live token REST request must use the official ephemeral-token constraints payload');
 
 assert.equal(pagesWorker.includes("url.pathname === '/angela/chat'"), true, 'Pages advanced Worker must expose /angela/chat');
+assert.equal(pagesWorker.includes("url.pathname === '/angela/transcribe'"), true, 'Pages advanced Worker must expose /angela/transcribe');
 assert.equal(pagesWorker.includes("url.pathname === '/angela/speech'"), true, 'Pages advanced Worker must expose /angela/speech');
 assert.equal(pagesWorker.includes("url.pathname === '/angela/live-token'"), true, 'Pages advanced Worker must expose /angela/live-token');
 assert.equal(pagesWorker.includes('liveConnectConstraints'), true, 'Pages advanced Worker must use the official Gemini Live token constraints payload');
