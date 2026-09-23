@@ -482,8 +482,18 @@ export function FreeVoiceAngelaWidget() {
     setError('');
     void unlockAudio();
 
-    if (!recordingSupported) {
+    // FREE_VOICE_INPUT_PRIMARY: use browser SpeechRecognition first on
+    // Chrome/Edge/Safari/Android/iOS when exposed by the browser. This avoids
+    // depending on free cloud transcription quota for the normal microphone path.
+    if (getSpeechRecognition()) {
       startBrowserRecognitionFallback();
+      return;
+    }
+
+    if (!recordingSupported) {
+      setError(language === 'bn'
+        ? 'এই ব্রাউজারে voice input চালু করা যাচ্ছে না। নিচে লিখে প্রশ্ন করুন।'
+        : 'Voice input is unavailable in this browser. Please type your question.');
       return;
     }
 
@@ -540,7 +550,9 @@ export function FreeVoiceAngelaWidget() {
           : 'Microphone permission is blocked. Allow microphone access in browser settings, or type your question.');
         return;
       }
-      startBrowserRecognitionFallback();
+      setError(language === 'bn'
+        ? 'Microphone চালু করা যায়নি। আবার চেষ্টা করুন অথবা লিখে প্রশ্ন করুন।'
+        : 'Microphone could not be started. Please try again or type your question.');
     }
   };
 
@@ -604,8 +616,8 @@ export function FreeVoiceAngelaWidget() {
             <aside role="dialog" aria-modal="true" aria-labelledby="free-angela-disclosure-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[#C7A44D]/60 bg-[#FFFDF6] p-5 text-left shadow-2xl sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0B6B53]">Journey Expert Ltd. AI support</p>
               <h2 id="free-angela-disclosure-title" className="mt-1 text-xl font-bold text-[#093F31]">Before you talk with Angela</h2>
-              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input is recorded only after you tap the microphone and is sent to Journey Expert’s Gemini endpoint for transcription and reply generation; browser speech recognition is used only as a compatibility fallback. Angela uses Journey Expert's cloud female voice as the primary cross-device voice when the free provider is available. If free cloud quota is unavailable, a ranked localized/female device voice is used as a fallback so the assistant does not become silent.</p>
-              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর ভয়েস রেকর্ডিং Journey Expert-এর Gemini endpoint-এ transcription ও উত্তর তৈরির জন্য পাঠানো হয়; browser speech recognition শুধু compatibility fallback হিসেবে ব্যবহৃত হতে পারে। Angela প্রথমে Journey Expert-এর cloud female voice ব্যবহার করে, যাতে Windows, Android, Mac ও iPhone-এ কণ্ঠ যতটা সম্ভব একই থাকে। Free cloud quota না থাকলে ranked localized/female device voice fallback ব্যবহার হবে, যাতে কথা বন্ধ না হয়।</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. After you tap the microphone, supported browsers use their speech-recognition service first so your spoken question can be sent directly to Angela. Audio recording and Gemini transcription are used only as a compatibility fallback when browser speech recognition is unavailable. Angela uses Journey Expert's cloud female voice as the primary cross-device voice when the free provider is available. If free cloud quota is unavailable, a ranked localized/female device voice is used as a fallback so the assistant does not become silent.</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর supported browser-এ প্রথমে browser speech recognition ব্যবহার করে আপনার কথাকে লেখা হিসেবে Angela-কে পাঠানো হয়। Browser speech recognition না থাকলে compatibility fallback হিসেবে audio recording ও Gemini transcription ব্যবহার হতে পারে। Angela প্রথমে Journey Expert-এর cloud female voice ব্যবহার করে, যাতে Windows, Android, Mac ও iPhone-এ কণ্ঠ যতটা সম্ভব একই থাকে। Free cloud quota না থাকলে ranked localized/female device voice fallback ব্যবহার হবে, যাতে কথা বন্ধ না হয়।</p>
               <p className="mt-3 text-xs leading-5 text-[#555555]">Replies may be incomplete or inaccurate. Do not share passport, bank, payment, password, or other sensitive information. For verified support, call <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
               <div className="mt-4 flex flex-col gap-3 border-t border-[#E8E1CF] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button type="button" className="inline-flex min-h-11 items-center justify-center bg-[#093F31] px-5 py-3 text-sm font-bold text-white hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" onClick={acceptDisclosure}>Agree and continue / সম্মত হয়ে চালিয়ে যান</button>
