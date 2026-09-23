@@ -20,9 +20,12 @@ assert.equal(widget.includes("fetch('/angela/chat'"), true, 'the widget must use
 assert.equal(widget.includes("cloud female voice as the primary cross-device voice"), true, 'the disclosure must explain the consistent cloud-female primary path');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
-assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
+assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must default to Bangla');
+assert.equal(widget.includes('data-language-contract="bangla-only"'), true, 'Angela production UI must be Bangla-only');
+assert.equal(widget.includes("setLanguage('en')"), false, 'Angela must not expose English mode');
 assert.equal(widget.includes("setLanguage('auto')"), false, 'Angela must not expose Auto mode');
 assert.equal(widget.includes("setLanguage('hi')"), false, 'Angela must not expose Hindi mode');
+assert.equal(widget.includes('FREE_VOICE_INPUT_PRIMARY'), true, 'browser speech recognition must be the primary free voice input path');
 assert.equal(widget.includes('CLOUD_FEMALE_PRIMARY_FAST'), true, 'Angela must prefer bounded cloud female speech before resilient device fallback');
 assert.equal(server.includes("app.post('/api/voice/gemini'"), true, 'the AI Studio server must expose Gemini female TTS');
 assert.equal(widget.includes('Voice output: Angela · cloud female + device fallback'), true, 'Angela UI must disclose the hybrid cross-device voice policy');
@@ -42,7 +45,7 @@ const pagesWorker = fs.readFileSync('public/_worker.js', 'utf8');
 const worker = fs.readFileSync('workers/angela-worker.js', 'utf8');
 assert.equal(pagesWorker.includes("'/api/ai/voice-agent'"), true, 'Pages Worker must expose Angela chat');
 assert.equal(pagesWorker.includes("'/api/voice/gemini'"), true, 'Pages Worker must expose female TTS');
-assert.equal(pagesWorker.includes("languages: ['bn', 'en']"), true, 'Pages Worker health must declare only Bangla and English');
+assert.equal(pagesWorker.includes("languages: ['bn']"), true, 'Pages Worker health must declare Bangla-only production mode');
 
 assert.equal(widget.includes('BANGLA_WELCOME'), true, 'Angela must greet visitors in Bangla by default');
 assert.equal(widget.includes('audioContextRef'), true, 'Angela must unlock reliable audio playback across mobile and desktop');
@@ -73,6 +76,10 @@ assert.equal(worker.includes('liveConnectConstraints'), true, 'standalone Worker
 
 assert.equal(pagesChat.includes("'gemini-3.8-flash'"), true, 'Pages-native Angela chat must use Gemini 3.8 Flash');
 assert.equal(pagesChat.includes('VERIFIED JEL SOURCE OF TRUTH'), true, 'Pages-native Angela chat must prioritize verified JEL knowledge');
+assert.equal(pagesChat.includes('asksTicket'), true, 'Pages-native fallback must answer ticket questions specifically');
+assert.equal(pagesChat.includes('asksVisa'), true, 'Pages-native fallback must answer visa questions specifically');
+assert.equal(pagesWorker.includes('asksTicket'), true, 'canonical Pages Worker fallback must answer ticket questions specifically');
+assert.equal(pagesWorker.includes('asksStudy'), true, 'canonical Pages Worker fallback must answer Study Abroad questions specifically');
 assert.equal(pagesSpeech.includes("'gemini-2.5-flash-preview-tts'"), true, 'female TTS must include the Gemini 2.5 Flash fallback');
 assert.equal(pagesSpeech.includes("'gemini-2.5-pro-preview-tts'"), true, 'female TTS must include the Gemini 2.5 Pro fallback');
 assert.equal(pagesLiveToken.includes('liveConnectConstraints'), true, 'Live token REST request must use the official ephemeral-token constraints payload');
