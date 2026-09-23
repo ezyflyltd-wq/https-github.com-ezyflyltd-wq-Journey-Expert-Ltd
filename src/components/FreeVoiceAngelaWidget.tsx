@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, RefreshCw, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { normalizePath } from '../routing/routes';
-import { fetchAngelaLiveFemaleSpeech } from '../lib/angelaLiveVoice';
 
 type SpeechRecognitionEventLike = {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -249,7 +248,7 @@ export function FreeVoiceAngelaWidget() {
 
     setError('');
 
-    // DEVICE_FIRST_ANGELA_VOICE
+    // DEVICE_FIRST_ANGELA_VOICE — device voice fallback is the production primary.
     // Gemini TTS/Live can return quota errors. Do not make audible speech wait on
     // those providers: speak immediately with the best localized device voice.
     try {
@@ -540,8 +539,8 @@ export function FreeVoiceAngelaWidget() {
             <aside role="dialog" aria-modal="true" aria-labelledby="free-angela-disclosure-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[#C7A44D]/60 bg-[#FFFDF6] p-5 text-left shadow-2xl sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0B6B53]">Journey Expert Ltd. AI support</p>
               <h2 id="free-angela-disclosure-title" className="mt-1 text-xl font-bold text-[#093F31]">Before you talk with Angela</h2>
-              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input is recorded only after you tap the microphone and is sent to Journey Expert’s Gemini endpoint for transcription and reply generation; browser speech recognition is used only as a compatibility fallback. Angela uses Journey Expert's cloud female voice when available. If free cloud voice quota is unavailable, the device speech engine may be used as a fallback so the assistant can still speak.</p>
-              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর ভয়েস রেকর্ডিং Journey Expert-এর Gemini endpoint-এ transcription ও উত্তর তৈরির জন্য পাঠানো হয়; browser speech recognition শুধু compatibility fallback হিসেবে ব্যবহৃত হতে পারে। Angela cloud female voice ব্যবহার করে; free cloud voice quota পাওয়া না গেলে কথা চালু রাখতে device speech engine fallback হিসেবে ব্যবহার হতে পারে।</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input is recorded only after you tap the microphone and is sent to Journey Expert’s Gemini endpoint for transcription and reply generation; browser speech recognition is used only as a compatibility fallback. Angela uses the device speech engine as the primary voice path so cloud quota cannot make the assistant silent. A localized/female device voice is preferred when the browser or operating system provides one.</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর ভয়েস রেকর্ডিং Journey Expert-এর Gemini endpoint-এ transcription ও উত্তর তৈরির জন্য পাঠানো হয়; browser speech recognition শুধু compatibility fallback হিসেবে ব্যবহৃত হতে পারে। Angela প্রথমে device speech engine ব্যবহার করে, যাতে cloud quota শেষ হলেও কথা বন্ধ না হয়। Browser বা operating system-এ localized/female voice থাকলে সেটি অগ্রাধিকার পায়।</p>
               <p className="mt-3 text-xs leading-5 text-[#555555]">Replies may be incomplete or inaccurate. Do not share passport, bank, payment, password, or other sensitive information. For verified support, call <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
               <div className="mt-4 flex flex-col gap-3 border-t border-[#E8E1CF] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button type="button" className="inline-flex min-h-11 items-center justify-center bg-[#093F31] px-5 py-3 text-sm font-bold text-white hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" onClick={acceptDisclosure}>Agree and continue / সম্মত হয়ে চালিয়ে যান</button>
@@ -590,7 +589,7 @@ export function FreeVoiceAngelaWidget() {
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-xs text-[#333333]">
             <p className="rounded-xl bg-[#F8FAF9] p-3 leading-5">{voiceInputSupported ? 'Ask Angela a question in Bangla, Banglish, or English. She will keep the conversation context.' : 'Voice input is not supported in this browser. Type your question below.'}</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0B6B53]" data-testid="voice-provider-status">
-              Voice output: Angela female · {language === 'bn' ? 'বাংলা' : 'English'}
+              Voice output: Angela · device-first · {language === 'bn' ? 'বাংলা' : 'English'}
             </p>
             <div className="flex justify-center">
               {isListening ? (
