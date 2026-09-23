@@ -1,4 +1,5 @@
 type Context = { request: Request; env: Record<string, string | undefined> };
+// [approved-production-change] shared female TTS fallback
 
 const json = (body: unknown, status = 200) => Response.json(body, {
   status,
@@ -98,6 +99,35 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  // Shared free-tier resilience: if this corporate project's TTS quota is exhausted,
+  // reuse the independently deployed Study Abroad female TTS endpoint server-to-server.
+  // No browser CORS dependency and no loop: the Study endpoint does not call back here.
+  try {
+    const shared = await fetch('https://journeyexpertbd.com/angela/speech', {
+      method: 'POST',
+      signal: AbortSignal.timeout(5500),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (shared.ok && shared.headers.get('content-type')?.includes('audio/wav')) {
+      const audio = await shared.arrayBuffer();
+      if (audio.byteLength > 1000) {
+        return new Response(audio, {
+          status: 200,
+          headers: {
+            'Content-Type': 'audio/wav',
+            'Cache-Control': 'no-store',
+            'X-Content-Type-Options': 'nosniff',
+            'X-Angela-Voice': shared.headers.get('X-Angela-Voice') || 'Kore',
+            'X-Angela-Voice-Model': 'jel-study-shared-' + (shared.headers.get('X-Angela-Voice-Model') || 'tts'),
+          },
+        });
+      }
+    }
+  } catch {
+    // Fall through to the client-side ranked female device voice.
   }
 
   return json({

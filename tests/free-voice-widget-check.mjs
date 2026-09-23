@@ -17,16 +17,16 @@ assert.equal(widget.includes('MediaRecorder'), true, 'the widget must prefer bro
 assert.equal(widget.includes("fetch('/angela/transcribe'"), true, 'the widget must send recorded audio to the same-origin Gemini transcription route');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
 assert.equal(widget.includes("fetch('/angela/chat'"), true, 'the widget must use the Worker-independent Pages Angela brain');
-assert.equal(widget.includes('device speech engine as the primary voice path'), true, 'the disclosure must explain the quota-independent device-first voice path');
+assert.equal(widget.includes("cloud female voice as the primary cross-device voice"), true, 'the disclosure must explain the consistent cloud-female primary path');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
 assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
 assert.equal(widget.includes("setLanguage('auto')"), false, 'Angela must not expose Auto mode');
 assert.equal(widget.includes("setLanguage('hi')"), false, 'Angela must not expose Hindi mode');
-assert.equal(widget.includes('DEVICE_FIRST_ANGELA_VOICE'), true, 'Angela must keep device speech ahead of quota-dependent cloud TTS');
+assert.equal(widget.includes('CLOUD_FEMALE_PRIMARY_FAST'), true, 'Angela must prefer bounded cloud female speech before resilient device fallback');
 assert.equal(server.includes("app.post('/api/voice/gemini'"), true, 'the AI Studio server must expose Gemini female TTS');
-assert.equal(widget.includes('Voice output: Angela · device-first'), true, 'Angela UI must disclose the reliable device-first voice policy');
-assert.equal(widget.includes('device voice fallback is the production primary'), true, 'device voice must remain the cross-device primary path during cloud quota exhaustion');
+assert.equal(widget.includes('Voice output: Angela · cloud female + device fallback'), true, 'Angela UI must disclose the hybrid cross-device voice policy');
+assert.equal(widget.includes('data-voice-contract="cloud female primary; device voice fallback"'), true, 'deployed widget must expose the cloud-female/device-fallback production contract');
 assert.equal(widget.includes('+8801926400400'), true, 'the human-support phone number must be callable');
 assert.equal(widget.includes('bottom-[max(0.75rem,env(safe-area-inset-bottom))]'), true, 'the public launcher must respect mobile safe areas');
 assert.equal(widget.includes('Talk to Angela · কথা বলুন'), true, 'the launcher must be customer-visible and bilingual');
@@ -54,7 +54,7 @@ assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a
 assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
 assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
 assert.equal(widget.includes('device voice fallback'), true, 'voice output must remain device-capable when cloud quota is unavailable');
-assert.equal(widget.includes('FEMALE_FIRST_CROSS_PLATFORM'), true, 'Angela must rank localized female voices across device families');
+assert.equal(widget.includes('FEMALE_VOICE_HINTS'), true, 'Angela must rank localized female voices across device families');
 assert.equal(widget.includes('MALE_VOICE_HINTS'), true, 'Angela must penalize known male voice names');
 assert.equal(widget.includes('voiceCatalogRef'), true, 'Angela must warm the browser/OS voice catalogue before use');
 assert.equal(widget.includes('আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা'), true, 'Bangla greeting must introduce Angela consistently');
@@ -84,3 +84,5 @@ assert.equal(pagesWorker.includes("url.pathname === '/angela/live-token'"), true
 assert.equal(pagesWorker.includes('liveConnectConstraints'), true, 'Pages advanced Worker must use the official Gemini Live token constraints payload');
 assert.equal(pagesWorker.includes("'gemini-2.5-flash-preview-tts'"), true, 'Pages advanced Worker must include Gemini 2.5 Flash TTS fallback');
 assert.equal(pagesWorker.includes("'gemini-2.5-pro-preview-tts'"), true, 'Pages advanced Worker must include Gemini 2.5 Pro TTS fallback');
+
+// approved cloud-female regression contract
