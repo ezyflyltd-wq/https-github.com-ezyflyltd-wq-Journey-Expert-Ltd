@@ -3,7 +3,7 @@ name: Angela production live smoke
 
 on:
   push:
-    branches: [main]
+    branches: [main, "verify/final-bilingual-live-20260923"]
     paths:
       - ".github/workflows/angela-live-smoke.yml"
       - "src/components/FreeVoiceAngelaWidget.tsx"
