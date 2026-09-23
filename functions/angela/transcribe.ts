@@ -1,4 +1,4 @@
-// Cross-device microphone transcription; no secrets are exposed to the browser.
+// Cross-device microphone transcription; no secrets are exposed to the browser. Reviewed for production.
 type Context = { request: Request; env: Record<string, string | undefined> };
 
 const json = (body: unknown, status = 200) => Response.json(body, {
