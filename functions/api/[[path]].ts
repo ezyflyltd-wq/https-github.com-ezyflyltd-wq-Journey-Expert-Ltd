@@ -240,7 +240,7 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
         input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
         response_format: { type: 'audio' },
         generation_config: {
-          speech_config: [{ voice: 'Kore' }],
+          speech_config: [{ voice: 'Aoede' }],
         },
       }),
     });

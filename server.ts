@@ -198,7 +198,7 @@ async function startServer() {
           input: prompt + text,
           response_format: { type: 'audio' },
           generation_config: {
-            speech_config: [{ voice: 'Kore' }],
+            speech_config: [{ voice: 'Aoede' }],
           },
         }),
       });

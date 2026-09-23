@@ -382,7 +382,7 @@ async function speech(request, env) {
           input: 'Speak the following transcript exactly in its original language, naturally, warmly, clearly, and in a professional adult female voice. Do not translate, summarize, answer, or add words:\n' + text,
           response_format: { type: 'audio' },
           generation_config: {
-            speech_config: [{ voice: 'Kore' }],
+            speech_config: [{ voice: 'Aoede' }],
           },
         }),
       });
@@ -401,7 +401,7 @@ async function speech(request, env) {
           'cache-control': 'no-store',
           'access-control-allow-origin': ALLOWED_ORIGIN,
           'x-content-type-options': 'nosniff',
-          'x-angela-voice': 'Kore',
+          'x-angela-voice': 'Aoede',
           'x-angela-voice-model': model,
         },
       });

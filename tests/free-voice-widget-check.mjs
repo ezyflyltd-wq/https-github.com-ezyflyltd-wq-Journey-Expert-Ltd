@@ -130,3 +130,13 @@ assert.equal(unknownSemantic.primaryIntent, 'unverified', 'unknown company detai
 assert.match(unknownSemantic.reply, /not present|verified/i, 'unknown company detail must not be invented');
 
 console.log('Angela semantic fallback checks passed.');
+
+assert.equal(widget.includes('STRICT_FEMALE_ONLY'), true, 'browser fallback must never use an unverified male/default voice');
+assert.equal(widget.includes('verified female device voice'), true, 'browser fallback must become text-only when no verified female voice exists');
+assert.equal(pagesSpeech.includes("'Aoede'"), true, 'Pages-native Angela speech must use Aoede');
+assert.equal(pagesWorker.includes("'Aoede'"), true, 'advanced Pages Worker speech must use Aoede');
+assert.equal(worker.includes("'Aoede'"), true, 'standalone Angela Worker speech must use Aoede');
+assert.equal(server.includes("'Aoede'"), true, 'AI Studio/server voice path must use Aoede');
+assert.equal(pagesSpeech.includes("'Kore'"), false, 'Pages-native Angela speech must not use Kore');
+assert.equal(pagesWorker.includes("'Kore'"), false, 'advanced Pages Worker speech must not use Kore');
+console.log('Angela strict female-only voice checks passed.');
