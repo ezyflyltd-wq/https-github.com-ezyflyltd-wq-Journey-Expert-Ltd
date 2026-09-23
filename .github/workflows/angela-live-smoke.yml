@@ -81,6 +81,34 @@ jobs:
           print("Angela live Bangla response passed")
           PY
 
+      - name: Check live Angela English response through same-origin API
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          curl --fail --silent --show-error --max-time 25 \
+            --header 'Content-Type: application/json' \
+            --header 'Origin: https://journeyexpertltd.com' \
+            --data '{"message":"What are your main travel, visa and study abroad services?","language":"en","conversationId":"production-smoke-en","history":[]}' \
+            --output "$body" \
+            https://journeyexpertltd.com/api/ai/voice-agent
+          python - "$body" <<'PY'
+          import json, re, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          reply = str(data.get("reply") or data.get("response") or "").strip()
+          if not reply:
+              raise SystemExit("Angela returned no English reply")
+          if re.search(r"[\u0980-\u09ff]", reply):
+              raise SystemExit("Angela English mode returned Bengali script")
+          lower = reply.lower()
+          for bad in ("live ai unavailable", "safe assistance mode", "নিরাপদ সহায়তা মোড"):
+              if bad in lower:
+                  raise SystemExit("Angela returned a degraded canned fallback")
+          print("Angela live English response passed")
+          PY
+
       - name: Check live Angela female voice capability
         shell: bash
         run: |
