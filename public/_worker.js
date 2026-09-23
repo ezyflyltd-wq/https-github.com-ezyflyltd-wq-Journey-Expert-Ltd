@@ -137,6 +137,74 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
   return json({ reply: fallback(language), language, mode: 'fallback' });
 }
 
+async function transcribe(request, env) {
+  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+  const origin = request.headers.get('origin');
+  if (origin && origin !== ALLOWED_ORIGIN && origin !== new URL(request.url).origin) return json({ error: 'origin_not_allowed' }, 403);
+  if (!request.headers.get('content-type')?.includes('application/json')) return json({ error: 'json_required' }, 415);
+
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).length > 3_600_000) return json({ error: 'audio_too_large' }, 413);
+  let body;
+  try { body = JSON.parse(raw); } catch { return json({ error: 'invalid_json' }, 400); }
+  const audio = typeof body?.audio === 'string' ? body.audio.trim() : '';
+  const language = body?.language === 'en' ? 'en' : 'bn';
+  const mimeTypeRaw = typeof body?.mimeType === 'string' ? body.mimeType : 'audio/webm';
+  const mimeType = mimeTypeRaw.split(';')[0].toLowerCase();
+  if (!audio) return json({ error: 'audio_required' }, 400);
+  if (!/^audio\/(webm|wav|mpeg|mp3|ogg|opus|aac|flac|m4a|mp4)$/i.test(mimeType)) return json({ error: 'audio_type_not_supported' }, 415);
+
+  const keys = [...new Set([env.GEMINI_API_KEY, env.GEMINI_TTS_API_KEY].map((value) => String(value || '').trim()).filter(Boolean))];
+  if (!keys.length) return json({ error: 'transcription_not_configured' }, 503);
+
+  const prompt = language === 'bn'
+    ? 'Transcribe this customer speech accurately. The customer is using Bangla or Banglish. Return only the transcript in natural Bengali script, preserving proper names and brand names such as Journey Expert, JEL, visa, ticket, university and country names when appropriate. Do not answer the question and do not add commentary.'
+    : 'Transcribe this customer speech accurately in English. Return only the transcript. Do not answer the question and do not add commentary.';
+
+  const models = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+  for (const model of models) {
+    for (const key of keys) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      try {
+        const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify({
+            contents: [{
+              role: 'user',
+              parts: [
+                { text: prompt },
+                { inlineData: { mimeType, data: audio } },
+              ],
+            }],
+            generationConfig: { temperature: 0, maxOutputTokens: 256 },
+          }),
+        });
+        if (!upstream.ok) continue;
+        const data = await upstream.json();
+        const transcript = data?.candidates?.[0]?.content?.parts
+          ?.filter((part) => !part.thought && typeof part.text === 'string')
+          .map((part) => part.text)
+          .join('')
+          .replace(/^[\"'\s]+|[\"'\s]+$/g, '')
+          .trim();
+        if (!transcript) continue;
+        if (language === 'bn' && !/[\u0980-\u09FF]/.test(transcript)) continue;
+        if (language === 'en' && /[\u0980-\u09FF]/.test(transcript)) continue;
+        return json({ transcript: transcript.slice(0, 1200), language, mode: 'ai', providerModel: model });
+      } catch {
+        // Try the next configured model/key.
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+  }
+
+  return json({ error: 'transcription_unavailable' }, 503);
+}
+
 async function speech(request, env) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   let body;
@@ -231,6 +299,7 @@ export default {
       },
     });
     if (url.pathname === '/angela/chat') return chat(request, env);
+    if (url.pathname === '/angela/transcribe') return transcribe(request, env);
     if (url.pathname === '/angela/speech') return speech(request, env);
     if (url.pathname === '/angela/live-token') return liveToken(request, env);
     if (url.pathname === '/api/ai/voice-agent' || url.pathname === '/api/ai-assistant') {
