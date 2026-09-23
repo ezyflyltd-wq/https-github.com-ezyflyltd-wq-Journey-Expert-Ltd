@@ -32,8 +32,8 @@ declare global {
 }
 
 const CONSENT_STORAGE_KEY = 'jel-free-angela-consent-v1';
-const BANGLA_WELCOME = 'আসসালামু আলাইকুম! আমি অ্যাঞ্জেলা, Journey Expert Ltd.-এর AI ভয়েস সহকারী। ভ্রমণ বা বিদেশে উচ্চশিক্ষা নিয়ে আপনাকে কীভাবে সাহায্য করতে পারি?';
-const ENGLISH_WELCOME = "Assalamu Alaikum! I am Angela, Journey Expert Ltd.'s AI voice assistant. How can I help with travel or study abroad?";
+const BANGLA_WELCOME = 'আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা, Journey Expert Limited-এর AI সহকারী। আমি আপনাকে কীভাবে সাহায্য করতে পারি? এয়ার টিকিট, ভিসা সহায়তা, ট্যুর ও হোটেল, হজ ও ওমরাহ, হালাল ট্যুরিজম, মেডিকেল ট্যুরিজম, ইন্স্যুরেন্স, কর্পোরেট ট্রাভেল, Meet & Greet অথবা Study Abroad—যেকোনো বিষয়ে প্রশ্ন করতে পারেন।';
+const ENGLISH_WELCOME = "Assalamu Alaikum. I am Angela, Journey Expert Limited's AI assistant. How can I help you today? You can ask me about air tickets, visa assistance, tours and hotels, Hajj and Umrah, halal tourism, medical tourism, insurance, corporate travel, Meet & Greet, or Study Abroad.";
 const PUBLIC_WIDGET_PATHS = new Set([
   '/',
   '/flights',
@@ -94,42 +94,40 @@ function detectReplyLanguage(text: string): 'bn' | 'en' {
 }
 
 const FEMALE_VOICE_HINTS: Record<'en' | 'bn', string[]> = {
-  bn: ['nabanita', 'female', 'woman', 'heera'],
+  bn: ['nabanita', 'tanishaa', 'lekha', 'sangeeta', 'heera', 'female', 'woman', 'google bengali', 'google bangla', 'microsoft nabanita'],
   en: ['zira', 'aria', 'jenny', 'sonia', 'samantha', 'victoria', 'ava', 'allison', 'karen', 'susan', 'hazel', 'libby', 'natasha', 'serena', 'moira', 'fiona', 'tessa', 'veena', 'female', 'woman', 'google uk english female'],
 };
-
-async function loadSpeechVoices(): Promise<SpeechSynthesisVoice[]> {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return [];
-  const synthesis = window.speechSynthesis;
-  let voices = synthesis.getVoices();
-  if (voices.length) return voices;
-
-  await new Promise<void>((resolve) => {
-    const finish = () => {
-      window.clearTimeout(timeout);
-      synthesis.removeEventListener('voiceschanged', onVoices);
-      resolve();
-    };
-    const onVoices = () => {
-      if (synthesis.getVoices().length) finish();
-    };
-    const timeout = window.setTimeout(finish, 1500);
-    synthesis.addEventListener('voiceschanged', onVoices);
-    onVoices();
-  });
-
-  voices = synthesis.getVoices();
-  return voices;
-}
+const MALE_VOICE_HINTS: Record<'en' | 'bn', string[]> = {
+  bn: ['pradeep', 'pradip', 'bhashkar', 'bhaskar', 'bashkar', 'male', 'man'],
+  en: ['david', 'mark', 'george', 'daniel', 'guy', 'male', 'man'],
+};
 
 function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' | 'bn'): SpeechSynthesisVoice | null {
-  const prefix = language === 'bn' ? 'bn' : 'en';
   const hints = FEMALE_VOICE_HINTS[language];
-  return voices.find((voice) => {
+  const maleHints = MALE_VOICE_HINTS[language];
+  const score = (voice: SpeechSynthesisVoice) => {
     const name = voice.name.toLowerCase();
-    const languageMatch = voice.lang.toLowerCase().startsWith(prefix);
-    return languageMatch && hints.some((hint) => name.includes(hint));
-  }) || voices.find((voice) => voice.lang.toLowerCase().startsWith(prefix)) || null;
+    const lang = voice.lang.toLowerCase();
+    let value = 0;
+    if (language === 'bn') {
+      if (lang.startsWith('bn-bd')) value += 130;
+      else if (lang.startsWith('bn-in')) value += 120;
+      else if (lang.startsWith('bn')) value += 110;
+      else if (/bangla|bengali/.test(name)) value += 85;
+    } else if (lang.startsWith('en')) {
+      value += 110;
+    }
+    if (hints.some((hint) => name.includes(hint))) value += 90;
+    if (maleHints.some((hint) => name.includes(hint))) value -= 220;
+    if (voice.default) value += 4;
+    if (voice.localService) value += 3;
+    return value;
+  };
+  const ranked = voices
+    .map((voice) => ({ voice, score: score(voice) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return ranked[0]?.voice || null;
 }
 
 function getFallbackReply(_prompt: string, selectedLanguage: 'bn' | 'en'): string {
@@ -160,6 +158,7 @@ export function FreeVoiceAngelaWidget() {
   const recordingTimeoutRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const voiceCatalogRef = useRef<SpeechSynthesisVoice[]>([]);
 
   const recordingSupported = typeof window !== 'undefined'
     && typeof MediaRecorder !== 'undefined'
@@ -178,6 +177,19 @@ export function FreeVoiceAngelaWidget() {
       if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
       if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
     };
+  }, []);
+
+  // Warm the OS/browser voice list before Angela is opened. Windows, Android,
+  // macOS and iOS expose different voice orders, so never trust "first Bengali voice".
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    const syncVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length) voiceCatalogRef.current = voices;
+    };
+    syncVoices();
+    window.speechSynthesis.addEventListener('voiceschanged', syncVoices);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', syncVoices);
   }, []);
 
 
@@ -249,6 +261,7 @@ export function FreeVoiceAngelaWidget() {
     setError('');
 
     // DEVICE_FIRST_ANGELA_VOICE — device voice fallback is the production primary.
+    // FEMALE_FIRST_CROSS_PLATFORM: rank localized female voices and penalize known male voices.
     // Gemini TTS/Live can return quota errors. Do not make audible speech wait on
     // those providers: speak immediately with the best localized device voice.
     try {
@@ -256,12 +269,14 @@ export function FreeVoiceAngelaWidget() {
       window.speechSynthesis.cancel();
       window.speechSynthesis.resume?.();
 
-      const voices = window.speechSynthesis.getVoices();
+      const voices = voiceCatalogRef.current.length
+        ? voiceCatalogRef.current
+        : window.speechSynthesis.getVoices();
       const preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US';
-      utterance.rate = 0.98;
-      utterance.pitch = 1.02;
+      utterance.rate = effectiveLanguage === 'bn' ? 1.03 : 1.0;
+      utterance.pitch = effectiveLanguage === 'bn' ? 1.12 : 1.04;
       if (preferred) {
         utterance.voice = preferred;
         utterance.lang = preferred.lang || utterance.lang;
