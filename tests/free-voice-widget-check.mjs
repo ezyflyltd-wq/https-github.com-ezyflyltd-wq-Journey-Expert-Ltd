@@ -90,3 +90,43 @@ assert.equal(pagesWorker.includes("'gemini-2.5-pro-preview-tts'"), true, 'Pages 
 assert.equal(pagesChat.includes('Hajj & Umrah verified service scope'), true, 'Pages-native Angela must carry detailed Hajj/Umrah grounding');
 assert.equal(pagesWorker.includes('Hajj & Umrah verified service scope'), true, 'Pages Worker must carry detailed Hajj/Umrah grounding');
 assert.equal(widget.includes('Makkah/Madinah accommodation'), true, 'Local Angela fallback must preserve Hajj/Umrah context');
+
+
+assert.equal(pagesChat.includes('JEL_SEMANTIC_KNOWLEDGE'), true, 'Pages chat must use semantic JEL knowledge routing');
+assert.equal(pagesWorker.includes('JEL_SEMANTIC_KNOWLEDGE'), true, 'Advanced Worker must use semantic JEL knowledge routing');
+assert.equal(pagesWorker.includes('STRICT SEMANTIC ACCURACY CONTRACT'), true, 'Advanced Worker must enforce semantic accuracy');
+assert.equal(widget.includes('current verified JEL knowledge'), true, 'Browser fallback must refuse unverified facts instead of guessing');
+
+const workerModule = await import('../public/_worker.js');
+const workerFetch = workerModule.default.fetch;
+const askWorker = async (message, language = 'en') => {
+  const response = await workerFetch(new Request('https://journeyexpertltd.com/angela/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, language }),
+  }), {}, {});
+  assert.equal(response.status, 200);
+  return response.json();
+};
+
+const semanticCases = [
+  ['I need Hajj visa and Makkah hotel guidance', 'en', 'hajj_umrah'],
+  ['student visa and CAS guidance', 'en', 'study_abroad'],
+  ['medical visa and hospital support', 'en', 'medical_tourism'],
+  ['ticket refund and reissue', 'en', 'air_ticketing'],
+  ['travel insurance coverage', 'en', 'insurance'],
+  ['corporate travel management', 'en', 'corporate_travel'],
+  ['Craft Bangla brand information', 'en', 'brands'],
+];
+
+for (const [message, language, intent] of semanticCases) {
+  const data = await askWorker(message, language);
+  assert.equal(data.primaryIntent, intent, 'semantic intent mismatch for: ' + message);
+  assert.equal(data.groundingIds[0], intent, 'semantic grounding mismatch for: ' + message);
+}
+
+const unknownSemantic = await askWorker('Who is the current chairman and what is their personal mobile number?', 'en');
+assert.equal(unknownSemantic.primaryIntent, 'unverified', 'unknown company detail must remain unverified');
+assert.match(unknownSemantic.reply, /not present|verified/i, 'unknown company detail must not be invented');
+
+console.log('Angela semantic fallback checks passed.');
