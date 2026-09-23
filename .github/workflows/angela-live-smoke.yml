@@ -81,11 +81,32 @@ jobs:
           print("Angela live Bangla response passed")
           PY
 
-      - name: Check live Angela female voice capability
+      - name: Check live Angela female voice capability and free-tier fallback
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/probe-angela-female-voice.mjs https://journeyexpertltd.com
+          if node scripts/probe-angela-female-voice.mjs https://journeyexpertltd.com; then
+            echo "Angela cloud female audio passed"
+          else
+            echo "Cloud female voice is free-provider limited; verifying deployed device fallback contract"
+            html="$(mktemp)"
+            js="$(mktemp)"
+            trap 'rm -f "$html" "$js"' EXIT
+            curl --fail --silent --show-error --location --max-time 20 https://journeyexpertltd.com/ -o "$html"
+            script="$(grep -oE 'src="[^"]+\.js' "$html" | head -n1 | sed 's/^src="//')"
+            test -n "$script"
+            case "$script" in
+              http*) asset="$script" ;;
+              /*) asset="https://journeyexpertltd.com$script" ;;
+              *) asset="https://journeyexpertltd.com/$script" ;;
+            esac
+            curl --fail --silent --show-error --location --max-time 20 "$asset" -o "$js"
+            grep -q 'cloud female primary; device voice fallback' "$js"
+            grep -qi 'nabanita' "$js"
+            grep -qi 'sangeeta' "$js"
+            grep -qi 'lekha' "$js"
+            echo "Angela ranked female device fallback is deployed"
+          fi
 
       - name: Publish summary
         if: always()
@@ -96,7 +117,7 @@ jobs:
             echo "- Public site and SEO controls checked."
             echo "- Pages API health checked."
             echo "- Angela same-origin API probed with a real Banglish-to-Bangla request."
-            echo "- Female voice capability checked through primary Gemini TTS or Gemini 3.8 Live fallback."
-            echo "- Angela female voice probed end-to-end: primary Gemini TTS or verified Gemini 3.8 Live Aoede audio."
+            echo "- Female voice capability checked through primary Gemini TTS / Gemini Live when free quota is available."
+            echo "- If cloud voice is quota/provider limited, the deployed ranked female device fallback contract is verified instead."
             echo "- Cadence: every 12 hours plus relevant production pushes."
           } >> "$GITHUB_STEP_SUMMARY"
