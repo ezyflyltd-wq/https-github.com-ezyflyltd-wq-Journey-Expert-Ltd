@@ -9,13 +9,18 @@ Use only the retrieved JEL context and clearly identified general guidance. Neve
 Return JSON only with keys: reply, language, intent, confidence, nextQuestion, lead, handoffRequired, handoffReason, usedSources.`;
 
 const KNOWLEDGE = [
-  ['service', 'Journey Expert Ltd. can assist with air tickets, hotels, tours and travel, visa-document guidance, Hajj and Umrah, medical tourism, halal tourism, corporate travel, Meet & Greet, group travel and travel-insurance enquiries. Detailed study-abroad counselling is handled by JEL Study Abroad at journeyexpertbd.com.', 'JEL Service Catalogue'],
-  ['flight ticket বিমান ফ্লাইট টিকেট', 'JEL can assist with domestic and international air-ticket enquiries. Fare, seats, baggage, cancellation, reissue, and refund terms depend on live supplier rules and must be verified before purchase.', 'JEL Air Ticketing Service Guide'],
-  ['hotel হোটেল room রুম', 'JEL can assist with hotel enquiries. Availability, room type, meal plan, cancellation, check-in, and price depend on dates, occupancy, category, and live inventory.', 'JEL Hotel Service Guide'],
-  ['tour package ভ্রমণ ট্যুর প্যাকেজ dubai malaysia thailand singapore maldives', 'JEL can help plan destination tours and packages. A suitable option depends on destination, purpose, dates, travellers, duration, budget, hotel, flights, and visa needs.', 'JEL Tour Service Guide'],
-  ['visa ভিসা embassy immigration', 'JEL can provide general visa-document guidance, but rules change and approval is decided by the relevant authority. Current requirements, fees, processing times, and eligibility must be verified from an official source.', 'JEL Visa Guidance Policy'],
-  ['study student university ielts admission পড়াশোনা স্টুডেন্ট বিশ্ববিদ্যালয়', 'JEL can guide study-abroad enquiries. Country, subject, academic qualification, graduation year, English proficiency, intake, and budget are useful. Admission and visa outcomes cannot be guaranteed.', 'JEL Study Abroad Service Guide'],
-  ['hajj umrah হজ ওমরাহ মক্কা মদিনা', 'JEL can assist with Hajj and Umrah enquiries, including packages, travel, accommodation, transport, and visa guidance. Price and availability must be confirmed for the requested season.', 'JEL Hajj and Umrah Service Guide'],
+  { id: 'hajj_umrah', priority: 100, keywords: ['hajj','umrah','হজ','ওমরাহ','উমরাহ','makkah','madinah','মক্কা','মদিনা','nusuk','ziyarat','জিয়ারত','জিয়ারত'], text: 'JEL Hajj & Umrah scope: package planning, air-travel coordination, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination, and visa/document guidance. Exact price, availability, Saudi rules, quotas and dates require current official or supplier verification.', source: 'JEL Hajj and Umrah Service Guide' },
+  { id: 'study_abroad', priority: 95, keywords: ['study abroad','student visa','student','study','university','admission','scholarship','sop','ielts','cas','coe','i-20','স্টাডি','স্টুডেন্ট','বিশ্ববিদ্যাল','অ্যাডমিশন','স্কলারশিপ'], text: 'JEL Study Abroad supports profile assessment, country/course/university selection, admissions, scholarship guidance, SOP, English-language tests, student-visa documents, and pre-/post-arrival guidance. Outcomes are not guaranteed.', source: 'JEL Study Abroad Service Guide' },
+  { id: 'medical_tourism', priority: 92, keywords: ['medical tourism','medical visa','hospital','doctor','treatment','মেডিকেল ট্যুরিজম','মেডিকেল ভিসা','হাসপাতাল','ডাক্তার','চিকিৎসা'], text: 'JEL medical-tourism support can include hospital/doctor selection support, appointment coordination and travel preparation. Treatment availability and outcomes require provider verification.', source: 'JEL Medical Tourism Service Guide' },
+  { id: 'air_ticketing', priority: 88, keywords: ['air ticket','ticketing','flight','fare','reissue','refund','ticket','টিকিট','ফ্লাইট','ফেয়ার','ফেয়ার','রিইস্যু','রিফান্ড'], text: 'JEL supports air tickets, fare quotation, reissue and refund. Live fare, seats, schedules, baggage and change/refund rules require current supplier verification.', source: 'JEL Air Ticketing Service Guide' },
+  { id: 'visa', priority: 80, keywords: ['visa','embassy','immigration','ভিসা','এম্বাসি','ইমিগ্রেশন'], text: 'JEL provides visa-document assistance. Current requirements, fees, processing times, eligibility and decisions require official verification. JEL never guarantees approval.', source: 'JEL Visa Guidance Policy' },
+  { id: 'tours_hotels', priority: 72, keywords: ['tour package','travel package','tour','hotel','package','holiday','ট্যুর','হোটেল','প্যাকেজ','ভ্রমণ'], text: 'JEL supports tours, hotels and travel packages. Live availability and prices require supplier verification.', source: 'JEL Tours and Hotels Guide' },
+  { id: 'halal_tourism', priority: 70, keywords: ['halal tourism','halal travel','হালাল ট্যুরিজম'], text: 'JEL supports halal-tourism planning around destination, dates, group size and halal-friendly preferences. Live availability requires verification.', source: 'JEL Halal Tourism Guide' },
+  { id: 'corporate_travel', priority: 68, keywords: ['corporate travel','business travel','corporate','কর্পোরেট'], text: 'JEL corporate-travel support includes business-travel planning, ticketing coordination, hotel support, itinerary assistance and travel workflow support.', source: 'JEL Corporate Travel Guide' },
+  { id: 'insurance', priority: 66, keywords: ['travel insurance','insurance','ইন্স্যুরেন্স','বীমা'], text: 'JEL provides travel-insurance assistance. Coverage, premium and eligibility depend on insurer and trip and require case-specific verification.', source: 'JEL Travel Insurance Guide' },
+  { id: 'meet_greet', priority: 64, keywords: ['meet & greet','meet and greet','airport assistance','airport support','মিট অ্যান্ড গ্রিট'], text: 'JEL Meet & Greet is a Journey Expert Limited service/co-brand for airport arrival/departure-related assistance. Exact scope depends on airport, date, flight and passenger details.', source: 'JEL Meet & Greet Guide' },
+  { id: 'brands', priority: 55, keywords: ['craft bangla','compliance','advisory','brand','co-brand','ক্রাফট বাংলা','ব্র্যান্ড'], text: 'Verified JEL brands/co-brands include JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory, and Craft Bangla.', source: 'JEL Brand Catalogue' },
+  { id: 'company', priority: 40, keywords: ['journey expert','jel','company','about','slogan','office','address','contact','phone','whatsapp','email','জার্নি এক্সপার্ট','কোম্পানি','অফিস','ঠিকানা','যোগাযোগ'], text: 'Journey Expert Limited (JEL), Bangladesh. Slogan: "Your Journey, Our Expertise." Office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215. WhatsApp/Hotline: +8801926400400. Telephone: +8802 9830404. Email: journeyexpertbd@gmail.com.', source: 'JEL Company Profile' },
 ];
 
 function languageOf(text, requested) {
@@ -26,10 +31,21 @@ function languageOf(text, requested) {
 }
 
 function contextFor(query) {
-  const normalized = query.toLocaleLowerCase();
-  const matches = KNOWLEDGE.map(([keywords, text, source]) => ({ keywords, text, source, score: keywords.split(' ').filter((k) => normalized.includes(k)).length }))
-    .filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 3);
-  return matches.length ? matches.map((item) => `[${item.source}] ${item.text}`).join('\n') : 'No specific JEL knowledge entry matched. Do not invent an answer; explain what can be verified and offer human support.';
+  const normalized = String(query || '').toLocaleLowerCase().replace(/\s+/g, ' ').trim();
+  const matches = KNOWLEDGE
+    .map((entry) => ({
+      entry,
+      score: entry.keywords.reduce((total, keyword) => normalized.includes(keyword.toLocaleLowerCase()) ? total + (keyword.includes(' ') ? 4 : 1) : total, 0),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => (b.score - a.score) || (b.entry.priority - a.entry.priority))
+    .slice(0, 3);
+  if (!matches.length) return { primary: null, ids: [], text: 'No exact JEL knowledge entry matched. Do not invent a JEL-specific fact.' };
+  return {
+    primary: matches[0].entry,
+    ids: matches.map((item) => item.entry.id),
+    text: matches.map((item) => '[' + item.entry.source + '] ' + item.entry.text).join('\n'),
+  };
 }
 
 function safeLead(value) {
@@ -40,24 +56,34 @@ function safeLead(value) {
 
 function fallback(message, language) {
   const bangla = language === 'bn';
-  const visaRequest = /visa|embassy|immigration|eligib|fee|ভিসা|এম্বেসি|ইমিগ্রেশন|যোগ্যতা|ফি/i.test(message);
-  if (visaRequest) {
-    return {
-      reply: bangla
-        ? 'ভিসার নিয়ম, ফি এবং যোগ্যতা পরিবর্তনশীল; তাই বর্তমান তথ্য সংশ্লিষ্ট সরকারি উৎস থেকে যাচাই করা প্রয়োজন। আপনার কেসটি সঠিকভাবে পর্যালোচনা করার জন্য Journey Expert-এর একজন ভিসা কনসালট্যান্টের সহায়তা নিন: +880 1926-400400।'
-        : 'Visa rules, fees, and eligibility can change and must be verified with the relevant official source. A Journey Expert visa consultant should review your case; contact +880 1926-400400.',
-      language, intent: 'visa_info', confidence: 0.62,
-      nextQuestion: bangla ? 'আপনি কোন দেশে, কোন উদ্দেশ্যে এবং আনুমানিক কবে ভ্রমণ করতে চান?' : 'Which country, purpose, and approximate travel date should we review?',
-      lead: {}, handoffRequired: true,
-      handoffReason: 'Current visa information and case-specific eligibility require official verification and human consultant review.',
-      usedSources: ['JEL Visa Guidance Policy'],
-    };
-  }
+  const retrieved = contextFor(message);
+  const id = retrieved.primary?.id || 'unverified';
+  const replies = {
+    hajj_umrah: bangla ? 'Journey Expert Limited হজ ও ওমরাহ বিষয়ে package planning, air travel coordination, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination এবং visa/document guidance-এ সহায়তা করে। নির্দিষ্ট price, availability ও Saudi rules current official source বা supplier থেকে যাচাই করতে হবে।' : 'Journey Expert Limited supports Hajj and Umrah package planning, air travel, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination, and visa/document guidance. Current prices, availability, and Saudi rules must be verified.',
+    study_abroad: bangla ? 'JEL Study Abroad profile assessment, দেশ/কোর্স/বিশ্ববিদ্যালয় নির্বাচন, admission ও scholarship guidance, SOP, English-language test guidance, student-visa documents এবং pre-departure/post-arrival guidance দেয়।' : 'JEL Study Abroad supports profile assessment, country/course/university selection, admissions and scholarship guidance, SOP, English-language tests, student-visa documents, and pre-/post-arrival guidance.',
+    medical_tourism: bangla ? 'Journey Expert Limited medical-tourism support-এ hospital/doctor selection support, appointment coordination এবং travel preparation-এ সহায়তা করতে পারে।' : 'Journey Expert Limited can support medical-tourism enquiries with hospital/doctor selection support, appointment coordination, and travel preparation.',
+    air_ticketing: bangla ? 'Journey Expert Limited air ticketing, fare quotation, reissue এবং refund support দেয়। Live fare, seat ও rules supplier data থেকে যাচাই করতে হবে।' : 'Journey Expert Limited provides air ticketing, fare quotation, reissue, and refund support. Live fares, seats, and rules require supplier verification.',
+    visa: bangla ? 'Journey Expert Limited visa-document assistance দেয়। Current requirements, fee, processing time, eligibility ও decision official source থেকে যাচাই করতে হবে; JEL approval গ্যারান্টি দেয় না।' : 'Journey Expert Limited provides visa-document assistance. Current requirements, fees, processing times, eligibility, and decisions require official verification; JEL never guarantees approval.',
+    tours_hotels: bangla ? 'Journey Expert Limited tours, hotels এবং travel package support দেয়। Live availability ও price supplier থেকে যাচাই করতে হবে।' : 'Journey Expert Limited supports tours, hotels, and travel packages. Live availability and prices require supplier verification.',
+    halal_tourism: bangla ? 'Journey Expert Limited halal-tourism support দেয়; live availability যাচাই করতে হবে।' : 'Journey Expert Limited supports halal-tourism planning; live availability requires verification.',
+    corporate_travel: bangla ? 'Journey Expert Limited corporate travel management-এ business-travel planning, ticketing coordination, hotel support ও itinerary assistance দেয়।' : 'Journey Expert Limited supports corporate travel with business-travel planning, ticketing coordination, hotel support, and itinerary assistance.',
+    insurance: bangla ? 'Journey Expert Limited travel-insurance assistance দেয়। Coverage, premium ও eligibility case-specificভাবে যাচাই করতে হবে।' : 'Journey Expert Limited provides travel-insurance assistance. Coverage, premium, and eligibility require case-specific verification.',
+    meet_greet: bangla ? 'JEL Meet & Greet airport arrival/departure-related assistance-এর service/co-brand।' : 'JEL Meet & Greet is a Journey Expert Limited service/co-brand for airport arrival/departure-related assistance.',
+    brands: bangla ? 'Verified JEL brand/co-brand-এর মধ্যে JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory এবং Craft Bangla রয়েছে।' : 'Verified JEL brands/co-brands include JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory, and Craft Bangla.',
+    company: bangla ? 'Journey Expert Limited-এর অফিস: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215। WhatsApp/Hotline: +8801926400400; Telephone: +8802 9830404; Email: journeyexpertbd@gmail.com।' : 'Journey Expert Limited office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215. WhatsApp/Hotline: +8801926400400; Telephone: +8802 9830404; Email: journeyexpertbd@gmail.com.',
+    unverified: bangla ? 'আপনার প্রশ্নের নির্দিষ্ট তথ্যটি বর্তমান verified JEL knowledge-এ নেই। ভুল তথ্য দেওয়ার বদলে এই অংশটি verify করা প্রয়োজন।' : 'That specific detail is not present in the current verified JEL knowledge. Rather than invent an answer, that detail needs verification.',
+  };
   return {
-    reply: bangla ? `আমি আপনার প্রশ্নটি বুঝেছি। নির্ভুলভাবে সাহায্য করতে গন্তব্য, ভ্রমণের তারিখ এবং কোন service প্রয়োজন তা জানাবেন? quotation বা booking যাচাই করতে Journey Expert consultant-এর সঙ্গে কথা বলুন: +880 1926-400400।` : `I understand your question. Please share your destination, travel date, and required service so I can guide you accurately. For a verified quotation or booking, contact a Journey Expert consultant at +880 1926-400400.`,
-    language, intent: 'GENERAL_TRAVEL_ENQUIRY', confidence: 0.45,
-    nextQuestion: bangla ? 'আপনার গন্তব্য, ভ্রমণের তারিখ এবং কোন service প্রয়োজন?' : 'What is your destination, travel date, and required service?',
-    lead: {}, handoffRequired: false, handoffReason: '', usedSources: ['JEL safe fallback'],
+    reply: replies[id] || replies.unverified,
+    language,
+    intent: id,
+    confidence: retrieved.primary ? 0.9 : 0.3,
+    nextQuestion: '',
+    lead: {},
+    handoffRequired: id === 'unverified',
+    handoffReason: id === 'unverified' ? 'The exact JEL-specific fact is not in the verified knowledge.' : '',
+    usedSources: retrieved.primary ? [retrieved.primary.source] : ['JEL semantic safe fallback'],
+    groundingIds: retrieved.ids,
   };
 }
 
@@ -78,7 +104,7 @@ async function fetchWithTimeout(url, options, timeoutMs = GEMINI_TIMEOUT_MS) {
 async function callGemini(env, model, message, language, history) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
   const contents = [...(Array.isArray(history) ? history : []).slice(-12).map((turn) => ({ role: turn && turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: String(turn && turn.content || '').slice(0, 2000) }] })), { role: 'user', parts: [{ text: message }] }];
-  const response = await fetchWithTimeout(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\nRetrieved JEL context:\n${contextFor(message)}\n\nLanguage hint: ${language}` }] }, contents, generationConfig: { temperature: 0.25, responseMimeType: 'application/json' } }) });
+  const response = await fetchWithTimeout(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\nRetrieved verified JEL context:\n${contextFor(message).text}\n\nSTRICT SEMANTIC ACCURACY CONTRACT:\n- Use only retrieved context for JEL-specific facts.\n- If the exact JEL fact is absent, say it is not verified; never fill the gap from model memory.\n- Do not substitute a neighbouring intent.\nLanguage hint: ${language}` }] }, contents, generationConfig: { temperature: 0.25, responseMimeType: 'application/json' } }) });
   if (!response.ok) throw new Error(`Gemini HTTP ${response.status}`);
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
