@@ -113,7 +113,9 @@ function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' 
     const name = voice.name.toLowerCase();
     const lang = voice.lang.toLowerCase();
     const femaleNamed = hints.some((hint) => name.includes(hint));
-    const maleNamed = maleHints.some((hint) => name.includes(hint));
+    // Match whole name tokens: "female" contains "male" and "Samantha" contains "man".
+    const nameTokens = name.split(/[^a-z]+/).filter(Boolean);
+    const maleNamed = maleHints.some((hint) => nameTokens.includes(hint));
     const languageMatch = language === 'bn'
       ? (lang.startsWith('bn') || /bangla|bengali/.test(name))
       : lang.startsWith('en');
@@ -339,9 +341,9 @@ export function FreeVoiceAngelaWidget() {
 
     // CLOUD_FEMALE_PRIMARY_FAST: use the same JEL-rendered female voice across
     // Windows, Android, macOS and iOS when free Gemini TTS is available.
-    // Quota/provider failures fall back within five seconds instead of muting Angela.
+    // Allow the bounded provider chain (up to 26s + a 5.5s shared fallback) to finish.
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 5000);
+    const timer = window.setTimeout(() => controller.abort(), 35000);
     try {
       const response = await fetch('/angela/speech', {
         method: 'POST',
