@@ -312,14 +312,49 @@ export function FreeVoiceAngelaWidget() {
         await audio.play();
         return;
       } catch {
-        // Cross-device invariant: never let the OS/browser silently substitute
-        // an unknown or male voice. If both verified female cloud paths fail,
-        // keep the answer visible as text.
-        if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
+        // Free third-line fallback: when Gemini TTS and Gemini Live quota/provider
+        // paths are unavailable, use the device speech engine instead of muting Angela.
+        // Prefer a female/localized voice; if the OS exposes only a locale voice,
+        // use that so the customer can still hear the answer.
+        try {
+          if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            const voices = await loadSpeechVoices();
+            const preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US';
+            utterance.rate = 0.98;
+            utterance.pitch = 1.02;
+            if (preferred) {
+              utterance.voice = preferred;
+              utterance.lang = preferred.lang || utterance.lang;
+            }
+            utterance.onstart = () => {
+              setIsSpeaking(true);
+              setError(effectiveLanguage === 'bn'
+                ? 'Cloud voice quota ব্যস্ত—Angela এই ডিভাইসের voice fallback ব্যবহার করছে।'
+                : 'Cloud voice quota is busy—Angela is using this device voice fallback.');
+            };
+            utterance.onend = () => {
+              setIsSpeaking(false);
+              setError('');
+            };
+            utterance.onerror = () => {
+              setIsSpeaking(false);
+              setError(effectiveLanguage === 'bn'
+                ? 'Voice provider ও device voice দুটোই এখন পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে আছে।'
+                : 'Cloud and device voice are both unavailable; the answer remains visible as text.');
+            };
+            window.speechSynthesis.speak(utterance);
+            return;
+          }
+        } catch {
+          // Keep the text reply visible below.
+        }
         setIsSpeaking(false);
         setError(effectiveLanguage === 'bn'
-          ? 'Angela-র verified female voice সাময়িকভাবে পাওয়া যাচ্ছে না। উত্তরটি লেখা আকারে দেখানো হচ্ছে।'
-          : 'Angela verified female voice is temporarily unavailable. The answer remains available as text.');
+          ? 'Voice provider ও device voice দুটোই এখন পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে আছে।'
+          : 'Cloud and device voice are both unavailable; the answer remains visible as text.');
       }
     }
   }
@@ -571,8 +606,8 @@ export function FreeVoiceAngelaWidget() {
             <aside role="dialog" aria-modal="true" aria-labelledby="free-angela-disclosure-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[#C7A44D]/60 bg-[#FFFDF6] p-5 text-left shadow-2xl sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0B6B53]">Journey Expert Ltd. AI support</p>
               <h2 id="free-angela-disclosure-title" className="mt-1 text-xl font-bold text-[#093F31]">Before you talk with Angela</h2>
-              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input is recorded only after you tap the microphone and is sent to Journey Expert’s Gemini endpoint for transcription and reply generation; browser speech recognition is used only as a compatibility fallback. Angela uses Journey Expert's server-rendered female voice when available; an unknown browser default voice is never substituted.</p>
-              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর ভয়েস রেকর্ডিং Journey Expert-এর Gemini endpoint-এ transcription ও উত্তর তৈরির জন্য পাঠানো হয়; browser speech recognition শুধু compatibility fallback হিসেবে ব্যবহৃত হতে পারে। Angela server-rendered female voice ব্যবহার করে; অজানা browser default voice কখনো substitute করা হয় না।</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input is recorded only after you tap the microphone and is sent to Journey Expert’s Gemini endpoint for transcription and reply generation; browser speech recognition is used only as a compatibility fallback. Angela uses Journey Expert's cloud female voice when available. If free cloud voice quota is unavailable, the device speech engine may be used as a fallback so the assistant can still speak.</p>
+              <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর ভয়েস রেকর্ডিং Journey Expert-এর Gemini endpoint-এ transcription ও উত্তর তৈরির জন্য পাঠানো হয়; browser speech recognition শুধু compatibility fallback হিসেবে ব্যবহৃত হতে পারে। Angela cloud female voice ব্যবহার করে; free cloud voice quota পাওয়া না গেলে কথা চালু রাখতে device speech engine fallback হিসেবে ব্যবহার হতে পারে।</p>
               <p className="mt-3 text-xs leading-5 text-[#555555]">Replies may be incomplete or inaccurate. Do not share passport, bank, payment, password, or other sensitive information. For verified support, call <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
               <div className="mt-4 flex flex-col gap-3 border-t border-[#E8E1CF] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button type="button" className="inline-flex min-h-11 items-center justify-center bg-[#093F31] px-5 py-3 text-sm font-bold text-white hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" onClick={acceptDisclosure}>Agree and continue / সম্মত হয়ে চালিয়ে যান</button>

@@ -17,7 +17,7 @@ assert.equal(widget.includes('MediaRecorder'), true, 'the widget must prefer bro
 assert.equal(widget.includes("fetch('/angela/transcribe'"), true, 'the widget must send recorded audio to the same-origin Gemini transcription route');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
 assert.equal(widget.includes("fetch('/angela/chat'"), true, 'the widget must use the Worker-independent Pages Angela brain');
-assert.equal(widget.includes('unknown browser default voice is never substituted'), true, 'the disclosure must explain the verified female-only voice policy');
+assert.equal(widget.includes('device speech engine may be used as a fallback'), true, 'the disclosure must explain the free device voice fallback');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
 assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
@@ -53,7 +53,7 @@ assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a
 
 assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
 assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
-assert.equal(widget.includes('verified female voice is temporarily unavailable'), true, 'voice failure must degrade to text instead of an unknown OS voice');
+assert.equal(widget.includes('device voice fallback'), true, 'voice quota failure must fall back to device speech when available');
 
 const liveVoice = fs.readFileSync(path.join(root, 'src/lib/angelaLiveVoice.ts'), 'utf8');
 assert.equal(widget.includes('fetchAngelaLiveFemaleSpeech'), true, 'corporate Angela must use verified Gemini Live female fallback');
