@@ -84,3 +84,5 @@ assert.equal(pagesWorker.includes("url.pathname === '/angela/live-token'"), true
 assert.equal(pagesWorker.includes('liveConnectConstraints'), true, 'Pages advanced Worker must use the official Gemini Live token constraints payload');
 assert.equal(pagesWorker.includes("'gemini-2.5-flash-preview-tts'"), true, 'Pages advanced Worker must include Gemini 2.5 Flash TTS fallback');
 assert.equal(pagesWorker.includes("'gemini-2.5-pro-preview-tts'"), true, 'Pages advanced Worker must include Gemini 2.5 Pro TTS fallback');
+
+// approved cloud-female regression contract
