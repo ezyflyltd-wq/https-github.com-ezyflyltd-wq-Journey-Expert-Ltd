@@ -133,13 +133,72 @@ function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' 
 
 function getFallbackReply(prompt: string, selectedLanguage: 'bn' | 'en'): string {
   const bn = selectedLanguage === 'bn';
-  const asksHajj = /hajj|umrah|হজ|ওমরাহ|উমরাহ|মক্কা|মদিনা|ziyarat|জিয়ারত|জিয়ারত/i.test(prompt);
-  if (asksHajj) return bn
-    ? 'Journey Expert Limited হজ ও ওমরাহ বিষয়ে package planning, air travel coordination, Makkah/Madinah accommodation, ground transport, Ziyarat planning এবং visa/document guidance-এ সহায়তা করে। বর্তমান price, availability, Saudi rules ও dates যাচাই করে নিতে হবে। Hajj না Umrah, সময় ও যাত্রীর সংখ্যা বলুন।'
-    : 'Journey Expert Limited supports Hajj and Umrah package planning, air travel, Makkah/Madinah accommodation, ground transport, Ziyarat planning, and visa/document guidance. Current prices, availability, Saudi rules, and dates must be verified. Tell me Hajj or Umrah, your travel period, and traveller count.';
+  const q = prompt.toLocaleLowerCase();
+  const match = (...terms: string[]) => terms.some((term) => q.includes(term));
+
+  if (match('hajj','umrah','হজ','ওমরাহ','উমরাহ','makkah','madinah','মক্কা','মদিনা','nusuk','ziyarat','জিয়ারত','জিয়ারত')) {
+    return bn
+      ? 'Journey Expert Limited হজ ও ওমরাহ বিষয়ে package planning, air travel coordination, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination এবং visa/document guidance-এ সহায়তা করে। নির্দিষ্ট price, availability ও Saudi rules current official source বা supplier থেকে যাচাই করতে হবে।'
+      : 'Journey Expert Limited supports Hajj and Umrah package planning, air travel, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination, and visa/document guidance. Current prices, availability, and Saudi rules must be verified.';
+  }
+  if (match('study abroad','student visa','student','university','admission','scholarship','sop','ielts','cas','coe','i-20','স্টাডি','স্টুডেন্ট','বিশ্ববিদ্যাল','অ্যাডমিশন','স্কলারশিপ')) {
+    return bn
+      ? 'JEL Study Abroad profile assessment, দেশ/কোর্স/বিশ্ববিদ্যালয় নির্বাচন, admission ও scholarship guidance, SOP, English-language test guidance, student-visa documents এবং pre-departure/post-arrival guidance দেয়। Admission, scholarship বা visa outcome গ্যারান্টি করা হয় না।'
+      : 'JEL Study Abroad supports profile assessment, country/course/university selection, admissions and scholarship guidance, SOP, English-language tests, student-visa documents, and pre-/post-arrival guidance. Outcomes are not guaranteed.';
+  }
+  if (match('medical tourism','medical visa','hospital','doctor','treatment','মেডিকেল ট্যুরিজম','মেডিকেল ভিসা','হাসপাতাল','ডাক্তার','চিকিৎসা')) {
+    return bn
+      ? 'Journey Expert Limited medical-tourism support-এ hospital/doctor selection support, appointment coordination এবং travel preparation-এ সহায়তা করতে পারে। Treatment availability ও medical outcome official provider-এর মাধ্যমে যাচাই করতে হবে।'
+      : 'Journey Expert Limited can support medical-tourism enquiries with hospital/doctor selection support, appointment coordination, and travel preparation. Treatment availability and outcomes must be verified with the provider.';
+  }
+  if (match('air ticket','ticketing','flight','fare','reissue','refund','ticket','টিকিট','ফ্লাইট','ফেয়ার','ফেয়ার','রিইস্যু','রিফান্ড')) {
+    return bn
+      ? 'Journey Expert Limited air ticketing, fare quotation, reissue এবং refund support দেয়। Live fare, seat, schedule, baggage এবং change/refund rule supplier-এর live data থেকে যাচাই করতে হবে।'
+      : 'Journey Expert Limited provides air ticketing, fare quotation, reissue, and refund support. Live fares, seats, schedules, baggage, and change/refund rules must be verified from supplier data.';
+  }
+  if (match('visa','embassy','immigration','ভিসা','এম্বাসি','ইমিগ্রেশন')) {
+    return bn
+      ? 'Journey Expert Limited visa-document assistance দেয়। Current checklist, fee, processing time, eligibility ও decision সংশ্লিষ্ট official source থেকে যাচাই করতে হবে; JEL visa approval গ্যারান্টি দেয় না।'
+      : 'Journey Expert Limited provides visa-document assistance. Current checklists, fees, processing times, eligibility, and decisions must be verified from official sources; JEL never guarantees approval.';
+  }
+  if (match('travel insurance','insurance','ইন্স্যুরেন্স','বীমা')) {
+    return bn
+      ? 'Journey Expert Limited travel-insurance assistance দেয়। Coverage, premium ও eligibility insurer এবং trip অনুযায়ী যাচাই করতে হবে।'
+      : 'Journey Expert Limited provides travel-insurance assistance. Coverage, premium, and eligibility must be verified for the specific insurer and trip.';
+  }
+  if (match('corporate travel','business travel','corporate','কর্পোরেট')) {
+    return bn
+      ? 'Journey Expert Limited corporate travel management-এ business-travel planning, ticketing coordination, hotel support ও itinerary assistance দেয়।'
+      : 'Journey Expert Limited supports corporate travel with business-travel planning, ticketing coordination, hotel support, and itinerary assistance.';
+  }
+  if (match('halal tourism','halal travel','হালাল ট্যুরিজম')) {
+    return bn
+      ? 'Journey Expert Limited halal-tourism support দেয়। Destination, travel date, group size ও halal-friendly preference অনুযায়ী plan করা যায়; live availability যাচাই করতে হবে।'
+      : 'Journey Expert Limited supports halal-tourism planning around destination, dates, group size, and halal-friendly preferences; live availability must be verified.';
+  }
+  if (match('meet & greet','meet and greet','airport assistance','মিট অ্যান্ড গ্রিট')) {
+    return bn
+      ? 'JEL Meet & Greet airport arrival/departure-related assistance-এর service/co-brand। Exact scope airport, date, flight ও passenger details অনুযায়ী যাচাই করতে হবে।'
+      : 'JEL Meet & Greet is a Journey Expert Limited service/co-brand for airport arrival/departure-related assistance. Exact scope depends on airport, date, flight, and passenger details.';
+  }
+  if (match('craft bangla','compliance','advisory','brand','ক্রাফট বাংলা','ব্র্যান্ড')) {
+    return bn
+      ? 'Verified JEL brand/co-brand-এর মধ্যে JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory এবং Craft Bangla রয়েছে।'
+      : 'Verified JEL brands/co-brands include JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory, and Craft Bangla.';
+  }
+  if (match('tour','hotel','package','holiday','ট্যুর','হোটেল','প্যাকেজ','ভ্রমণ')) {
+    return bn
+      ? 'Journey Expert Limited tours, hotels এবং travel package support দেয়। Live availability ও price supplier থেকে যাচাই করতে হবে।'
+      : 'Journey Expert Limited supports tours, hotels, and travel packages. Live availability and prices must be verified from suppliers.';
+  }
+  if (match('journey expert','jel','company','office','address','contact','phone','whatsapp','email','জার্নি এক্সপার্ট','কোম্পানি','অফিস','ঠিকানা','যোগাযোগ')) {
+    return bn
+      ? 'Journey Expert Limited-এর verified contact: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215। WhatsApp/Hotline: +8801926400400; Telephone: +8802 9830404; Email: journeyexpertbd@gmail.com।'
+      : 'Journey Expert Limited verified contact: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215. WhatsApp/Hotline: +8801926400400; Telephone: +8802 9830404; Email: journeyexpertbd@gmail.com.';
+  }
   return bn
-    ? 'আমি অ্যাঞ্জেলা, Journey Expert Ltd.-এর AI সহকারী। এয়ার টিকিট, ভিসা, ট্যুরস অ্যান্ড ট্রাভেলস, হজ ও ওমরাহ, মেডিকেল ট্যুরিজম, হালাল ট্যুরিজম, হোটেল, ইন্স্যুরেন্স ও কর্পোরেট ট্রাভেল সম্পর্কে সাধারণ তথ্য দিতে পারি। যাচাই করা লাইভ কোটেশন বা কেস রিভিউয়ের জন্য +8801926400400 নম্বরে যোগাযোগ করুন।'
-    : 'I am Angela, Journey Expert Ltd.\'s AI assistant. I can help with air tickets, visas, tours and travel, Hajj and Umrah, medical tourism, halal tourism, hotels, insurance and corporate travel. For a verified live quotation or case review, contact +8801926400400.';
+    ? 'আপনার প্রশ্নের নির্দিষ্ট তথ্যটি বর্তমান verified JEL knowledge-এ নেই। ভুল তথ্য দেওয়ার বদলে এই অংশটি verify করা প্রয়োজন।'
+    : 'That specific detail is not present in the current verified JEL knowledge. Rather than invent an answer, that detail needs to be verified.';
 }
 
 export function FreeVoiceAngelaWidget() {
