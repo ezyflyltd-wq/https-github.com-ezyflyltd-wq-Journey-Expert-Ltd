@@ -10,7 +10,7 @@ Return JSON only with keys: reply, language, intent, confidence, nextQuestion, l
 
 const KNOWLEDGE = [
   { id: 'hajj_umrah', priority: 100, keywords: ['hajj','umrah','হজ','ওমরাহ','উমরাহ','makkah','madinah','মক্কা','মদিনা','nusuk','ziyarat','জিয়ারত','জিয়ারত'], text: 'JEL Hajj & Umrah scope: package planning, air-travel coordination, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination, and visa/document guidance. Exact price, availability, Saudi rules, quotas and dates require current official or supplier verification.', source: 'JEL Hajj and Umrah Service Guide' },
-  { id: 'study_abroad', priority: 95, keywords: ['study abroad','student visa','student','study','university','admission','scholarship','sop','ielts','cas','coe','i-20','স্টাডি','স্টুডেন্ট','বিশ্ববিদ্যাল','অ্যাডমিশন','স্কলারশিপ'], text: 'JEL Study Abroad supports profile assessment, country/course/university selection, admissions, scholarship guidance, SOP, English-language tests, student-visa documents, and pre-/post-arrival guidance. Outcomes are not guaranteed.', source: 'JEL Study Abroad Service Guide' },
+  { id: 'study_abroad', priority: 95, keywords: ['study abroad','student visa','student','study','university','admission','scholarship','sop','ielts','cas','coe','i-20','স্টাডি','স্টুডেন্ট','বিশ্ববিদ্যাল','অ্যাডমিশন','স্কলারশিপ','পড়াশোনা','পড়াশোনা','পড়তে','পড়তে','মাস্টার্স','ব্যাচেলর'], text: 'JEL Study Abroad supports profile assessment, country/course/university selection, admissions, scholarship guidance, SOP, English-language tests, student-visa documents, and pre-/post-arrival guidance. Outcomes are not guaranteed.', source: 'JEL Study Abroad Service Guide' },
   { id: 'medical_tourism', priority: 92, keywords: ['medical tourism','medical visa','hospital','doctor','treatment','মেডিকেল ট্যুরিজম','মেডিকেল ভিসা','হাসপাতাল','ডাক্তার','চিকিৎসা'], text: 'JEL medical-tourism support can include hospital/doctor selection support, appointment coordination and travel preparation. Treatment availability and outcomes require provider verification.', source: 'JEL Medical Tourism Service Guide' },
   { id: 'air_ticketing', priority: 88, keywords: ['air ticket','ticketing','flight','fare','reissue','refund','ticket','টিকিট','ফ্লাইট','ফেয়ার','ফেয়ার','রিইস্যু','রিফান্ড'], text: 'JEL supports air tickets, fare quotation, reissue and refund. Live fare, seats, schedules, baggage and change/refund rules require current supplier verification.', source: 'JEL Air Ticketing Service Guide' },
   { id: 'visa', priority: 80, keywords: ['visa','embassy','immigration','ভিসা','এম্বাসি','ইমিগ্রেশন'], text: 'JEL provides visa-document assistance. Current requirements, fees, processing times, eligibility and decisions require official verification. JEL never guarantees approval.', source: 'JEL Visa Guidance Policy' },
@@ -38,7 +38,7 @@ function contextFor(query) {
       score: entry.keywords.reduce((total, keyword) => normalized.includes(keyword.toLocaleLowerCase()) ? total + (keyword.includes(' ') ? 4 : 1) : total, 0),
     }))
     .filter((item) => item.score > 0)
-    .sort((a, b) => (b.score - a.score) || (b.entry.priority - a.entry.priority))
+    .sort((a, b) => (b.entry.priority - a.entry.priority) || (b.score - a.score))
     .slice(0, 3);
   if (!matches.length) return { primary: null, ids: [], text: 'No exact JEL knowledge entry matched. Do not invent a JEL-specific fact.' };
   return {
