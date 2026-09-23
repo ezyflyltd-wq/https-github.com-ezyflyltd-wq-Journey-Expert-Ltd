@@ -17,16 +17,16 @@ assert.equal(widget.includes('MediaRecorder'), true, 'the widget must prefer bro
 assert.equal(widget.includes("fetch('/angela/transcribe'"), true, 'the widget must send recorded audio to the same-origin Gemini transcription route');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
 assert.equal(widget.includes("fetch('/angela/chat'"), true, 'the widget must use the Worker-independent Pages Angela brain');
-assert.equal(widget.includes('device speech engine may be used as a fallback'), true, 'the disclosure must explain the free device voice fallback');
+assert.equal(widget.includes('device speech engine as the primary voice path'), true, 'the disclosure must explain the quota-independent device-first voice path');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
 assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
 assert.equal(widget.includes("setLanguage('auto')"), false, 'Angela must not expose Auto mode');
 assert.equal(widget.includes("setLanguage('hi')"), false, 'Angela must not expose Hindi mode');
-assert.equal(widget.includes("fetch('/angela/speech'"), true, 'Angela must use the Worker-independent same-origin female TTS route');
+assert.equal(widget.includes('DEVICE_FIRST_ANGELA_VOICE'), true, 'Angela must keep device speech ahead of quota-dependent cloud TTS');
 assert.equal(server.includes("app.post('/api/voice/gemini'"), true, 'the AI Studio server must expose Gemini female TTS');
-assert.equal(widget.includes('Voice output: Angela female'), true, 'Angela UI must state the female-only voice policy');
-assert.equal(widget.includes('Use the same server-rendered Angela female voice on desktop and mobile.'), true, 'server female TTS must be the cross-device primary path');
+assert.equal(widget.includes('Voice output: Angela · device-first'), true, 'Angela UI must disclose the reliable device-first voice policy');
+assert.equal(widget.includes('device voice fallback is the production primary'), true, 'device voice must remain the cross-device primary path during cloud quota exhaustion');
 assert.equal(widget.includes('+8801926400400'), true, 'the human-support phone number must be callable');
 assert.equal(widget.includes('bottom-[max(0.75rem,env(safe-area-inset-bottom))]'), true, 'the public launcher must respect mobile safe areas');
 assert.equal(widget.includes('Talk to Angela · কথা বলুন'), true, 'the launcher must be customer-visible and bilingual');
@@ -53,10 +53,10 @@ assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a
 
 assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
 assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
-assert.equal(widget.includes('device voice fallback'), true, 'voice quota failure must fall back to device speech when available');
+assert.equal(widget.includes('device voice fallback'), true, 'voice output must remain device-capable when cloud quota is unavailable');
 
 const liveVoice = fs.readFileSync(path.join(root, 'src/lib/angelaLiveVoice.ts'), 'utf8');
-assert.equal(widget.includes('fetchAngelaLiveFemaleSpeech'), true, 'corporate Angela must use verified Gemini Live female fallback');
+assert.equal(liveVoice.includes('fetchAngelaLiveFemaleSpeech'), true, 'optional Gemini Live female capability must remain available for future provider recovery');
 assert.equal(liveVoice.includes("voiceName: 'Aoede'"), true, 'Live fallback must use Aoede female voice');
 assert.equal(liveVoice.includes('/angela/live-token'), true, 'Live fallback must use Worker-independent same-origin token route');
 assert.equal(pagesWorker.includes("action === 'live-token'"), true, 'Pages Worker must expose Live token action on canonical route');
