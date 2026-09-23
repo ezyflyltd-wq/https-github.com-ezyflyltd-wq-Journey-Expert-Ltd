@@ -312,14 +312,49 @@ export function FreeVoiceAngelaWidget() {
         await audio.play();
         return;
       } catch {
-        // Cross-device invariant: never let the OS/browser silently substitute
-        // an unknown or male voice. If both verified female cloud paths fail,
-        // keep the answer visible as text.
-        if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
+        // Free third-line fallback: when Gemini TTS and Gemini Live quota/provider
+        // paths are unavailable, use the device speech engine instead of muting Angela.
+        // Prefer a female/localized voice; if the OS exposes only a locale voice,
+        // use that so the customer can still hear the answer.
+        try {
+          if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            const voices = await loadSpeechVoices();
+            const preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US';
+            utterance.rate = 0.98;
+            utterance.pitch = 1.02;
+            if (preferred) {
+              utterance.voice = preferred;
+              utterance.lang = preferred.lang || utterance.lang;
+            }
+            utterance.onstart = () => {
+              setIsSpeaking(true);
+              setError(effectiveLanguage === 'bn'
+                ? 'Cloud voice quota ব্যস্ত—Angela এই ডিভাইসের voice fallback ব্যবহার করছে।'
+                : 'Cloud voice quota is busy—Angela is using this device voice fallback.');
+            };
+            utterance.onend = () => {
+              setIsSpeaking(false);
+              setError('');
+            };
+            utterance.onerror = () => {
+              setIsSpeaking(false);
+              setError(effectiveLanguage === 'bn'
+                ? 'Voice provider ও device voice দুটোই এখন পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে আছে।'
+                : 'Cloud and device voice are both unavailable; the answer remains visible as text.');
+            };
+            window.speechSynthesis.speak(utterance);
+            return;
+          }
+        } catch {
+          // Keep the text reply visible below.
+        }
         setIsSpeaking(false);
         setError(effectiveLanguage === 'bn'
-          ? 'Angela-র verified female voice সাময়িকভাবে পাওয়া যাচ্ছে না। উত্তরটি লেখা আকারে দেখানো হচ্ছে।'
-          : 'Angela verified female voice is temporarily unavailable. The answer remains available as text.');
+          ? 'Voice provider ও device voice দুটোই এখন পাওয়া যাচ্ছে না; উত্তরটি লেখা আকারে আছে।'
+          : 'Cloud and device voice are both unavailable; the answer remains visible as text.');
       }
     }
   }
