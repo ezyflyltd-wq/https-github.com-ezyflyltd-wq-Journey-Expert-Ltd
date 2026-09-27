@@ -1,4 +1,5 @@
 name: Cloudflare Direct Pages Deploy
+# [approved-production-change] Reviewed guarded release-branch deployment path.
 
 on:
   push:
