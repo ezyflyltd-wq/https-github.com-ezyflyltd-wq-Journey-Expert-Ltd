@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      CLOUDFLARE_API_TOKEN: \${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: "7b0d4036973a06b9cd4622770748a101"
 
     steps:
@@ -40,7 +40,7 @@ jobs:
           source_sha="$(git rev-parse HEAD)"
           echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
           if [ "$GITHUB_EVENT_NAME" = "workflow_run" ]; then
-            expected="\${{ github.event.workflow_run.head_sha }}"
+            expected="${{ github.event.workflow_run.head_sha }}"
             test "$source_sha" = "$expected" || {
               echo "::error::release SHA $source_sha does not match validated main SHA $expected"
               exit 1
@@ -84,7 +84,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -n "\${CLOUDFLARE_API_TOKEN:-}" ]; then
+          if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
             echo "Cloudflare direct-deploy credential is available."
           else
@@ -102,7 +102,7 @@ jobs:
           npx --yes wrangler@4 pages deploy dist \
             --project-name=journey-expert-ltd-main \
             --branch=direct-ltd-smoke \
-            --commit-hash="\${{ steps.source.outputs.sha }}" 2>&1 | tee "$log"
+            --commit-hash="${{ steps.source.outputs.sha }}" 2>&1 | tee "$log"
           url="$(grep -Eo 'https://[A-Za-z0-9._-]+\.pages\.dev' "$log" | tail -n1 || true)"
           test -n "$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
@@ -112,7 +112,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          url="\${{ steps.preview.outputs.url }}"
+          url="${{ steps.preview.outputs.url }}"
           health="$(curl --fail --silent --show-error --max-time 30 "$url/api/health")"
           echo "$health" | jq -e '.status == "online"'
           echo "$health" | jq -e '.service | contains("Journey Expert") or contains("Angela API Gateway")'
@@ -146,7 +146,7 @@ jobs:
           npx --yes wrangler@4 pages deploy dist \
             --project-name=journey-expert-ltd-main \
             --branch=release \
-            --commit-hash="\${{ steps.source.outputs.sha }}"
+            --commit-hash="${{ steps.source.outputs.sha }}"
 
       - name: Verify public production
         if: steps.cf.outputs.available == 'true'
@@ -187,8 +187,8 @@ jobs:
             echo "## Cloudflare Direct Pages Deploy"
             echo "- Project: journey-expert-ltd-main"
             echo "- Production branch: release"
-            echo "- Source: \${{ steps.source.outputs.sha }}"
-            echo "- Direct-deploy credential available: \${{ steps.cf.outputs.available || 'unknown' }}"
+            echo "- Source: ${{ steps.source.outputs.sha }}"
+            echo "- Direct-deploy credential available: ${{ steps.cf.outputs.available || 'unknown' }}"
             echo "- Safety: validated release source is type-checked and built before deployment."
             echo "- Safety: preview health and Bangla Angela smoke must pass before production."
             echo "- Existing DNS, custom domains, bindings, and dashboard variables are not modified."
