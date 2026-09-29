@@ -387,7 +387,12 @@ async function speech(request, env) {
         }),
       });
       if (!upstream.ok) {
-        if (upstream.status === 429) sawQuota = true;
+        // 429 is account/project quota. Retrying more models with the same key
+        // only burns requests and delays the browser's verified female fallback.
+        if (upstream.status === 429) {
+          sawQuota = true;
+          break;
+        }
         continue;
       }
       const data = await upstream.json();
@@ -412,7 +417,19 @@ async function speech(request, env) {
     }
   }
 
-  return json({ error: sawQuota ? 'voice_quota_exceeded' : 'female_voice_unavailable' }, sawQuota ? 429 : 503);
+  if (sawQuota) {
+    return new Response(JSON.stringify({ error: 'voice_quota_exceeded' }), {
+      status: 429,
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        'access-control-allow-origin': ALLOWED_ORIGIN,
+        'x-content-type-options': 'nosniff',
+        'retry-after': '60',
+      },
+    });
+  }
+  return json({ error: 'female_voice_unavailable' }, 503);
 }
 
 export default {
