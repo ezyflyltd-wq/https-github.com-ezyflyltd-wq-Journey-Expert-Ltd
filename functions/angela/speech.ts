@@ -74,7 +74,12 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
       });
 
       if (!upstream.ok) {
-        if (upstream.status === 429) sawQuota = true;
+        // Quota is shared by this credential; do not multiply 429 traffic by
+        // retrying additional TTS models with the same key.
+        if (upstream.status === 429) {
+          sawQuota = true;
+          break;
+        }
         continue;
       }
 
@@ -101,10 +106,9 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
     }
   }
 
-  // Shared free-tier resilience: if this corporate project's TTS quota is exhausted,
-  // reuse the independently deployed Study Abroad female TTS endpoint server-to-server.
-  // No browser CORS dependency and no loop: the Study endpoint does not call back here.
-  try {
+  // Only try the independent Study Abroad renderer for non-quota provider misses.
+  // On a 429, return immediately so the client can use its verified female voice.
+  if (!sawQuota) try {
     const shared = await fetch('https://journeyexpertbd.com/angela/speech', {
       method: 'POST',
       signal: AbortSignal.timeout(5500),
@@ -130,7 +134,15 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
     // Fall through to the client-side ranked female device voice.
   }
 
-  return json({
-    error: sawQuota ? 'voice_quota_exceeded' : 'voice_provider_unavailable',
-  }, sawQuota ? 429 : 503);
+  if (sawQuota) {
+    return Response.json({ error: 'voice_quota_exceeded' }, {
+      status: 429,
+      headers: {
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'Retry-After': '60',
+      },
+    });
+  }
+  return json({ error: 'voice_provider_unavailable' }, 503);
 }
