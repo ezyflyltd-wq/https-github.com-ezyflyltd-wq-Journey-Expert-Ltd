@@ -235,6 +235,7 @@ export function FreeVoiceAngelaWidget() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const voiceCatalogRef = useRef<SpeechSynthesisVoice[]>([]);
+  const voiceQuotaCooldownUntilRef = useRef(0);
 
   const recordingSupported = typeof window !== 'undefined'
     && typeof MediaRecorder !== 'undefined'
@@ -341,17 +342,27 @@ export function FreeVoiceAngelaWidget() {
 
     // CLOUD_FEMALE_PRIMARY_FAST: use the same JEL-rendered female voice across
     // Windows, Android, macOS and iOS when free Gemini TTS is available.
-    // Allow the bounded provider chain (up to 26s + a 5.5s shared fallback) to finish.
+    // A recent 429 skips the provider during Retry-After and moves straight to
+    // the positively identified female device voice.
+    const quotaCoolingDown = Date.now() < voiceQuotaCooldownUntilRef.current;
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 35000);
+    const timer = window.setTimeout(() => controller.abort(), 11000);
     try {
+      if (quotaCoolingDown) throw new Error('voice_quota_cooldown');
       const response = await fetch('/angela/speech', {
         method: 'POST',
         signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: cleanText, language: effectiveLanguage }),
       });
+      if (response.status === 429) {
+        const retryAfter = Number(response.headers.get('retry-after'));
+        const seconds = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(300, Math.max(15, retryAfter)) : 60;
+        voiceQuotaCooldownUntilRef.current = Date.now() + seconds * 1000;
+        throw new Error('voice_quota_exceeded');
+      }
       if (response.ok && response.headers.get('content-type')?.includes('audio/wav')) {
+        voiceQuotaCooldownUntilRef.current = 0;
         const blob = await response.blob();
         const context = await contextPromise;
         if (context?.state === 'running') {
