@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "vite build && node scripts/generate-route-html.mjs",
     "build:pages": "vite build && node scripts/generate-route-html.mjs",
     "check:entry-performance": "node scripts/check-entry-performance.mjs dist/assets",
     "build:pages:guarded": "pnpm run build:pages && pnpm run check:entry-performance",
@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
     "lint": "tsc --noEmit",
-    "test:free-voice": "node tests/free-voice-widget-check.mjs"
+    "test:free-voice": "node tests/free-voice-widget-check.mjs",
+    "build:server": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
