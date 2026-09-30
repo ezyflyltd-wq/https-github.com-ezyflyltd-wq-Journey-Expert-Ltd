@@ -73,8 +73,8 @@ assert.equal(worker.includes('liveConnectConstraints'), true, 'standalone Worker
 
 assert.equal(pagesChat.includes("'gemini-3.8-flash'"), true, 'Pages-native Angela chat must use Gemini 3.8 Flash');
 assert.equal(pagesChat.includes('VERIFIED JEL SOURCE OF TRUTH'), true, 'Pages-native Angela chat must prioritize verified JEL knowledge');
-assert.equal(pagesSpeech.includes("'gemini-2.5-flash-preview-tts'"), true, 'female TTS must include the Gemini 2.5 Flash fallback');
-assert.equal(pagesSpeech.includes("'gemini-2.5-pro-preview-tts'"), true, 'female TTS must include the Gemini 2.5 Pro fallback');
+assert.equal(pagesSpeech.includes("'gemini-3.8-flash-lite-tts'"), true, 'female TTS must use Gemini 3.8 Flash-Lite TTS');
+assert.equal(pagesSpeech.includes("'gemini-2.5-pro-preview-tts'"), false, 'female TTS must not depend on retired Gemini 2.5 preview TTS');
 assert.equal(pagesLiveToken.includes('liveConnectConstraints'), true, 'Live token REST request must use the official ephemeral-token constraints payload');
 
 assert.equal(pagesWorker.includes("url.pathname === '/angela/chat'"), true, 'Pages advanced Worker must expose /angela/chat');
@@ -82,8 +82,8 @@ assert.equal(pagesWorker.includes("url.pathname === '/angela/transcribe'"), true
 assert.equal(pagesWorker.includes("url.pathname === '/angela/speech'"), true, 'Pages advanced Worker must expose /angela/speech');
 assert.equal(pagesWorker.includes("url.pathname === '/angela/live-token'"), true, 'Pages advanced Worker must expose /angela/live-token');
 assert.equal(pagesWorker.includes('liveConnectConstraints'), true, 'Pages advanced Worker must use the official Gemini Live token constraints payload');
-assert.equal(pagesWorker.includes("'gemini-2.5-flash-preview-tts'"), true, 'Pages advanced Worker must include Gemini 2.5 Flash TTS fallback');
-assert.equal(pagesWorker.includes("'gemini-2.5-pro-preview-tts'"), true, 'Pages advanced Worker must include Gemini 2.5 Pro TTS fallback');
+assert.equal(pagesWorker.includes("'gemini-3.8-flash-lite-tts'"), true, 'Pages advanced Worker must use Gemini 3.8 Flash-Lite TTS');
+assert.equal(pagesWorker.includes("'gemini-2.5-pro-preview-tts'"), false, 'Pages advanced Worker must not depend on retired Gemini 2.5 preview TTS');
 
 // approved cloud-female regression contract
 
