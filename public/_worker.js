@@ -188,7 +188,7 @@ function conversationReply(message, language) {
   }
 
   if (
-    /\b(can|could|do) (u|you) (talk|speak) (in )?(bangla|bengla|bengali)\b/.test(q) ||
+    /\b(can|could|do) (u|you) (talk|speak) ((?:in|to) )?(bangla|bengla|bengali)\b/.test(q) ||
     /\b(talk|speak) (bangla|bengla|bengali)\b/.test(q) ||
     /বাংলা (বলতে|কথা বলতে) (পারো|পারেন|পারি)/.test(q) ||
     /তুমি কি বাংলা/.test(q) ||
@@ -236,6 +236,7 @@ async function liveToken(request, env) {
   const model = 'gemini-3.8-live';
   const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
   let sawQuota = false;
+  const providerStatuses = [];
 
   for (const key of keys) {
     const controller = new AbortController();
@@ -259,6 +260,7 @@ async function liveToken(request, env) {
       });
 
       if (!upstream.ok) {
+        providerStatuses.push(upstream.status);
         const detail = await upstream.text().catch(() => '');
         console.warn('Angela Worker Live token provider status', upstream.status, detail.slice(0, 240));
         if (upstream.status === 429) {
@@ -281,8 +283,8 @@ async function liveToken(request, env) {
   }
 
   return sawQuota
-    ? json({ error: 'live_voice_quota_exceeded', providerStatus: 429 }, 429)
-    : json({ error: 'live_voice_unavailable' }, 424);
+    ? json({ error: 'live_voice_quota_exceeded', providerStatus: 429, providerStatuses }, 429)
+    : json({ error: 'live_voice_unavailable', providerStatuses }, 424);
 }
 
 const pcmToWav = (pcm) => {
