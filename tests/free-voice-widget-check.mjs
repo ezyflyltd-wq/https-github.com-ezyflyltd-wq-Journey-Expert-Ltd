@@ -68,6 +68,10 @@ assert.equal(liveVoice.includes('fetchAngelaLiveFemaleSpeech'), true, 'optional 
 assert.equal(liveVoice.includes("voiceName: 'Aoede'"), true, 'Live fallback must use Aoede female voice');
 assert.equal(liveVoice.includes('/angela/live-token'), true, 'Live fallback must use Worker-independent same-origin token route');
 assert.equal(pagesWorker.includes("action === 'live-token'"), true, 'Pages Worker must expose Live token action on canonical route');
+assert.equal(pagesWorker.includes('conversationReply'), true, 'Pages Worker must handle ordinary conversation before semantic JEL fallback');
+assert.equal(pagesWorker.includes('bengla'), true, 'Pages Worker must understand common Bangla capability spelling variants');
+assert.equal(pagesWorker.includes("env.GEMINI_TTS_API_KEY?.trim()"), true, 'Pages Worker Live token path must fail over to the TTS Gemini credential');
+assert.equal(pagesWorker.includes("for (const key of keys)"), true, 'Pages Worker Live token path must try configured Gemini credentials independently');
 
 assert.equal(pagesWorker.includes("action === 'speech'"), true, 'Pages Worker must multiplex verified female speech on the canonical Angela endpoint');
 
