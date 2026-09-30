@@ -29,25 +29,45 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
     const timer = setTimeout(() => controller.abort(), 4500);
 
     try {
-      const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': key,
-      },
-      body: JSON.stringify({
-        uses: 1,
-        expireTime,
-        liveConnectConstraints: {
-          model: 'models/gemini-3.8-live',
-          config: {
-            sessionResumption: {},
-            responseModalities: ['AUDIO'],
-          },
+      let upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key,
         },
-      }),
-    });
+        body: JSON.stringify({
+          uses: 1,
+          expireTime,
+          liveConnectConstraints: {
+            model: 'models/gemini-3.8-live',
+            config: {
+              sessionResumption: {},
+              responseModalities: ['AUDIO'],
+            },
+          },
+        }),
+      });
+
+      // Some Gemini projects currently reject constrained ephemeral-token
+      // creation with HTTP 400 even though unconstrained short-lived tokens are
+      // supported. Retry without constraints; the browser still pins the Live
+      // model and AUDIO/Aoede setup when opening the WebSocket session.
+      if (upstream.status === 400) {
+        upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': key,
+          },
+          body: JSON.stringify({
+            uses: 1,
+            expireTime,
+            newSessionExpireTime: new Date(Date.now() + 60 * 1000).toISOString(),
+          }),
+        });
+      }
 
       if (!upstream.ok) {
         const detail = await upstream.text().catch(() => '');

@@ -259,6 +259,20 @@ async function liveToken(request, env) {
         }),
       });
 
+      if (upstream.status === 400) {
+        providerStatuses.push(400);
+        upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify({
+            uses: 1,
+            expireTime,
+            newSessionExpireTime: new Date(Date.now() + 60 * 1000).toISOString(),
+          }),
+        });
+      }
+
       if (!upstream.ok) {
         providerStatuses.push(upstream.status);
         const detail = await upstream.text().catch(() => '');
