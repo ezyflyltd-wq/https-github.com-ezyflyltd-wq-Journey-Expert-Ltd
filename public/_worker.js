@@ -22,6 +22,13 @@ const languageFor = (message, requested) => {
 
 const JEL_SEMANTIC_KNOWLEDGE = [
   {
+    id: 'services_overview', priority: 120,
+    keywords: ['what services','which services','services provide','services does','services offer','jel services','journey expert services','all services','কি কি সার্ভিস','কী কী সার্ভিস','কি কি সেবা','কী কী সেবা','সার্ভিস দেয়','সার্ভিস দেয়','সব সার্ভিস','সকল সার্ভিস'],
+    facts: 'Journey Expert Limited verified core services: air ticketing and fare quotation; reissue/refund support; visa-document assistance; tours and travel; hotels; Hajj and Umrah; halal tourism; medical tourism; travel insurance; corporate travel management; Meet & Greet; Study Abroad; and compliance/advisory support. Known verified brands/co-brands include JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory, and Craft Bangla.',
+    bn: 'Journey Expert Limited (JEL)-এর verified core services হলো: air ticketing ও fare quotation, reissue/refund support, visa-document assistance, tours & travel, hotel, Hajj & Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, Study Abroad এবং compliance/advisory support। Known verified brand/co-brand: JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory এবং Craft Bangla।',
+    en: 'Journey Expert Limited (JEL) provides air ticketing and fare quotation, reissue/refund support, visa-document assistance, tours and travel, hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, Study Abroad, and compliance/advisory support. Known verified brands/co-brands include JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory, and Craft Bangla.'
+  },
+  {
     id: 'hajj_umrah', priority: 100,
     keywords: ['hajj','umrah','হজ','ওমরাহ','উমরাহ','makkah','madinah','মক্কা','মদিনা','nusuk','নুসুক','ziyarat','জিয়ারত','জিয়ারত','rawda','rawdah'],
     facts: 'JEL Hajj & Umrah scope: pilgrimage package planning; air-travel coordination; Makkah/Madinah accommodation; ground transport; Ziyarat planning; pilgrim/group coordination; visa/document guidance. Exact package inclusions, prices, availability, Saudi visa/permit/health rules, quotas and dates are time-sensitive and must be verified from current official or supplier sources.',

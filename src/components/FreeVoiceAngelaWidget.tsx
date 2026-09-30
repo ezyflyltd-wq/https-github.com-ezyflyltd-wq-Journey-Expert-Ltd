@@ -148,6 +148,11 @@ function getFallbackReply(prompt: string, selectedLanguage: 'bn' | 'en'): string
   const q = prompt.toLocaleLowerCase();
   const match = (...terms: string[]) => terms.some((term) => q.includes(term));
 
+  if (match('what services','which services','services provide','services does','services offer','jel services','journey expert services','all services','কি কি সার্ভিস','কী কী সার্ভিস','কি কি সেবা','কী কী সেবা','সব সার্ভিস','সকল সার্ভিস')) {
+    return bn
+      ? 'Journey Expert Limited (JEL)-এর verified core services হলো: air ticketing ও fare quotation, reissue/refund support, visa-document assistance, tours & travel, hotel, Hajj & Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, Study Abroad এবং compliance/advisory support। Known verified brand/co-brand: JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory এবং Craft Bangla।'
+      : 'Journey Expert Limited (JEL) provides air ticketing and fare quotation, reissue/refund support, visa-document assistance, tours and travel, hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, Study Abroad, and compliance/advisory support. Known verified brands/co-brands include JEL Study Abroad, JEL Meet & Greet, JEL Compliance & Advisory, and Craft Bangla.';
+  }
   if (match('hajj','umrah','হজ','ওমরাহ','উমরাহ','makkah','madinah','মক্কা','মদিনা','nusuk','ziyarat','জিয়ারত','জিয়ারত')) {
     return bn
       ? 'Journey Expert Limited হজ ও ওমরাহ বিষয়ে package planning, air travel coordination, Makkah/Madinah accommodation, ground transport, Ziyarat planning, pilgrim/group coordination এবং visa/document guidance-এ সহায়তা করে। নির্দিষ্ট price, availability ও Saudi rules current official source বা supplier থেকে যাচাই করতে হবে।'
