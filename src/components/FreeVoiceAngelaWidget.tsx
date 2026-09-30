@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, RefreshCw, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { normalizePath } from '../routing/routes';
+import { fetchAngelaLiveFemaleSpeech } from '../lib/angelaLiveVoice';
 
 type SpeechRecognitionEventLike = {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -444,6 +445,45 @@ export function FreeVoiceAngelaWidget() {
       // Continue immediately to device voice fallback.
     } finally {
       window.clearTimeout(timer);
+    }
+
+    // GEMINI_LIVE_FEMALE_SECONDARY: when unary/server TTS is quota-limited,
+    // request a one-use token and render Aoede directly in the browser before
+    // falling back to OS/device voices.
+    try {
+      const liveController = new AbortController();
+      const liveTimer = window.setTimeout(() => liveController.abort(), 7000);
+      try {
+        const liveBlob = await fetchAngelaLiveFemaleSpeech(cleanText, liveController.signal);
+        const context = await contextPromise;
+        const url = URL.createObjectURL(liveBlob);
+        const audio = audioRef.current || new Audio();
+        audioRef.current?.pause();
+        if (audioRef.current?.src?.startsWith('blob:')) URL.revokeObjectURL(audioRef.current.src);
+        audioRef.current = audio;
+        audio.src = url;
+        audio.preload = 'auto';
+        audio.muted = false;
+        audio.volume = 1;
+        audio.onended = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(url);
+          if (audioRef.current === audio) audioRef.current = null;
+        };
+        audio.onerror = () => setIsSpeaking(false);
+        if (context?.state === 'suspended') {
+          try { await context.resume(); } catch { /* HTMLAudio still gets a chance */ }
+        }
+        setIsSpeaking(true);
+        await audio.play();
+        setError('');
+        setVoiceNotice('');
+        return;
+      } finally {
+        window.clearTimeout(liveTimer);
+      }
+    } catch (liveError) {
+      console.warn('Angela Gemini Live female fallback unavailable; trying device female voice.', liveError);
     }
 
     // device voice fallback: rank female/localized voices and penalize known male
