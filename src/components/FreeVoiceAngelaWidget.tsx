@@ -33,6 +33,54 @@ declare global {
 }
 
 const CONSENT_STORAGE_KEY = 'jel-free-angela-consent-v1';
+const SILENT_WAV_DATA_URI = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+
+async function decodePcmWav(context: AudioContext, blob: Blob): Promise<AudioBuffer | null> {
+  const raw = await blob.arrayBuffer();
+  const view = new DataView(raw);
+  if (raw.byteLength < 44) return null;
+  const tag = (offset: number, length: number) =>
+    String.fromCharCode(...new Uint8Array(raw, offset, Math.min(length, raw.byteLength - offset)));
+  if (tag(0, 4) !== 'RIFF' || tag(8, 4) !== 'WAVE') return null;
+
+  let offset = 12;
+  let channels = 1;
+  let sampleRate = 24000;
+  let bitsPerSample = 16;
+  let format = 1;
+  let dataOffset = -1;
+  let dataSize = 0;
+
+  while (offset + 8 <= raw.byteLength) {
+    const id = tag(offset, 4);
+    const size = view.getUint32(offset + 4, true);
+    const body = offset + 8;
+    if (id === 'fmt ' && size >= 16 && body + 16 <= raw.byteLength) {
+      format = view.getUint16(body, true);
+      channels = view.getUint16(body + 2, true);
+      sampleRate = view.getUint32(body + 4, true);
+      bitsPerSample = view.getUint16(body + 14, true);
+    } else if (id === 'data') {
+      dataOffset = body;
+      dataSize = Math.min(size, raw.byteLength - body);
+      break;
+    }
+    offset = body + size + (size % 2);
+  }
+
+  if (format !== 1 || bitsPerSample !== 16 || dataOffset < 0 || channels < 1 || channels > 2) return null;
+  const frameCount = Math.floor(dataSize / (2 * channels));
+  if (frameCount < 1) return null;
+  const buffer = context.createBuffer(channels, frameCount, sampleRate);
+  for (let channel = 0; channel < channels; channel += 1) {
+    const output = buffer.getChannelData(channel);
+    for (let frame = 0; frame < frameCount; frame += 1) {
+      const sampleOffset = dataOffset + ((frame * channels + channel) * 2);
+      output[frame] = view.getInt16(sampleOffset, true) / 32768;
+    }
+  }
+  return buffer;
+}
 // [approved-production-change] Cross-platform Angela voice/knowledge hardening reviewed for production.
 const BANGLA_WELCOME = 'আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা, Journey Expert Limited-এর AI সহকারী। আমি আপনাকে কীভাবে সাহায্য করতে পারি? এয়ার টিকিট, ভিসা সহায়তা, ট্যুর ও হোটেল, হজ ও ওমরাহ, হালাল ট্যুরিজম, মেডিকেল ট্যুরিজম, ইন্স্যুরেন্স, কর্পোরেট ট্রাভেল, Meet & Greet অথবা Study Abroad—যেকোনো বিষয়ে প্রশ্ন করতে পারেন।';
 const ENGLISH_WELCOME = "Assalamu Alaikum. I am Angela, Journey Expert Limited's AI assistant. How can I help you today? You can ask me about air tickets, visa assistance, tours and hotels, Hajj and Umrah, halal tourism, medical tourism, insurance, corporate travel, Meet & Greet, or Study Abroad.";
@@ -148,6 +196,21 @@ function getFallbackReply(prompt: string, selectedLanguage: 'bn' | 'en'): string
   const bn = selectedLanguage === 'bn';
   const q = prompt.toLocaleLowerCase();
   const match = (...terms: string[]) => terms.some((term) => q.includes(term));
+
+  if (
+    /\b(can|could|do) (u|you) (talk|speak) (in )?(bangla|bengla|bengali)\b/i.test(q) ||
+    /\b(talk|speak) (bangla|bengla|bengali)\b/i.test(q) ||
+    /বাংলা (বলতে|কথা বলতে) (পারো|পারেন|পারি)/.test(q)
+  ) {
+    return bn
+      ? 'হ্যাঁ, আমি বাংলায় কথা বলতে ও উত্তর দিতে পারি। আপনি বাংলায়, Banglish-এ বা English-এ প্রশ্ন করতে পারেন।'
+      : 'Yes. I can speak and reply in Bangla. You can ask in Bangla, Banglish, or English.';
+  }
+  if (/^(hi|hello|hey|assalamu alaikum|salam|হ্যালো|হাই|সালাম|আসসালামু আলাইকুম)$/i.test(q.trim())) {
+    return bn
+      ? 'ওয়ালাইকুম আসসালাম। আমি অ্যাঞ্জেলা। বাংলা বা English—দুই ভাষাতেই সাহায্য করতে পারি। কী জানতে চান?'
+      : 'Wa Alaikum Assalam. I am Angela. I can help in both Bangla and English. What would you like to know?';
+  }
 
   if (match('what services','which services','services provide','services does','services offer','jel services','journey expert services','all services','কি কি সার্ভিস','কী কী সার্ভিস','কি কি সেবা','কী কী সেবা','সব সার্ভিস','সকল সার্ভিস')) {
     return bn
@@ -297,6 +360,34 @@ export function FreeVoiceAngelaWidget() {
 
   const unlockAudio = async () => {
     if (typeof window === 'undefined') return null;
+
+    // Prime one reusable HTMLAudio element during the user's click/mic gesture.
+    // This preserves a browser-authorized playback path for the later async
+    // cloud-female WAV response, especially on Chromium/Windows.
+    try {
+      const audio = audioRef.current || new Audio();
+      audioRef.current = audio;
+      if (audio.dataset.angelaPrimed !== 'true') {
+        audio.src = SILENT_WAV_DATA_URI;
+        audio.preload = 'auto';
+        audio.muted = true;
+        audio.volume = 0;
+        const playPromise = audio.play();
+        if (playPromise) {
+          void playPromise.then(() => {
+            audio.pause();
+            try { audio.currentTime = 0; } catch { /* no-op */ }
+            audio.muted = false;
+            audio.volume = 1;
+            audio.dataset.angelaPrimed = 'true';
+          }).catch(() => {
+            audio.muted = false;
+            audio.volume = 1;
+          });
+        }
+      }
+    } catch { /* Web Audio remains the primary path. */ }
+
     const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextCtor) return null;
     try {
@@ -407,7 +498,28 @@ export function FreeVoiceAngelaWidget() {
             source.start(0);
             return;
           } catch (decodeError) {
-            console.warn('Angela WebAudio decode failed; retrying cloud female WAV with HTMLAudio.', decodeError);
+            console.warn('Angela WebAudio decode failed; trying manual PCM WAV decoder.', decodeError);
+            try {
+              const manual = await decodePcmWav(context, blob);
+              if (manual) {
+                const source = context.createBufferSource();
+                source.buffer = manual;
+                source.connect(context.destination);
+                webAudioSourceRef.current = source;
+                source.onended = () => {
+                  if (webAudioSourceRef.current === source) webAudioSourceRef.current = null;
+                  try { source.disconnect(); } catch { /* already disconnected */ }
+                  setIsSpeaking(false);
+                };
+                setIsSpeaking(true);
+                setError('');
+                setVoiceNotice('');
+                source.start(0);
+                return;
+              }
+            } catch (manualDecodeError) {
+              console.warn('Angela manual WAV decode failed; retrying cloud female WAV with HTMLAudio.', manualDecodeError);
+            }
           }
         }
 
@@ -416,10 +528,12 @@ export function FreeVoiceAngelaWidget() {
         audioRef.current?.pause();
         if (audioRef.current?.src?.startsWith('blob:')) URL.revokeObjectURL(audioRef.current.src);
         audioRef.current = audio;
+        audio.pause();
         audio.src = url;
         audio.preload = 'auto';
         audio.muted = false;
         audio.volume = 1;
+        audio.dataset.angelaPrimed = 'true';
         audio.onended = () => {
           setIsSpeaking(false);
           URL.revokeObjectURL(url);
@@ -579,6 +693,7 @@ export function FreeVoiceAngelaWidget() {
         { role: 'assistant', content: reply },
       ].slice(-12));
       setLastReply(reply);
+      setError('');
       void speak(reply);
     } catch {
       const fallback = getFallbackReply(cleanPrompt, language);
