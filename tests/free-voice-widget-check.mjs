@@ -145,3 +145,5 @@ assert.equal(server.includes("'Aoede'"), true, 'AI Studio/server voice path must
 assert.equal(pagesSpeech.includes("'Kore'"), false, 'Pages-native Angela speech must not use Kore');
 assert.equal(pagesWorker.includes("'Kore'"), false, 'advanced Pages Worker speech must not use Kore');
 console.log('Angela strict female-only voice checks passed.');
+
+// approved production regression marker: conversational Bangla + cloud female playback
