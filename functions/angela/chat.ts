@@ -18,6 +18,64 @@ function detectLanguage(message: string, requested?: string): 'bn' | 'en' {
   return 'en';
 }
 
+function conversationalReply(message: string, language: 'bn' | 'en') {
+  const q = message
+    .toLocaleLowerCase()
+    .replace(/[’‘]/g, "'")
+    .replace(/[^a-z0-9\u0980-\u09FF'& ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const bn = language === 'bn';
+  const answer = (bnText: string, enText: string) => ({
+    reply: bn ? bnText : enText,
+    language,
+    mode: 'conversation',
+    primaryIntent: 'conversation',
+    groundingIds: [],
+  });
+
+  if (/^(hi|hello|hey|assalamu alaikum|salam|আসসালামু আলাইকুম|সালাম|হ্যালো|হাই)$/.test(q)) {
+    return answer(
+      'ওয়ালাইকুম আসসালাম। আমি অ্যাঞ্জেলা, Journey Expert Limited-এর AI সহকারী। বাংলা বা English—দুই ভাষাতেই কথা বলতে পারি। কী জানতে চান?',
+      'Wa Alaikum Assalam. I am Angela, Journey Expert Limited’s AI assistant. I can speak in both Bangla and English. How can I help?'
+    );
+  }
+
+  if (
+    /\b(can|could|do) (u|you) (talk|speak) (in )?(bangla|bengla|bengali)\b/.test(q) ||
+    /\b(talk|speak) (bangla|bengla|bengali)\b/.test(q) ||
+    /বাংলা (বলতে|কথা বলতে) (পারো|পারেন|পারি)/.test(q) ||
+    /তুমি কি বাংলা/.test(q) ||
+    /আপনি কি বাংলা/.test(q)
+  ) {
+    return answer(
+      'হ্যাঁ, আমি বাংলায় কথা বলতে ও উত্তর দিতে পারি। আপনি বাংলায়, Banglish-এ বা English-এ প্রশ্ন করতে পারেন। আমি Journey Expert Limited-এর সেবা এবং travel/study সম্পর্কিত সাধারণ প্রশ্নেও সাহায্য করতে পারি।',
+      'Yes. I can speak and reply in Bangla. You can ask in Bangla, Banglish, or English, and I can help with Journey Expert Limited services and general travel/study questions.'
+    );
+  }
+
+  if (
+    /\b(can|could|do) (u|you) (talk|speak) (in )?english\b/.test(q) ||
+    /ইংরেজি (বলতে|কথা বলতে) (পারো|পারেন|পারি)/.test(q)
+  ) {
+    return answer(
+      'হ্যাঁ, আমি English-এও কথা বলতে ও উত্তর দিতে পারি। উপরের EN/বাংলা selector দিয়ে ভাষা বদলাতে পারেন।',
+      'Yes. I can speak and reply in English as well. You can switch languages with the EN/বাংলা selector.'
+    );
+  }
+
+  if (/^(thanks|thank you|thx|ধন্যবাদ|অনেক ধন্যবাদ)$/.test(q)) {
+    return answer('স্বাগতম। আর কী জানতে চান?', 'You are welcome. What else would you like to know?');
+  }
+
+  if (/^(how are you|how r u|কেমন আছো|কেমন আছেন)$/.test(q)) {
+    return answer('আমি প্রস্তুত আছি। কীভাবে সাহায্য করতে পারি?', 'I am ready to help. What would you like to know?');
+  }
+
+  return null;
+}
+
 const VERIFIED_JEL = `
 Journey Expert Ltd. (JEL), Bangladesh.
 Slogan: "Your Journey, Our Expertise."
@@ -189,6 +247,8 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   if (!message) return json({ error: 'message_required' }, 400);
 
   const language = detectLanguage(message, body?.language);
+  const conversational = conversationalReply(message, language);
+  if (conversational) return json(conversational);
   const retrievedKnowledge = retrieveJelKnowledge(message);
 
   // Stable verified JEL facts must never depend on external model quota.
