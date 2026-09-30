@@ -1,5 +1,5 @@
 type Context = { request: Request; env: Record<string, string | undefined> };
-// [approved-production-change] shared female TTS fallback; quota fail-fast reviewed 2026-09-29; production guard marker aligned
+// [approved-production-change] shared female TTS fallback; quota failover reviewed 2026-09-30; production guard marker aligned
 
 const json = (body: unknown, status = 200) => Response.json(body, {
   status,
@@ -33,8 +33,11 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   const text = typeof body?.text === 'string' ? body.text.replace(/\s+/g, ' ').trim().slice(0, 1200) : '';
   if (!text) return json({ error: 'text_required' }, 400);
 
-  const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
-  if (!key || env.ANGELA_SERVER_VOICE === 'off') return json({ error: 'voice_not_configured' }, 503);
+  const keys = Array.from(new Set([
+    env.GEMINI_TTS_API_KEY?.trim(),
+    env.GEMINI_API_KEY?.trim(),
+  ].filter((key): key is string => Boolean(key))));
+  if (!keys.length || env.ANGELA_SERVER_VOICE === 'off') return json({ error: 'voice_not_configured' }, 503);
   const models = Array.from(new Set([
     env.GEMINI_TTS_MODEL,
     'gemini-3.8-flash-lite-tts',
@@ -57,10 +60,14 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   };
 
   let sawQuota = false;
-  for (const model of models) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 6500);
-    try {
+  const localDeadline = Date.now() + 8000;
+  localKeys: for (const key of keys) {
+    for (const model of models) {
+      const remaining = localDeadline - Date.now();
+      if (remaining < 700) break localKeys;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), Math.min(4500, remaining));
+      try {
       const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
         method: 'POST',
         signal: controller.signal,
@@ -78,8 +85,11 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
         // retrying additional TTS models with the same key.
         if (upstream.status === 429) {
           sawQuota = true;
+          // Quota/auth can be credential-specific. Move to the next configured
+          // Gemini key instead of disabling Angela voice for the whole session.
           break;
         }
+        if (upstream.status === 401 || upstream.status === 403) break;
         continue;
       }
 
@@ -99,16 +109,17 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
           'X-Angela-Voice-Model': model,
         },
       });
-    } catch {
-      if (controller.signal.aborted) continue;
-    } finally {
-      clearTimeout(timer);
+      } catch {
+        if (controller.signal.aborted) continue;
+      } finally {
+        clearTimeout(timer);
+      }
     }
   }
 
-  // Only try the independent Study Abroad renderer for non-quota provider misses.
-  // On a 429, return immediately so the client can use its verified female voice.
-  if (!sawQuota) try {
+  // The Study Abroad renderer is an independent same-brand female TTS path.
+  // It must be attempted especially after corporate 429/quota exhaustion.
+  try {
     const shared = await fetch('https://journeyexpertbd.com/angela/speech', {
       method: 'POST',
       signal: AbortSignal.timeout(5500),

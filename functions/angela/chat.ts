@@ -190,7 +190,31 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
 
   const language = detectLanguage(message, body?.language);
   const retrievedKnowledge = retrieveJelKnowledge(message);
-  if (retrievedKnowledge.primary?.id === 'company_directory') return json({ ...fallback(language, message), language, mode: 'fallback' });
+
+  // Stable verified JEL facts must never depend on external model quota.
+  // Serve them instantly from the controlled knowledge layer.
+  const deterministicJelIntents = new Set([
+    'company_directory',
+    'services_overview',
+    'hajj_umrah',
+    'study_abroad',
+    'medical_tourism',
+    'air_ticketing',
+    'visa',
+    'tours_hotels',
+    'halal_tourism',
+    'corporate_travel',
+    'insurance',
+    'meet_greet',
+    'brands',
+    'contact',
+    'company',
+    'identity',
+  ]);
+  if (retrievedKnowledge.primary && deterministicJelIntents.has(retrievedKnowledge.primary.id)) {
+    return json({ ...fallback(language, message), language, mode: 'verified' });
+  }
+
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
   if (!key) return json({ ...fallback(language, message), language, mode: 'fallback' });
 
@@ -274,6 +298,43 @@ ${languageInstruction}\n\nRETRIEVED VERIFIED JEL CONTEXT:\n${retrievedKnowledge.
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  // Reuse the independent JEL Study Abroad brain when the corporate Gemini
+  // credential is rate-limited or temporarily unavailable. Both public portals
+  // share the verified Journey Expert service scope.
+  try {
+    const shared = await fetch('https://journeyexpertbd.com/api/gemini/chat', {
+      method: 'POST',
+      signal: AbortSignal.timeout(5000),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        language,
+        history: history.map((turn: any) => ({
+          role: turn.role === 'model' ? 'assistant' : 'user',
+          content: turn.parts?.[0]?.text || '',
+        })),
+      }),
+    });
+    if (shared.ok) {
+      const data: any = await shared.json();
+      const reply = typeof data?.reply === 'string' ? data.reply.trim() : '';
+      if (reply
+        && !(language === 'bn' && !/[\u0980-\u09FF]/.test(reply))
+        && !(language === 'en' && /[\u0980-\u09FF]/.test(reply))) {
+        return json({
+          reply: reply.slice(0, 1800),
+          language,
+          mode: data.mode === 'fallback' ? 'fallback' : 'ai',
+          providerModel: 'jel-study-shared-' + (data.providerModel || 'gemini'),
+          primaryIntent: data.primaryIntent || retrievedKnowledge.primary?.id || 'unverified',
+          groundingIds: data.groundingIds || retrievedKnowledge.ids,
+        });
+      }
+    }
+  } catch {
+    // Preserve the verified local semantic fallback below.
   }
 
   return json({ ...fallback(language, message), language, mode: 'fallback' });
