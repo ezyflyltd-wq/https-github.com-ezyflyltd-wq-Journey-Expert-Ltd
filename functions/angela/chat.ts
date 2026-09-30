@@ -43,7 +43,7 @@ function conversationalReply(message: string, language: 'bn' | 'en') {
   }
 
   if (
-    /\b(can|could|do) (u|you) (talk|speak) (in )?(bangla|bengla|bengali)\b/.test(q) ||
+    /\b(can|could|do) (u|you) (talk|speak) ((?:in|to) )?(bangla|bengla|bengali)\b/.test(q) ||
     /\b(talk|speak) (bangla|bengla|bengali)\b/.test(q) ||
     /বাংলা (বলতে|কথা বলতে) (পারো|পারেন|পারি)/.test(q) ||
     /তুমি কি বাংলা/.test(q) ||
