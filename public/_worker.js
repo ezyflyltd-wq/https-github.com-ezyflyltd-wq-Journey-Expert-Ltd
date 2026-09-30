@@ -164,45 +164,125 @@ function semanticFallback(language, message) {
 
 const fallback = (language, message = '') => semanticFallback(language, message);
 
+function conversationReply(message, language) {
+  const q = String(message || '')
+    .toLocaleLowerCase()
+    .replace(/[’‘]/g, "'")
+    .replace(/[^a-z0-9\u0980-\u09FF'& ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const bn = language === 'bn';
+  const answer = (bnText, enText) => ({
+    reply: bn ? bnText : enText,
+    language,
+    mode: 'conversation',
+    primaryIntent: 'conversation',
+    groundingIds: [],
+  });
+
+  if (/^(hi|hello|hey|assalamu alaikum|salam|আসসালামু আলাইকুম|সালাম|হ্যালো|হাই)$/.test(q)) {
+    return answer(
+      'ওয়ালাইকুম আসসালাম। আমি অ্যাঞ্জেলা, Journey Expert Limited-এর AI সহকারী। বাংলা বা English—দুই ভাষাতেই কথা বলতে পারি। কী জানতে চান?',
+      'Wa Alaikum Assalam. I am Angela, Journey Expert Limited’s AI assistant. I can speak in both Bangla and English. How can I help?'
+    );
+  }
+
+  if (
+    /\b(can|could|do) (u|you) (talk|speak) (in )?(bangla|bengla|bengali)\b/.test(q) ||
+    /\b(talk|speak) (bangla|bengla|bengali)\b/.test(q) ||
+    /বাংলা (বলতে|কথা বলতে) (পারো|পারেন|পারি)/.test(q) ||
+    /তুমি কি বাংলা/.test(q) ||
+    /আপনি কি বাংলা/.test(q)
+  ) {
+    return answer(
+      'হ্যাঁ, আমি বাংলায় কথা বলতে ও উত্তর দিতে পারি। আপনি বাংলায়, Banglish-এ বা English-এ প্রশ্ন করতে পারেন। Journey Expert Limited-এর সেবা এবং travel/study সম্পর্কিত সাধারণ প্রশ্নেও আমি সাহায্য করতে পারি।',
+      'Yes. I can speak and reply in Bangla. You can ask in Bangla, Banglish, or English, and I can help with Journey Expert Limited services and general travel/study questions.'
+    );
+  }
+
+  if (
+    /\b(can|could|do) (u|you) (talk|speak) (in )?english\b/.test(q) ||
+    /ইংরেজি (বলতে|কথা বলতে) (পারো|পারেন|পারি)/.test(q)
+  ) {
+    return answer(
+      'হ্যাঁ, আমি English-এও কথা বলতে ও উত্তর দিতে পারি। উপরের EN/বাংলা selector দিয়ে ভাষা বদলাতে পারেন।',
+      'Yes. I can speak and reply in English as well. You can switch languages with the EN/বাংলা selector.'
+    );
+  }
+
+  if (/^(thanks|thank you|thx|ধন্যবাদ|অনেক ধন্যবাদ)$/.test(q)) {
+    return answer('স্বাগতম। আর কী জানতে চান?', 'You are welcome. What else would you like to know?');
+  }
+
+  if (/^(how are you|how r u|কেমন আছো|কেমন আছেন)$/.test(q)) {
+    return answer('আমি প্রস্তুত আছি। কীভাবে সাহায্য করতে পারি?', 'I am ready to help. What would you like to know?');
+  }
+
+  return null;
+}
+
 async function liveToken(request, env) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const origin = request.headers.get('origin');
   const url = new URL(request.url);
   if (origin && origin !== url.origin) return json({ error: 'origin_not_allowed' }, 403);
-  const key = (env.GEMINI_API_KEY || '').trim();
-  if (!key) return json({ error: 'live_voice_not_configured' }, 503);
+
+  const keys = Array.from(new Set([
+    env.GEMINI_API_KEY?.trim(),
+    env.GEMINI_TTS_API_KEY?.trim(),
+  ].filter(Boolean)));
+  if (!keys.length) return json({ error: 'live_voice_not_configured' }, 503);
 
   const model = 'gemini-3.8-live';
   const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
-  try {
-    const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        uses: 1,
-        expireTime,
-        liveConnectConstraints: {
-          model: 'models/gemini-3.8-live',
-          config: {
-            sessionResumption: {},
-            responseModalities: ['AUDIO'],
+  let sawQuota = false;
+
+  for (const key of keys) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    try {
+      const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          uses: 1,
+          expireTime,
+          liveConnectConstraints: {
+            model: 'models/gemini-3.8-live',
+            config: {
+              sessionResumption: {},
+              responseModalities: ['AUDIO'],
+            },
           },
-        },
-      }),
-    });
-    if (!upstream.ok) return json({ error: upstream.status === 429 ? 'live_voice_quota_exceeded' : 'live_voice_unavailable' }, upstream.status === 429 ? 429 : 424);
-    const data = await upstream.json();
-    const token = typeof data?.name === 'string' ? data.name : '';
-    if (!token) return json({ error: 'live_voice_unavailable' }, 424);
-    return json({ token, model, expiresAt: expireTime });
-  } catch {
-    return json({ error: controller.signal.aborted ? 'live_voice_timeout' : 'live_voice_unavailable' }, 503);
-  } finally {
-    clearTimeout(timer);
+        }),
+      });
+
+      if (!upstream.ok) {
+        const detail = await upstream.text().catch(() => '');
+        console.warn('Angela Worker Live token provider status', upstream.status, detail.slice(0, 240));
+        if (upstream.status === 429) {
+          sawQuota = true;
+          continue;
+        }
+        if (upstream.status === 401 || upstream.status === 403) continue;
+        continue;
+      }
+
+      const data = await upstream.json();
+      const token = typeof data?.name === 'string' ? data.name : '';
+      if (!token) continue;
+      return json({ token, model, expiresAt: expireTime });
+    } catch (error) {
+      console.warn('Angela Worker Live token error', controller.signal.aborted ? 'timeout' : (error?.message || 'unknown'));
+    } finally {
+      clearTimeout(timer);
+    }
   }
+
+  return sawQuota
+    ? json({ error: 'live_voice_quota_exceeded', providerStatus: 429 }, 429)
+    : json({ error: 'live_voice_unavailable' }, 424);
 }
 
 const pcmToWav = (pcm) => {
@@ -233,6 +313,8 @@ async function chat(request, env) {
   const message = typeof body?.message === 'string' ? body.message.trim().slice(0, 5000) : '';
   if (!message) return json({ error: 'message_required' }, 400);
   const language = languageFor(message, body?.language);
+  const conversational = conversationReply(message, language);
+  if (conversational) return json(conversational);
   const retrievedKnowledge = retrieveJelKnowledge(message);
   if (retrievedKnowledge.primary?.id === 'company_directory') return json({ ...fallback(language, message), language, mode: 'fallback' });
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
