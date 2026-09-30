@@ -198,7 +198,7 @@ function getFallbackReply(prompt: string, selectedLanguage: 'bn' | 'en'): string
   const match = (...terms: string[]) => terms.some((term) => q.includes(term));
 
   if (
-    /\b(can|could|do) (u|you) (talk|speak) (in )?(bangla|bengla|bengali)\b/i.test(q) ||
+    /\b(can|could|do) (u|you) (talk|speak) ((?:in|to) )?(bangla|bengla|bengali)\b/i.test(q) ||
     /\b(talk|speak) (bangla|bengla|bengali)\b/i.test(q) ||
     /বাংলা (বলতে|কথা বলতে) (পারো|পারেন|পারি)/.test(q)
   ) {
