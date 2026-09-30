@@ -190,7 +190,31 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
 
   const language = detectLanguage(message, body?.language);
   const retrievedKnowledge = retrieveJelKnowledge(message);
-  if (retrievedKnowledge.primary?.id === 'company_directory') return json({ ...fallback(language, message), language, mode: 'fallback' });
+
+  // Stable verified JEL facts must never depend on external model quota.
+  // Serve them instantly from the controlled knowledge layer.
+  const deterministicJelIntents = new Set([
+    'company_directory',
+    'services_overview',
+    'hajj_umrah',
+    'study_abroad',
+    'medical_tourism',
+    'air_ticketing',
+    'visa',
+    'tours_hotels',
+    'halal_tourism',
+    'corporate_travel',
+    'insurance',
+    'meet_greet',
+    'brands',
+    'contact',
+    'company',
+    'identity',
+  ]);
+  if (retrievedKnowledge.primary && deterministicJelIntents.has(retrievedKnowledge.primary.id)) {
+    return json({ ...fallback(language, message), language, mode: 'verified' });
+  }
+
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
   if (!key) return json({ ...fallback(language, message), language, mode: 'fallback' });
 
