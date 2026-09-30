@@ -18,7 +18,7 @@ async function startServer() {
 
   // Initialize Gemini AI client on the server side. Keep the model configurable so
   // production can rotate supported model versions without a source rewrite.
-  const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+  const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   let ai: GoogleGenAI | null = null;
   if (process.env.GEMINI_API_KEY) {
     ai = new GoogleGenAI({
