@@ -185,7 +185,7 @@ async function startServer() {
     };
 
     try {
-      const model = process.env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
+      const model = process.env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts';
       const prompt = language === 'bn'
         ? 'Speak this Bengali transcript naturally and exactly as written. Do not translate, answer, summarize, or add text:\n'
         : 'Speak this English transcript naturally and exactly as written. Do not answer, summarize, or add text:\n';
@@ -195,7 +195,7 @@ async function startServer() {
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           model,
-          input: prompt + text,
+          input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: 'Warm, natural, professional adult female delivery in the original language.' }] }] }],
           response_format: { type: 'audio' },
           generation_config: {
             speech_config: [{ voice: 'Aoede' }],
@@ -222,7 +222,8 @@ async function startServer() {
       res.setHeader('Content-Type', 'audio/wav');
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      return res.send(wav);
+      const isWav = raw.length >= 12 && raw.toString('ascii', 0, 4) === 'RIFF' && raw.toString('ascii', 8, 12) === 'WAVE';
+      return res.send(isWav ? raw : wav);
     } catch {
       return res.status(controller.signal.aborted ? 503 : 502).json({
         error: controller.signal.aborted ? 'voice_timeout' : 'voice_provider_unavailable',

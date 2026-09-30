@@ -7,6 +7,8 @@ const json = (body: unknown, status = 200) => Response.json(body, {
 });
 
 function pcmToWav(pcm: Uint8Array): ArrayBuffer {
+  // Unary Gemini TTS already returns WAV; never wrap it as raw PCM.
+  if (pcm.length >= 12 && String.fromCharCode(...pcm.slice(0, 4)) === 'RIFF' && String.fromCharCode(...pcm.slice(8, 12)) === 'WAVE') return new Uint8Array(pcm).buffer;
   const output = new ArrayBuffer(44 + pcm.length);
   const view = new DataView(output);
   const bytes = new Uint8Array(output);
@@ -65,7 +67,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
         body: JSON.stringify({
           model,
-          input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
+          input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: 'Warm, natural, professional adult female delivery in the original language.' }] }] }],
           response_format: { type: 'audio' },
           generation_config: { speech_config: [{ voice: 'Aoede' }] },
         }),

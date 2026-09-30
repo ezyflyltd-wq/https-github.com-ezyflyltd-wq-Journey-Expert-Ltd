@@ -116,6 +116,8 @@ async function callGemini(env, model, message, language, history) {
 
 
 function pcmToWav(pcm) {
+  // Unary Gemini TTS already returns WAV; never wrap it as raw PCM.
+  if (pcm.length >= 12 && String.fromCharCode(...pcm.slice(0, 4)) === 'RIFF' && String.fromCharCode(...pcm.slice(8, 12)) === 'WAVE') return new Uint8Array(pcm).buffer;
   const output = new ArrayBuffer(44 + pcm.length);
   const view = new DataView(output);
   const bytes = new Uint8Array(output);
@@ -136,7 +138,7 @@ async function handleFemaleTts(request, env) {
   const key = String(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
   if (!key) return json({ error: 'voice_not_configured' }, 503);
 
-  const model = env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
+  const model = env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts';
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 9000);
 
@@ -166,7 +168,7 @@ async function handleFemaleTts(request, env) {
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
         model,
-        input: 'Speak the following transcript exactly in its original language, naturally, warmly, and clearly. Do not translate, summarize, answer, or add words:\n' + text,
+        input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: 'Warm, natural, professional adult female delivery in the original language.' }] }] }],
         response_format: { type: 'audio' },
         generation_config: {
           speech_config: [{ voice: 'Aoede' }],
