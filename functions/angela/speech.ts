@@ -33,15 +33,29 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   const text = typeof body?.text === 'string' ? body.text.replace(/\s+/g, ' ').trim().slice(0, 1200) : '';
   if (!text) return json({ error: 'text_required' }, 400);
 
-  const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
-  if (!key || env.ANGELA_SERVER_VOICE === 'off') return json({ error: 'voice_not_configured' }, 503);
+  const keys = Array.from(new Set([
+    env.GEMINI_TTS_API_KEY?.trim(),
+    env.GEMINI_API_KEY?.trim(),
+  ].filter((key): key is string => Boolean(key))));
+  if (!keys.length || env.ANGELA_SERVER_VOICE === 'off') return json({ error: 'voice_not_configured' }, 503);
+
   const models = Array.from(new Set([
     env.GEMINI_TTS_MODEL,
     'gemini-3.8-flash-lite-tts',
+    'gemini-3.8-flash-tts',
   ].filter((model): model is string => Boolean(model))));
-  const findAudio = (value: any): { data: string } | null => {
+
+  const findAudio = (value: any): { data: string; mimeType?: string } | null => {
     if (!value || typeof value !== 'object') return null;
-    if (value.type === 'audio' && typeof value.data === 'string') return { data: value.data };
+    if (typeof value.data === 'string' && (
+      value.type === 'audio' ||
+      (typeof value.mimeType === 'string' && value.mimeType.startsWith('audio/')) ||
+      (typeof value.mime_type === 'string' && value.mime_type.startsWith('audio/'))
+    )) return { data: value.data, mimeType: value.mime_type || value.mimeType };
+    if (value.inlineData && typeof value.inlineData.data === 'string'
+        && String(value.inlineData.mimeType || '').startsWith('audio/')) {
+      return { data: value.inlineData.data, mimeType: value.inlineData.mimeType };
+    }
     if (Array.isArray(value)) {
       for (const item of value) {
         const found = findAudio(item);
@@ -57,61 +71,77 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   };
 
   let sawQuota = false;
-  for (const model of models) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 6500);
-    try {
-      const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          model,
-          input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: 'Warm, natural, professional adult female delivery in the original language.' }] }] }],
-          response_format: { type: 'audio' },
-          generation_config: { speech_config: [{ voice: 'Aoede' }] },
-        }),
-      });
+  const deadline = Date.now() + 9000;
+  keyLoop: for (const key of keys) {
+    for (const model of models) {
+      const remaining = deadline - Date.now();
+      if (remaining < 700) break keyLoop;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), Math.min(5000, remaining));
+      try {
+        const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify({
+            model,
+            input: [{
+              type: 'user_input',
+              content: [{
+                type: 'text',
+                text,
+                annotations: [{
+                  type: 'speech_metadata',
+                  style: 'Warm, natural, professional adult female delivery in the original language.',
+                }],
+              }],
+            }],
+            response_format: { type: 'audio' },
+            generation_config: { speech_config: [{ voice: 'Aoede' }] },
+          }),
+        });
 
-      if (!upstream.ok) {
-        // Quota is shared by this credential; do not multiply 429 traffic by
-        // retrying additional TTS models with the same key.
-        if (upstream.status === 429) {
-          sawQuota = true;
-          break;
+        if (!upstream.ok) {
+          if (upstream.status === 429) {
+            sawQuota = true;
+            // Quota can be credential/project specific. Try the next key.
+            break;
+          }
+          if (upstream.status === 401 || upstream.status === 403) break;
+          continue;
         }
-        continue;
+
+        const data: any = await upstream.json();
+        const audio = findAudio(data);
+        if (!audio?.data) continue;
+        const raw = Uint8Array.from(atob(audio.data), (character) => character.charCodeAt(0));
+        if (!raw.length) continue;
+
+        return new Response(pcmToWav(raw), {
+          status: 200,
+          headers: {
+            'Content-Type': 'audio/wav',
+            'Cache-Control': 'no-store',
+            'X-Content-Type-Options': 'nosniff',
+            'X-Angela-Voice': 'Aoede',
+            'X-Angela-Voice-Model': model,
+          },
+        });
+      } catch {
+        // Continue through the bounded key/model failover chain.
+      } finally {
+        clearTimeout(timer);
       }
-
-      const data: any = await upstream.json();
-      const audio = findAudio(data);
-      if (!audio?.data) continue;
-      const pcm = Uint8Array.from(atob(audio.data), (c) => c.charCodeAt(0));
-      if (!pcm.length) continue;
-
-      return new Response(pcmToWav(pcm), {
-        status: 200,
-        headers: {
-          'Content-Type': 'audio/wav',
-          'Cache-Control': 'no-store',
-          'X-Content-Type-Options': 'nosniff',
-          'X-Angela-Voice': 'Aoede',
-          'X-Angela-Voice-Model': model,
-        },
-      });
-    } catch {
-      if (controller.signal.aborted) continue;
-    } finally {
-      clearTimeout(timer);
     }
   }
 
-  // Only try the independent Study Abroad renderer for non-quota provider misses.
-  // On a 429, return immediately so the client can use its verified female voice.
-  if (!sawQuota) try {
+  // Independent JEL Study renderer is intentionally tried even after a local
+  // 429/credential outage so corporate Angela does not become text-only merely
+  // because one Google project is rate limited.
+  try {
     const shared = await fetch('https://journeyexpertbd.com/angela/speech', {
       method: 'POST',
-      signal: AbortSignal.timeout(5500),
+      signal: AbortSignal.timeout(6500),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     });
@@ -131,7 +161,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
       }
     }
   } catch {
-    // Fall through to the client-side ranked female device voice.
+    // Client can still use its positively identified female device voice.
   }
 
   if (sawQuota) {
@@ -144,5 +174,6 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
       },
     });
   }
+
   return json({ error: 'voice_provider_unavailable' }, 503);
 }
