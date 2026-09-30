@@ -204,7 +204,7 @@ async function handleGeminiFemaleTts(request: Request, env: Record<string, strin
   const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
   if (!key) return jsonError('Gemini female voice is not configured on Cloudflare Pages.', 503, request, { configured: false });
 
-  const model = env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
+  const model = env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts';
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 9000);
 
