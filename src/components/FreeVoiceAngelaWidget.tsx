@@ -225,6 +225,7 @@ export function FreeVoiceAngelaWidget() {
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastReply, setLastReply] = useState('');
   const [error, setError] = useState('');
+  const [voiceNotice, setVoiceNotice] = useState('');
   const [conversationId] = useState(() => `angela-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
   const [history, setHistory] = useState<ConversationTurn[]>([]);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -234,6 +235,7 @@ export function FreeVoiceAngelaWidget() {
   const recordingTimeoutRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const webAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const voiceCatalogRef = useRef<SpeechSynthesisVoice[]>([]);
   const voiceQuotaCooldownUntilRef = useRef(0);
 
@@ -251,7 +253,12 @@ export function FreeVoiceAngelaWidget() {
       }
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
       audioRef.current?.pause();
-      if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
+      if (audioRef.current?.src?.startsWith('blob:')) URL.revokeObjectURL(audioRef.current.src);
+      if (webAudioSourceRef.current) {
+        try { webAudioSourceRef.current.stop(); } catch { /* already stopped */ }
+        try { webAudioSourceRef.current.disconnect(); } catch { /* already disconnected */ }
+        webAudioSourceRef.current = null;
+      }
       if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
     };
   }, []);
@@ -338,7 +345,14 @@ export function FreeVoiceAngelaWidget() {
     if (!cleanText) return;
 
     setError('');
+    setVoiceNotice('');
     const contextPromise = unlockAudio();
+
+    if (webAudioSourceRef.current) {
+      try { webAudioSourceRef.current.stop(); } catch { /* already stopped */ }
+      try { webAudioSourceRef.current.disconnect(); } catch { /* already disconnected */ }
+      webAudioSourceRef.current = null;
+    }
 
     // CLOUD_FEMALE_PRIMARY_FAST: use the same JEL-rendered female voice across
     // Windows, Android, macOS and iOS when free Gemini TTS is available.
@@ -365,30 +379,60 @@ export function FreeVoiceAngelaWidget() {
         voiceQuotaCooldownUntilRef.current = 0;
         const blob = await response.blob();
         const context = await contextPromise;
+
+        // Some Chromium/Windows builds reject a valid WAV in decodeAudioData()
+        // even though HTMLAudio can play it. Preserve the working cloud female
+        // response by falling back to HTMLAudio before device speech.
         if (context?.state === 'running') {
-          const decoded = await context.decodeAudioData((await blob.arrayBuffer()).slice(0));
-          const source = context.createBufferSource();
-          source.buffer = decoded;
-          source.connect(context.destination);
-          source.onended = () => setIsSpeaking(false);
-          setIsSpeaking(true);
-          setError('');
-          source.start(0);
-          return;
+          try {
+            const decoded = await context.decodeAudioData((await blob.arrayBuffer()).slice(0));
+            const source = context.createBufferSource();
+            source.buffer = decoded;
+            source.connect(context.destination);
+            webAudioSourceRef.current = source;
+            source.onended = () => {
+              if (webAudioSourceRef.current === source) webAudioSourceRef.current = null;
+              try { source.disconnect(); } catch { /* already disconnected */ }
+              setIsSpeaking(false);
+            };
+            setIsSpeaking(true);
+            setError('');
+            setVoiceNotice('');
+            source.start(0);
+            return;
+          } catch (decodeError) {
+            console.warn('Angela WebAudio decode failed; retrying cloud female WAV with HTMLAudio.', decodeError);
+          }
         }
 
         const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
+        const audio = audioRef.current || new Audio();
         audioRef.current?.pause();
-        if (audioRef.current) URL.revokeObjectURL(audioRef.current.src);
+        if (audioRef.current?.src?.startsWith('blob:')) URL.revokeObjectURL(audioRef.current.src);
         audioRef.current = audio;
+        audio.src = url;
+        audio.preload = 'auto';
+        audio.muted = false;
+        audio.volume = 1;
         audio.onended = () => {
           setIsSpeaking(false);
           URL.revokeObjectURL(url);
           if (audioRef.current === audio) audioRef.current = null;
         };
+        audio.onerror = () => {
+          setIsSpeaking(false);
+        };
         setIsSpeaking(true);
-        await audio.play();
+        try {
+          await audio.play();
+        } catch {
+          if (context?.state === 'suspended') {
+            try { await context.resume(); } catch { /* retry still falls through */ }
+          }
+          await audio.play();
+        }
+        setError('');
+        setVoiceNotice('');
         return;
       }
     } catch {
@@ -404,15 +448,24 @@ export function FreeVoiceAngelaWidget() {
       window.speechSynthesis.cancel();
       window.speechSynthesis.resume?.();
 
-      const voices = voiceCatalogRef.current.length
+      let voices = voiceCatalogRef.current.length
         ? voiceCatalogRef.current
         : window.speechSynthesis.getVoices();
-      const preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+      let preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+
+      // Edge/Chrome/Windows often expose installed voices asynchronously.
+      // Refresh once before declaring the verified female fallback unavailable.
+      if (!preferred) {
+        await new Promise((resolve) => window.setTimeout(resolve, 220));
+        voices = window.speechSynthesis.getVoices();
+        if (voices.length) voiceCatalogRef.current = voices;
+        preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+      }
       if (!preferred) {
         setIsSpeaking(false);
-        setError(effectiveLanguage === 'bn'
-          ? 'Verified female device voice পাওয়া যায়নি। Male/default voice ব্যবহার না করে উত্তরটি text হিসেবে রাখা হয়েছে।'
-          : 'A verified female device voice is unavailable. Angela will stay text-only rather than use a male/default voice.');
+        setVoiceNotice(effectiveLanguage === 'bn'
+          ? 'Cloud নারী কণ্ঠটি এইবার চালানো যায়নি এবং এই ডিভাইসে নিশ্চিত female voice পাওয়া যায়নি। Chat চালু আছে—পরের প্রশ্ন করুন বা আবার voice চালান।'
+          : 'Cloud female playback failed this time and no verified female device voice is available. Chat remains active—ask the next question or retry voice.');
         return;
       }
       const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -431,18 +484,18 @@ export function FreeVoiceAngelaWidget() {
       };
       utterance.onerror = () => {
         setIsSpeaking(false);
-        setError(effectiveLanguage === 'bn'
-          ? 'এই ডিভাইসের voice চালানো যায়নি। Browser/OS voice settings পরীক্ষা করুন।'
-          : 'This device could not start speech output. Check the browser/OS voice settings.');
+        setVoiceNotice(effectiveLanguage === 'bn'
+          ? 'এইবার device female voice চালানো যায়নি। Chat চালু আছে—আবার voice চেষ্টা করুন।'
+          : 'The device female voice could not play this time. Chat remains active—retry voice.');
       };
 
       window.speechSynthesis.speak(utterance);
       return;
     } catch {
       setIsSpeaking(false);
-      setError(effectiveLanguage === 'bn'
-        ? 'Cloud voice সাময়িকভাবে পাওয়া যাচ্ছে না এবং এই browser-এ device voice নেই; উত্তরটি লেখা আকারে আছে।'
-        : 'Cloud voice is temporarily unavailable and this browser has no device voice; the answer remains visible as text.');
+      setVoiceNotice(effectiveLanguage === 'bn'
+        ? 'Cloud voice সাময়িকভাবে পাওয়া যাচ্ছে না এবং এই browser-এ verified female device voice নেই। Chat বন্ধ হয়নি।'
+        : 'Cloud voice is temporarily unavailable and this browser has no verified female device voice. Chat is still active.');
     }
   }
 
@@ -567,6 +620,11 @@ export function FreeVoiceAngelaWidget() {
 
   const startListening = async () => {
     audioRef.current?.pause();
+    if (webAudioSourceRef.current) {
+      try { webAudioSourceRef.current.stop(); } catch { /* already stopped */ }
+      try { webAudioSourceRef.current.disconnect(); } catch { /* already disconnected */ }
+      webAudioSourceRef.current = null;
+    }
     window.speechSynthesis?.cancel();
     setIsSpeaking(false);
     setError('');
@@ -654,11 +712,17 @@ export function FreeVoiceAngelaWidget() {
     try { recognition?.stop(); } catch { /* already ended */ }
     window.speechSynthesis?.cancel();
     audioRef.current?.pause();
+    if (webAudioSourceRef.current) {
+      try { webAudioSourceRef.current.stop(); } catch { /* already stopped */ }
+      try { webAudioSourceRef.current.disconnect(); } catch { /* already disconnected */ }
+      webAudioSourceRef.current = null;
+    }
     setIsSpeaking(false);
     setHistory([]);
     setLastTranscript('');
     setLastReply('');
     setError('');
+    setVoiceNotice('');
     setIsListening(false);
   };
 
@@ -756,6 +820,7 @@ export function FreeVoiceAngelaWidget() {
             {lastTranscript && <p className="border-l-2 border-[#C7A44D] pl-3 leading-5"><strong>You:</strong> {lastTranscript}</p>}
             {lastReply && <p className="border-l-2 border-[#0B6B53] pl-3 leading-5"><strong>Angela:</strong> {lastReply}</p>}
             {error && <p className="rounded-lg bg-[#FFF1F0] p-2 text-[#B42318]">{error}</p>}
+            {voiceNotice && <p className="rounded-lg bg-amber-50 p-2 text-amber-800">{voiceNotice}</p>}
             <form onSubmit={(event) => { event.preventDefault(); void askAssistant(input); }} className="flex gap-2 border-t border-[#E8E1CF] pt-3">
               <label htmlFor="free-angela-query" className="sr-only">Ask Angela</label>
               <input id="free-angela-query" value={input} onChange={(event) => setInput(event.target.value)} placeholder={language === 'bn' ? 'আপনার প্রশ্ন লিখুন…' : 'Type your question…'} className="min-w-0 flex-1 rounded-xl border border-[#E8E1CF] bg-white px-3 py-2.5 text-xs outline-none focus:border-[#0B6B53]" />
