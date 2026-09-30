@@ -46,6 +46,9 @@ assert.equal(pagesWorker.includes("languages: ['bn', 'en']"), true, 'Pages Worke
 
 assert.equal(widget.includes('BANGLA_WELCOME'), true, 'Angela must greet visitors in Bangla by default');
 assert.equal(widget.includes('audioContextRef'), true, 'Angela must unlock reliable audio playback across mobile and desktop');
+assert.equal(widget.includes('SILENT_WAV_DATA_URI'), true, 'Angela must prime a reusable HTMLAudio element during user gestures');
+assert.equal(widget.includes('decodePcmWav'), true, 'Angela must manually decode standard PCM WAV when Chromium decodeAudioData rejects valid cloud audio');
+assert.equal(widget.includes("audio.dataset.angelaPrimed"), true, 'Angela must preserve a browser-authorized reusable audio element for async cloud playback');
 
 assert.equal(widget.includes("jel:open-angela"), true, 'site AI triggers must open the canonical Angela widget');
 assert.equal(widget.includes("recognitionRef.current = null"), true, 'speech recognition sessions must be released between turns');
@@ -73,6 +76,8 @@ assert.equal(worker.includes('liveConnectConstraints'), true, 'standalone Worker
 
 assert.equal(pagesChat.includes("'gemini-3.8-flash'"), true, 'Pages-native Angela chat must use Gemini 3.8 Flash');
 assert.equal(pagesChat.includes('VERIFIED JEL SOURCE OF TRUTH'), true, 'Pages-native Angela chat must prioritize verified JEL knowledge');
+assert.equal(pagesChat.includes('conversationalReply'), true, 'Pages-native Angela must handle ordinary conversation before JEL semantic fallback');
+assert.equal(pagesChat.includes('bengla'), true, 'Pages-native Angela must understand common Bangla-language spelling variants');
 assert.equal(pagesSpeech.includes("'gemini-3.8-flash-lite-tts'"), true, 'female TTS must use Gemini 3.8 Flash-Lite TTS');
 assert.equal(pagesSpeech.includes("'gemini-2.5-pro-preview-tts'"), false, 'female TTS must not depend on retired Gemini 2.5 preview TTS');
 assert.equal(pagesLiveToken.includes('liveConnectConstraints'), true, 'Live token REST request must use the official ephemeral-token constraints payload');
@@ -140,3 +145,5 @@ assert.equal(server.includes("'Aoede'"), true, 'AI Studio/server voice path must
 assert.equal(pagesSpeech.includes("'Kore'"), false, 'Pages-native Angela speech must not use Kore');
 assert.equal(pagesWorker.includes("'Kore'"), false, 'advanced Pages Worker speech must not use Kore');
 console.log('Angela strict female-only voice checks passed.');
+
+// approved production regression marker: conversational Bangla + cloud female playback
