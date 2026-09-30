@@ -35,9 +35,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   if (!key || env.ANGELA_SERVER_VOICE === 'off') return json({ error: 'voice_not_configured' }, 503);
   const models = Array.from(new Set([
     env.GEMINI_TTS_MODEL,
-    'gemini-3.1-flash-tts-preview',
-    'gemini-2.5-flash-preview-tts',
-    'gemini-2.5-pro-preview-tts',
+    'gemini-3.8-flash-lite-tts',
   ].filter((model): model is string => Boolean(model))));
   const findAudio = (value: any): { data: string } | null => {
     if (!value || typeof value !== 'object') return null;
