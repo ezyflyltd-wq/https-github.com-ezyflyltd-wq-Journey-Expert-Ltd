@@ -1,5 +1,5 @@
 type Context = { request: Request; env: Record<string, string | undefined> };
-// [approved-production-change] shared female TTS fallback; quota fail-fast reviewed 2026-09-29; production guard marker aligned
+// [approved-production-change] shared female TTS fallback; quota failover reviewed 2026-09-30; production guard marker aligned
 
 const json = (body: unknown, status = 200) => Response.json(body, {
   status,
