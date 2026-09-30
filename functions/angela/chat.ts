@@ -121,6 +121,20 @@ const JEL_SEMANTIC_KNOWLEDGE = [
 
 function retrieveJelKnowledge(query) {
   const normalized = String(query || '').toLocaleLowerCase().replace(/[’‘]/g, "'").replace(/\s+/g, ' ').trim();
+
+  // A combined directory question must not collapse to the brands-only entry.
+  if (/brand|ব্র্যান্ড|ব্রান্ড|co-brand/.test(normalized)
+      && /service|সার্ভিস|সেবা|contact|phone|ফোন|যোগাযোগ|hotline/.test(normalized)) {
+    const brands = JEL_SEMANTIC_KNOWLEDGE.find(entry => entry.id === 'brands');
+    const primary = {
+      id: 'company_directory', priority: 130, keywords: [],
+      facts: "Journey Expert Limited (JEL) provides air ticketing, fare quotations, reissue/refund support, visa-document assistance, tours and travel, hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, Study Abroad, and compliance/advisory support. JEL Study Abroad also provides profile assessment, country/course/university selection, admissions, scholarship and SOP guidance, English-language test guidance, student-visa document preparation, and pre-/post-arrival support. Hotline and WhatsApp: 01926400400." + '\n' + brands.facts,
+      bn: "Journey Expert Limited (JEL) air ticketing, fare quotation, reissue/refund support, visa-document assistance, tours & travel, hotel, Hajj & Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, Study Abroad এবং compliance/advisory support দেয়। JEL Study Abroad প্রোফাইল assessment, দেশ/কোর্স/বিশ্ববিদ্যালয় নির্বাচন, admission, scholarship, SOP, English-language test, student-visa documents এবং pre-/post-arrival guidance দেয়।\n\n" + brands.bn + '\n\nহটলাইন ও WhatsApp: 01926400400 (+8801926400400)।',
+      en: "Journey Expert Limited (JEL) provides air ticketing, fare quotations, reissue/refund support, visa-document assistance, tours and travel, hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, Study Abroad, and compliance/advisory support. JEL Study Abroad also provides profile assessment, country/course/university selection, admissions, scholarship and SOP guidance, English-language test guidance, student-visa document preparation, and pre-/post-arrival support." + '\n\n' + brands.en + '\n\nHotline and WhatsApp: 01926400400 (+8801926400400).',
+    };
+    return { primary, ids: ['company_directory'], text: primary.facts };
+  }
+
   const scored = JEL_SEMANTIC_KNOWLEDGE
     .map((entry) => ({
       entry,
@@ -169,6 +183,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
 
   const language = detectLanguage(message, body?.language);
   const retrievedKnowledge = retrieveJelKnowledge(message);
+  if (retrievedKnowledge.primary?.id === 'company_directory') return json({ ...fallback(language, message), language, mode: 'fallback' });
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
   if (!key) return json({ ...fallback(language, message), language, mode: 'fallback' });
 
