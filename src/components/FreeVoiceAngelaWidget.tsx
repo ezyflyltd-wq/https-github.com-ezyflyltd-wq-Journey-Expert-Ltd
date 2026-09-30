@@ -95,7 +95,7 @@ function detectReplyLanguage(text: string): 'bn' | 'en' {
 }
 
 const FEMALE_VOICE_HINTS: Record<'en' | 'bn', string[]> = {
-  bn: ['nabanita', 'tanishaa', 'lekha', 'sangeeta', 'heera', 'female', 'woman', 'google bengali', 'google bangla', 'microsoft nabanita'],
+  bn: ['nabanita', 'nabanita online', 'tanishaa', 'lekha', 'sangeeta', 'heera', 'female', 'woman', 'google bengali', 'google bangla', 'google বাংলা', 'microsoft nabanita', 'microsoft নবানিতা'],
   en: ['zira', 'aria', 'jenny', 'sonia', 'samantha', 'victoria', 'ava', 'allison', 'karen', 'susan', 'hazel', 'libby', 'natasha', 'serena', 'moira', 'fiona', 'tessa', 'veena', 'female', 'woman', 'google uk english female'],
 };
 const MALE_VOICE_HINTS: Record<'en' | 'bn', string[]> = {
