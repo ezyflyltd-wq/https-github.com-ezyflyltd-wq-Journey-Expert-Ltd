@@ -205,44 +205,65 @@ async function handleLiveToken(request, env) {
   const url = new URL(request.url);
   if (origin && origin !== url.origin) return json({ error: 'origin_not_allowed' }, 403);
 
-  const key = String(env.GEMINI_API_KEY || '').trim();
-  if (!key) return json({ error: 'live_voice_not_configured' }, 503);
+  const keys = Array.from(new Set([
+    String(env.GEMINI_API_KEY || '').trim(),
+    String(env.GEMINI_TTS_API_KEY || '').trim(),
+  ].filter(Boolean)));
+  if (!keys.length) return json({ error: 'live_voice_not_configured' }, 503);
 
   const expireTime = new Date(Date.now() + 5 * 60 * 1000).toISOString();
   const newSessionExpireTime = new Date(Date.now() + 60 * 1000).toISOString();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
+  const providerStatuses = [];
+  let sawQuota = false;
 
-  try {
-    const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        uses: 1,
-        expireTime,
-        newSessionExpireTime,
-        liveConnectConstraints: {
-          model: 'models/gemini-3.8-live',
-          config: {
-            sessionResumption: {},
-            responseModalities: ['AUDIO'],
+  for (const key of keys) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    try {
+      let upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          uses: 1,
+          expireTime,
+          newSessionExpireTime,
+          liveConnectConstraints: {
+            model: 'models/gemini-3.8-live',
+            config: { sessionResumption: {}, responseModalities: ['AUDIO'] },
           },
-        },
-      }),
-    });
-    if (!upstream.ok) {
-      return json({ error: upstream.status === 429 ? 'live_voice_quota_exceeded' : 'live_voice_unavailable' }, upstream.status === 429 ? 429 : 502);
+        }),
+      });
+
+      if (upstream.status === 400) {
+        providerStatuses.push(400);
+        upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify({ uses: 1, expireTime, newSessionExpireTime }),
+        });
+      }
+
+      if (!upstream.ok) {
+        providerStatuses.push(upstream.status);
+        if (upstream.status === 429) sawQuota = true;
+        continue;
+      }
+      const data = await upstream.json();
+      const token = typeof data?.name === 'string' ? data.name : '';
+      if (!token) continue;
+      return json({ token, model: 'gemini-3.8-live', expiresAt: expireTime });
+    } catch {
+      providerStatuses.push(controller.signal.aborted ? 408 : 520);
+    } finally {
+      clearTimeout(timer);
     }
-    const data = await upstream.json();
-    const token = typeof data?.name === 'string' ? data.name : '';
-    if (!token) return json({ error: 'live_voice_unavailable' }, 502);
-    return json({ token, model: 'gemini-3.8-live', expiresAt: expireTime });
-  } catch {
-    return json({ error: controller.signal.aborted ? 'live_voice_timeout' : 'live_voice_unavailable' }, 503);
-  } finally {
-    clearTimeout(timer);
   }
+
+  return sawQuota
+    ? json({ error: 'live_voice_quota_exceeded', providerStatus: 429, providerStatuses }, 429)
+    : json({ error: 'live_voice_unavailable', providerStatuses }, 502);
 }
 
 export default {
