@@ -242,7 +242,7 @@ async function liveToken(request, env) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
     try {
-      const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
+      let upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
         method: 'POST',
         signal: controller.signal,
         headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
