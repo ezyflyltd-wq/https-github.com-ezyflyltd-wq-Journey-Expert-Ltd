@@ -32,7 +32,7 @@ jobs:
             language:'bn',conversationId:'audit-bn',history:[]
           });
           must(ltdBn,/air|এয়ার|ভিসা|visa/i,'LTD BN services');
-          must(ltdBn,/01926400400|01926.?400400|+8801926400400/i,'LTD hotline');
+          must(ltdBn,/01926400400|01926.?400400|\+8801926400400/i,'LTD hotline');
 
           const ltdEn = await post('https://journeyexpertltd.com/angela/chat',{
             message:'Do you guarantee visa approval? Also summarize your Study Abroad support.',
