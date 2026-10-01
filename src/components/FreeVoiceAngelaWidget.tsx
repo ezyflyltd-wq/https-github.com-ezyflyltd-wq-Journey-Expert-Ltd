@@ -193,28 +193,10 @@ function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' 
 }
 
 function getOpeningGreetingVoice(voices: SpeechSynthesisVoice[], language: 'en' | 'bn'): SpeechSynthesisVoice | null {
-  const strictFemale = getPreferredFemaleVoice(voices, language);
-  if (strictFemale) return strictFemale;
-
-  const maleHints = MALE_VOICE_HINTS[language];
-  const candidates = voices.filter((voice) => {
-    const name = voice.name.toLowerCase();
-    const lang = voice.lang.toLowerCase();
-    const nameTokens = name.split(/[^a-z]+/).filter(Boolean);
-    const explicitlyMale = maleHints.some((hint) => nameTokens.includes(hint));
-    const languageMatch = language === 'bn'
-      ? (lang.startsWith('bn') || /bangla|bengali/.test(name))
-      : lang.startsWith('en');
-    return languageMatch && !explicitlyMale;
-  });
-  return candidates
-    .map((voice) => ({
-      voice,
-      score: (voice.localService ? 20 : 0)
-        + (voice.default ? 5 : 0)
-        + (language === 'bn' && voice.lang.toLowerCase().startsWith('bn-bd') ? 30 : 0),
-    }))
-    .sort((a, b) => b.score - a.score)[0]?.voice || null;
+  // Opening greeting uses the same strict female-only selector as normal
+  // speech. Never relax to an unknown/default localized voice because device
+  // voice catalogues can map those entries to male voices.
+  return getPreferredFemaleVoice(voices, language);
 }
 
 function getFallbackReply(prompt: string, selectedLanguage: 'bn' | 'en'): string {
