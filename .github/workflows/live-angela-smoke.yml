@@ -1,43 +1,42 @@
-name: Live Angela smoke
+name: Live Angela frontend audit
 on:
   push:
     branches:
       - diagnostic/live-angela-smoke-20261001
 jobs:
-  smoke:
+  audit:
     runs-on: ubuntu-latest
     steps:
-      - name: Check live homepages
+      - name: Audit live frontend bundles
         shell: bash
         run: |
-          set -euxo pipefail
-          curl -I --fail --max-time 20 https://journeyexpertltd.com/
-          curl -I --fail --max-time 20 https://journeyexpertbd.com/
-      - name: Check both Angela speech endpoints
-        shell: bash
-        run: |
-          set -u
-          failed=0
-          for url in             https://journeyexpertltd.com/angela/speech             https://journeyexpertbd.com/angela/speech
+          set -euo pipefail
+          for site in journeyexpertltd.com journeyexpertbd.com
           do
-            echo "===== Testing $url ====="
-            rm -f /tmp/voice.bin /tmp/headers.txt
-            status=$(curl -sS --max-time 35 -o /tmp/voice.bin -D /tmp/headers.txt               -w "%{http_code}"               -H 'Content-Type: application/json'               --data '{"text":"আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা।","language":"bn"}'               "$url" || true)
-            bytes=$(wc -c </tmp/voice.bin 2>/dev/null || echo 0)
-            content_type=$(grep -i '^content-type:' /tmp/headers.txt 2>/dev/null | tail -1 | tr -d '\r' || true)
-            voice=$(grep -i '^x-angela-voice:' /tmp/headers.txt 2>/dev/null | tail -1 | tr -d '\r' || true)
-            model=$(grep -i '^x-angela-voice-model:' /tmp/headers.txt 2>/dev/null | tail -1 | tr -d '\r' || true)
-            echo "HTTP=$status"
-            echo "BYTES=$bytes"
-            echo "$content_type"
-            echo "$voice"
-            echo "$model"
-            if [ "$status" != "200" ] || [ "$bytes" -lt 1000 ] || ! echo "$content_type" | grep -Eiq 'audio/wav|audio/'; then
-              echo "FAILED_ENDPOINT=$url"
-              head -c 500 /tmp/voice.bin | strings || true
-              failed=1
-            else
-              echo "PASSED_ENDPOINT=$url"
+            echo "===== $site ====="
+            curl -sS --max-time 30 "https://$site/" -o /tmp/index.html
+            echo "HTML_BYTES=$(wc -c </tmp/index.html)"
+            grep -oE '<script[^>]+src="[^"]+"' /tmp/index.html || true
+            mapfile -t scripts < <(grep -oE 'src="[^"]+\.js[^"]*"' /tmp/index.html | sed -E 's/^src="|"$//g' | sort -u)
+            echo "SCRIPT_COUNT=${#scripts[@]}"
+            found_angela=0
+            found_greeting=0
+            for src in "${scripts[@]}"
+            do
+              if [[ "$src" == http* ]]; then url="$src"; else url="https://$site${src#/}"; fi
+              echo "FETCH $url"
+              curl -sS --max-time 30 "$url" -o /tmp/app.js || continue
+              bytes=$(wc -c </tmp/app.js)
+              echo "JS_BYTES=$bytes"
+              if grep -aFq "Angela" /tmp/app.js; then echo "FOUND_ANGELA_IN=$url"; found_angela=1; fi
+              if grep -aFq "আসসালামু আলাইকুম" /tmp/app.js; then echo "FOUND_BANGLA_GREETING_IN=$url"; found_greeting=1; fi
+              if grep -aFq "btn-open-angela-assistant" /tmp/app.js; then echo "FOUND_OPEN_BUTTON_ID_IN=$url"; fi
+              if grep -aFq "female_voice_unavailable" /tmp/app.js; then echo "FOUND_OLD_VOICE_ERROR_IN=$url"; fi
+            done
+            echo "FOUND_ANGELA=$found_angela"
+            echo "FOUND_GREETING=$found_greeting"
+            if [ "$found_angela" -ne 1 ] || [ "$found_greeting" -ne 1 ]; then
+              echo "FRONTEND_CONTRACT_FAIL=$site"
+              exit 41
             fi
           done
-          exit "$failed"
