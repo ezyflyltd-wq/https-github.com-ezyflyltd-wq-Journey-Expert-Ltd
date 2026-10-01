@@ -40,12 +40,27 @@ jobs:
           set -euo pipefail
           source_sha="$(git rev-parse HEAD)"
           echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
+
+          git fetch origin main:refs/remotes/origin/main --force
+
           if [ "$GITHUB_EVENT_NAME" = "workflow_run" ]; then
             expected="${{ github.event.workflow_run.head_sha }}"
             test "$source_sha" = "$expected" || {
               echo "::error::release SHA $source_sha does not match validated main SHA $expected"
               exit 1
             }
+          else
+            # Manual dispatch is allowed only when release contains the current
+            # protected main source and has no production-relevant drift.
+            git merge-base --is-ancestor origin/main HEAD || {
+              echo "::error::release does not contain the current protected main commit"
+              exit 1
+            }
+            if ! git diff --quiet origin/main..HEAD --               src functions public workers server scripts               package.json pnpm-lock.yaml vite.config.ts               tsconfig.json tsconfig.node.json wrangler.toml wrangler.jsonc; then
+              echo "::error::manual production deploy blocked: release differs from protected main in production-relevant files"
+              git diff --name-only origin/main..HEAD --                 src functions public workers server scripts                 package.json pnpm-lock.yaml vite.config.ts                 tsconfig.json tsconfig.node.json wrangler.toml wrangler.jsonc
+              exit 1
+            fi
           fi
           echo "Validated release SHA: $source_sha"
 
