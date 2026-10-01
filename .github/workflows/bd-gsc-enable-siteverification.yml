@@ -1,0 +1,109 @@
+name: Enable Site Verification API and recheck
+on:
+  push:
+    branches:
+      - diagnostic/bd-gsc-dns-preflight-20261001
+permissions:
+  contents: read
+jobs:
+  enable-and-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --upgrade google-auth requests
+      - name: Enable Site Verification API if authorized
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, time, requests
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import Request
+
+          info=json.loads(os.environ['GSC_SERVICE_ACCOUNT_JSON'])
+          project_number='523221821577'
+          creds=service_account.Credentials.from_service_account_info(
+              info, scopes=['https://www.googleapis.com/auth/cloud-platform'])
+          creds.refresh(Request())
+          h={'Authorization':f'Bearer {creds.token}','Content-Type':'application/json'}
+          url=f'https://serviceusage.googleapis.com/v1/projects/{project_number}/services/siteverification.googleapis.com'
+          r=requests.get(url,headers=h,timeout=30)
+          print('SERVICE_USAGE_GET_STATUS',r.status_code)
+          if not r.ok:
+              print('SERVICE_USAGE_GET_ERROR',r.text[:700])
+              raise SystemExit(51)
+          state=(r.json() or {}).get('state')
+          print('SITE_VERIFICATION_API_STATE_BEFORE',state)
+          if state!='ENABLED':
+              e=requests.post(url+':enable',headers=h,data='',timeout=30)
+              print('SERVICE_ENABLE_STATUS',e.status_code)
+              if not e.ok:
+                  print('SERVICE_ENABLE_ERROR',e.text[:700])
+                  raise SystemExit(52)
+              op=e.json().get('name')
+              if op:
+                  for _ in range(30):
+                      time.sleep(2)
+                      q=requests.get('https://serviceusage.googleapis.com/v1/'+op,headers=h,timeout=30)
+                      if q.ok and q.json().get('done'):
+                          if q.json().get('error'):
+                              print('SERVICE_ENABLE_OPERATION_ERROR',str(q.json().get('error'))[:700])
+                              raise SystemExit(53)
+                          break
+              for _ in range(20):
+                  time.sleep(2)
+                  r=requests.get(url,headers=h,timeout=30)
+                  if r.ok and (r.json() or {}).get('state')=='ENABLED':
+                      break
+              if not r.ok or (r.json() or {}).get('state')!='ENABLED':
+                  raise SystemExit('Site Verification API did not reach ENABLED state')
+          print('SITE_VERIFICATION_API_STATE_AFTER','ENABLED')
+
+          sv=service_account.Credentials.from_service_account_info(
+              info,
+              scopes=['https://www.googleapis.com/auth/siteverification.verify_only',
+                      'https://www.googleapis.com/auth/webmasters.readonly'])
+          sv.refresh(Request())
+          rh={'Authorization':f'Bearer {sv.token}','Content-Type':'application/json'}
+          t=requests.post('https://www.googleapis.com/siteVerification/v1/token',
+              headers=rh,
+              json={'site':{'type':'INET_DOMAIN','identifier':'journeyexpertbd.com'},
+                    'verificationMethod':'DNS_TXT'},
+              timeout=30)
+          print('SITE_VERIFICATION_TOKEN_STATUS',t.status_code)
+          if not t.ok:
+              print('SITE_VERIFICATION_TOKEN_ERROR',t.text[:700])
+              raise SystemExit(54)
+          token=str(t.json().get('token') or '')
+          print('DNS_TOKEN_AVAILABLE',bool(token))
+          if not token: raise SystemExit(55)
+
+          # Cloudflare read-only reachability check.
+          ch={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'Content-Type':'application/json'}
+          z=requests.get('https://api.cloudflare.com/client/v4/zones',headers=ch,
+                         params={'name':'journeyexpertbd.com','status':'active'},timeout=30)
+          print('CF_ZONE_LOOKUP_STATUS',z.status_code)
+          data=z.json() if z.content else {}
+          print('CF_ZONE_LOOKUP_SUCCESS',bool(data.get('success')))
+          results=data.get('result') or []
+          print('CF_ZONE_MATCH_COUNT',len(results))
+          if not z.ok or not data.get('success') or len(results)!=1:
+              print('CF_ZONE_LOOKUP_ERRORS',str(data.get('errors'))[:700])
+              raise SystemExit(56)
+          zone=results[0]
+          d=requests.get(f"https://api.cloudflare.com/client/v4/zones/{zone['id']}/dns_records",
+                         headers=ch,params={'type':'TXT','per_page':5},timeout=30)
+          print('CF_DNS_READ_STATUS',d.status_code)
+          dd=d.json() if d.content else {}
+          print('CF_DNS_READ_SUCCESS',bool(dd.get('success')))
+          if not d.ok or not dd.get('success'):
+              print('CF_DNS_READ_ERRORS',str(dd.get('errors'))[:700])
+              raise SystemExit(57)
+          print('SITEVERIFY_ENABLE_AND_CF_READ=PASS')
+          PY
