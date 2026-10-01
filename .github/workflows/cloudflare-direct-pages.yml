@@ -1,5 +1,6 @@
 name: Cloudflare Direct Pages Deploy
 # [approved-production-change] Reviewed guarded release-branch deployment path.
+# Preview smoke uses the immutable Wrangler deployment URL before production promotion.
 
 on:
   workflow_run:
@@ -103,7 +104,7 @@ jobs:
             --project-name=journey-expert-ltd-main \
             --branch=direct-ltd-smoke \
             --commit-hash="${{ steps.source.outputs.sha }}" 2>&1 | tee "$log"
-          url="$(grep -Eo 'https://[A-Za-z0-9._-]+\.pages\.dev' "$log" | tail -n1 || true)"
+          url="$(grep -Eo 'https://[A-Za-z0-9._-]+\.pages\.dev' "$log" | head -n1 || true)"
           test -n "$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
@@ -113,7 +114,15 @@ jobs:
         run: |
           set -euo pipefail
           url="${{ steps.preview.outputs.url }}"
-          health="$(curl --fail --silent --show-error --max-time 30 "$url/api/health")"
+          health=""
+          for attempt in 1 2 3 4 5 6; do
+            health="$(curl --fail --silent --show-error --max-time 30 "$url/api/health" || true)"
+            if echo "$health" | jq -e '.status == "online"' >/dev/null 2>&1; then
+              break
+            fi
+            echo "Preview health not ready yet (attempt $attempt); retrying..."
+            sleep 3
+          done
           echo "$health" | jq -e '.status == "online"'
           echo "$health" | jq -e '.service | contains("Journey Expert") or contains("Angela API Gateway")'
 
