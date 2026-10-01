@@ -13,22 +13,31 @@ jobs:
           set -euxo pipefail
           curl -I --fail --max-time 20 https://journeyexpertltd.com/
           curl -I --fail --max-time 20 https://journeyexpertbd.com/
-      - name: Check Angela speech endpoints
+      - name: Check both Angela speech endpoints
         shell: bash
         run: |
-          set -euxo pipefail
+          set -u
+          failed=0
           for url in             https://journeyexpertltd.com/angela/speech             https://journeyexpertbd.com/angela/speech
           do
-            echo "Testing $url"
-            status=$(curl -sS --max-time 30 -o /tmp/voice.bin -D /tmp/headers.txt               -w "%{http_code}"               -H 'Content-Type: application/json'               --data '{"text":"আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা।","language":"bn"}'               "$url" || true)
+            echo "===== Testing $url ====="
+            rm -f /tmp/voice.bin /tmp/headers.txt
+            status=$(curl -sS --max-time 35 -o /tmp/voice.bin -D /tmp/headers.txt               -w "%{http_code}"               -H 'Content-Type: application/json'               --data '{"text":"আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা।","language":"bn"}'               "$url" || true)
+            bytes=$(wc -c </tmp/voice.bin 2>/dev/null || echo 0)
+            content_type=$(grep -i '^content-type:' /tmp/headers.txt 2>/dev/null | tail -1 | tr -d '\r' || true)
+            voice=$(grep -i '^x-angela-voice:' /tmp/headers.txt 2>/dev/null | tail -1 | tr -d '\r' || true)
+            model=$(grep -i '^x-angela-voice-model:' /tmp/headers.txt 2>/dev/null | tail -1 | tr -d '\r' || true)
             echo "HTTP=$status"
-            cat /tmp/headers.txt || true
-            file /tmp/voice.bin || true
-            bytes=$(wc -c </tmp/voice.bin || echo 0)
             echo "BYTES=$bytes"
-            head -c 300 /tmp/voice.bin | strings || true
-            if [ "$status" != "200" ]; then exit 31; fi
-            if [ "$bytes" -lt 1000 ]; then exit 32; fi
-            content_type=$(grep -i '^content-type:' /tmp/headers.txt | tail -1 | tr -d '\r' || true)
-            echo "$content_type" | grep -Eiq 'audio|octet-stream' || exit 33
+            echo "$content_type"
+            echo "$voice"
+            echo "$model"
+            if [ "$status" != "200" ] || [ "$bytes" -lt 1000 ] || ! echo "$content_type" | grep -Eiq 'audio/wav|audio/'; then
+              echo "FAILED_ENDPOINT=$url"
+              head -c 500 /tmp/voice.bin | strings || true
+              failed=1
+            else
+              echo "PASSED_ENDPOINT=$url"
+            fi
           done
+          exit "$failed"
