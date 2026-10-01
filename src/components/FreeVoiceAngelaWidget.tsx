@@ -471,24 +471,37 @@ export function FreeVoiceAngelaWidget() {
     window.speechSynthesis.speak(utterance);
   };
 
+  const beginGreetingPlayback = (greeting: string) => {
+    // Cloud female TTS is the primary opening path. It uses the reusable,
+    // click-primed HTMLAudio/WebAudio route and only falls back to device speech
+    // if the cloud provider is unavailable.
+    void unlockAudio();
+    void speakWithBrowser(greeting);
+  };
+
+  const openFirstTimeAssistant = () => {
+    const greeting = welcomeText();
+    setIsOpen(true);
+    setLastReply(greeting);
+    beginGreetingPlayback(greeting);
+  };
+
   const acceptDisclosure = () => {
     void unlockAudio();
     storeConsent();
     setHasAcceptedDisclosure(true);
     setIsOpen(true);
-    const greeting = welcomeText();
+    const greeting = lastReply || welcomeText();
     setLastReply(greeting);
-    speakOpeningGreeting(greeting);
+    // Do not replay if the greeting was already started from the launcher click.
+    if (!lastReply) beginGreetingPlayback(greeting);
   };
 
   const openAssistant = () => {
-    void unlockAudio();
     setIsOpen(true);
-    if (!lastReply) {
-      const greeting = welcomeText();
-      setLastReply(greeting);
-      speakOpeningGreeting(greeting);
-    }
+    const greeting = welcomeText();
+    setLastReply(greeting);
+    beginGreetingPlayback(greeting);
   };
 
   async function speakWithBrowser(text: string) {
@@ -960,7 +973,7 @@ export function FreeVoiceAngelaWidget() {
           type="button"
           className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[60] flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-gradient-to-tr from-[#0B5D3B] via-[#0D7A4D] to-[#D4AF37] text-white shadow-2xl ring-2 ring-white/50 transition-all hover:scale-105 active:scale-95 sm:bottom-6 sm:right-6"
           aria-label="Open free Angela voice assistant"
-          onClick={() => setIsOpen(true)}
+          onClick={openFirstTimeAssistant}
         >
           <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 opacity-50 blur-sm animate-pulse" aria-hidden="true"></span>
           <span className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white/90 bg-white p-1">
@@ -974,6 +987,7 @@ export function FreeVoiceAngelaWidget() {
             <aside role="dialog" aria-modal="true" aria-labelledby="free-angela-disclosure-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[#C7A44D]/60 bg-[#FFFDF6] p-5 text-left shadow-2xl sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0B6B53]">Journey Expert Ltd. AI support</p>
               <h2 id="free-angela-disclosure-title" className="mt-1 text-xl font-bold text-[#093F31]">Before you talk with Angela</h2>
+              <p className="mt-3 rounded-lg border border-[#D4AF37]/40 bg-white p-3 text-sm font-semibold leading-6 text-[#093F31]" lang={language === 'bn' ? 'bn' : 'en'}><strong>Angela:</strong> {lastReply || welcomeText()}</p>
               <p className="mt-3 text-sm leading-6 text-[#333333]">Angela is an AI assistant, not a human. Voice input is recorded only after you tap the microphone and is sent to Journey Expert’s Gemini endpoint for transcription and reply generation; browser speech recognition is used only as a compatibility fallback. Angela uses Journey Expert's cloud female voice as the primary cross-device voice when the free provider is available. If free cloud quota is unavailable, a ranked localized/female device voice is used as a fallback so the assistant does not become silent.</p>
               <p className="mt-3 text-sm leading-6 text-[#333333]" lang="bn">অ্যাঞ্জেলা একজন AI সহকারী, মানুষ নন। আপনি microphone চাপার পর ভয়েস রেকর্ডিং Journey Expert-এর Gemini endpoint-এ transcription ও উত্তর তৈরির জন্য পাঠানো হয়; browser speech recognition শুধু compatibility fallback হিসেবে ব্যবহৃত হতে পারে। Angela প্রথমে Journey Expert-এর cloud female voice ব্যবহার করে, যাতে Windows, Android, Mac ও iPhone-এ কণ্ঠ যতটা সম্ভব একই থাকে। Free cloud quota না থাকলে ranked localized/female device voice fallback ব্যবহার হবে, যাতে কথা বন্ধ না হয়।</p>
               <p className="mt-3 text-xs leading-5 text-[#555555]">Replies may be incomplete or inaccurate. Do not share passport, bank, payment, password, or other sensitive information. For verified support, call <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
