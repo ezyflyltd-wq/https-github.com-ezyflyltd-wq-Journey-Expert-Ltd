@@ -1,0 +1,76 @@
+name: Deploy reviewed Study Abroad production
+on:
+  push:
+    branches:
+      - diagnostic/live-angela-smoke-20261001
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 7b0d4036973a06b9cd4622770748a101
+      STUDY_SHA: f1bdc804e948b9fd4de349b55223c1418d6e2869
+    steps:
+      - name: Check valid credential presence
+        run: test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Check out exact reviewed Study source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/journeyexpertltd-cmd/Jel-Study-Abroad-.git study
+          cd study
+          git fetch --depth=1 origin "$STUDY_SHA"
+          git checkout --detach "$STUDY_SHA"
+          test "$(git rev-parse HEAD)" = "$STUDY_SHA"
+      - name: Build and validate Study source
+        working-directory: study
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run lint
+          node --test tests/*.test.mjs
+          npm run build
+          test -f dist/index.html
+          grep -R -F "const wantsBanglaVoice=isBanglaText" dist/assets >/dev/null || grep -R -F "isBanglaText" dist/assets >/dev/null
+      - name: Deploy preview
+        working-directory: study
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages deploy dist             --project-name=jel-study-abroad             --branch=final-freeze-20261001             --commit-hash="$STUDY_SHA" 2>&1 | tee /tmp/preview.log
+          url="$(grep -Eo 'https://[A-Za-z0-9._-]+\.pages\.dev' /tmp/preview.log | tail -n1)"
+          test -n "$url"
+          echo "PREVIEW_URL=$url" >> "$GITHUB_ENV"
+      - name: Smoke preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 5 --retry-delay 2 --max-time 30 "$PREVIEW_URL/" -o /tmp/home
+          grep -q '<div id="root"' /tmp/home
+          code="$(curl -sS -o /tmp/chat -w '%{http_code}' --max-time 30             -X POST "$PREVIEW_URL/api/gemini/chat"             -H 'content-type: application/json'             --data '{"messages":[{"sender":"user","text":"Can you speak English?"}],"language":"en","source":"text"}')"
+          echo "PREVIEW_CHAT_HTTP=$code"
+          test "$code" = "200"
+      - name: Deploy production
+        working-directory: study
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 pages deploy dist             --project-name=jel-study-abroad             --branch=main             --commit-hash="$STUDY_SHA"
+      - name: Verify custom domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5 6; do
+            code="$(curl -sS -o /tmp/live -w '%{http_code}' --max-time 30 https://journeyexpertbd.com/ || true)"
+            if [ "$code" = "200" ]; then break; fi
+            sleep 2
+          done
+          test "$code" = "200"
+          chat="$(curl -sS -o /tmp/live-chat -w '%{http_code}' --max-time 30             -X POST https://journeyexpertbd.com/api/gemini/chat             -H 'content-type: application/json'             --data '{"messages":[{"sender":"user","text":"What can JEL Study Abroad help with?"}],"language":"en","source":"text"}')"
+          echo "LIVE_CHAT_HTTP=$chat"
+          test "$chat" = "200"
+          echo "STUDY_PRODUCTION_DEPLOY=PASS"
