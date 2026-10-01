@@ -1,0 +1,43 @@
+name: Final read-only GSC BD audit
+on:
+  push:
+    branches:
+      - diagnostic/gsc-bd-20261001
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --upgrade google-auth requests
+      - name: Inspect BD homepage in Search Console
+        env:
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+          GSC_SITE_URL: 'https://journeyexpertbd.com/'
+          GSC_URL_FILE: '/tmp/gsc-bd-urls.txt'
+          GSC_OUTPUT: 'artifacts/gsc-bd-indexing-status.json'
+          GSC_STRICT: '0'
+        run: |
+          test -n "$GSC_SERVICE_ACCOUNT_JSON"
+          mkdir -p artifacts
+          printf '%s\n' 'https://journeyexpertbd.com/' > /tmp/gsc-bd-urls.txt
+          python scripts/inspect-gsc-indexing.py
+          python - <<'PY'
+          import json
+          d=json.load(open('artifacts/gsc-bd-indexing-status.json'))
+          rows=d if isinstance(d,list) else d.get('results',d.get('inspections',[]))
+          print('BD_GSC_ROWS',len(rows))
+          for r in rows:
+              print('BD_GSC_URL',r.get('url'),'VERDICT',r.get('verdict'),'COVERAGE',r.get('coverageState'),'ROBOTS',r.get('robotsTxtState'),'INDEXING',r.get('indexingState'),'LAST_CRAWL',r.get('lastCrawlTime'))
+          if not rows:
+              raise SystemExit('BD GSC property returned no inspection rows')
+          r=rows[0]
+          if r.get('verdict')!='PASS' or r.get('robotsTxtState')!='ALLOWED' or r.get('indexingState')!='INDEXING_ALLOWED':
+              raise SystemExit('BD GSC homepage is not fully indexed/allowed')
+          print('FINAL_BD_GSC_AUDIT=PASS')
+          PY
