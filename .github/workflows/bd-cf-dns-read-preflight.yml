@@ -1,0 +1,40 @@
+name: BD Cloudflare DNS read preflight
+on:
+  push:
+    branches:
+      - diagnostic/bd-gsc-dns-preflight-20261001
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Read journeyexpertbd.com zone and DNS records
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, requests
+          h={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'Content-Type':'application/json'}
+          z=requests.get('https://api.cloudflare.com/client/v4/zones',headers=h,params={'name':'journeyexpertbd.com'},timeout=30)
+          print('CF_ZONE_STATUS',z.status_code)
+          data=z.json() if z.content else {}
+          print('CF_ZONE_SUCCESS',bool(data.get('success')))
+          rows=data.get('result') or []
+          print('CF_ZONE_COUNT',len(rows))
+          if not z.ok or not data.get('success') or len(rows)!=1:
+              print('CF_ZONE_ERRORS',str(data.get('errors'))[:500])
+              raise SystemExit(61)
+          zone=rows[0]
+          d=requests.get(f"https://api.cloudflare.com/client/v4/zones/{zone['id']}/dns_records",headers=h,params={'per_page':5},timeout=30)
+          print('CF_DNS_STATUS',d.status_code)
+          dd=d.json() if d.content else {}
+          print('CF_DNS_SUCCESS',bool(dd.get('success')))
+          if not d.ok or not dd.get('success'):
+              print('CF_DNS_ERRORS',str(dd.get('errors'))[:500])
+              raise SystemExit(62)
+          print('CF_DNS_READ_PREFLIGHT=PASS')
+          PY
