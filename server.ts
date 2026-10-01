@@ -93,8 +93,27 @@ async function startServer() {
     } catch (err: any) {
       const status = Number(err?.status) === 400 ? 400 : 500;
       console.error('Error in Angela conversational brain:', err);
-      res.status(status).json({
-        error: status === 400 ? 'Message is required' : 'Failed to process Angela response',
+      if (status === 400) {
+        res.status(400).json({ error: 'Message is required' });
+        return;
+      }
+
+      // AI_STUDIO_CHAT_FALLBACK_LOCK: provider quota/outage must not make
+      // the published AI Studio app return a dead 500 response. Reuse the
+      // same verified JEL fallback brain that is used when no API key exists.
+      const rawMessage = typeof req.body?.message === 'string' ? req.body.message : req.body?.prompt;
+      const message = typeof rawMessage === 'string' && rawMessage.trim()
+        ? rawMessage.trim().slice(0, 4000)
+        : 'General Journey Expert enquiry';
+      const language = typeof req.body?.language === 'string' ? req.body.language : undefined;
+      const fallback = fallbackAngelaResponse(message, language);
+      res.status(200).json({
+        conversationId: makeConversationId(req.body?.conversationId),
+        ...fallback,
+        response: fallback.reply,
+        sources: fallback.usedSources,
+        mode: 'fallback',
+        retryable: true,
       });
     }
   };
