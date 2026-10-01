@@ -124,7 +124,7 @@ jobs:
             sleep 3
           done
           echo "$health" | jq -e '.status == "online"'
-          echo "$health" | jq -e '.service | contains("Journey Expert") or contains("Angela API Gateway")'
+          echo "$health" | jq -e '.service | contains("Journey Expert") or contains("Angela API Gateway") or contains("JEL Angela Pages Worker")'
 
           reply_file="$(mktemp)"
           trap 'rm -f "$reply_file"' EXIT
