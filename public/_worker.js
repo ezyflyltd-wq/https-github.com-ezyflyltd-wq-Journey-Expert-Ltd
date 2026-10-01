@@ -459,86 +459,109 @@ async function speech(request, env) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   let body;
   try { body = await readJson(request); } catch { return json({ error: 'invalid_json' }, 400); }
-  const text = typeof body?.text === 'string' ? body.text.trim().slice(0, 1200) : '';
+
+  const text = typeof body?.text === 'string' ? body.text.replace(/\s+/g, ' ').trim().slice(0, 1200) : '';
   if (!text) return json({ error: 'text_required' }, 400);
-  const key = (env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY || '').trim();
-  if (!key || env.ANGELA_SERVER_VOICE === 'off') return json({ error: 'female_voice_not_configured' }, 503);
+
+  const keys = [...new Set([
+    String(env.GEMINI_TTS_API_KEY || '').trim(),
+    String(env.GEMINI_API_KEY || '').trim(),
+  ].filter(Boolean))];
+  if (!keys.length || env.ANGELA_SERVER_VOICE === 'off') {
+    return json({ error: 'female_voice_not_configured' }, 503);
+  }
 
   const models = [...new Set([
     env.GEMINI_TTS_MODEL,
     'gemini-3.8-flash-lite-tts',
+    'gemini-3.8-flash-tts',
   ].filter(Boolean))];
 
-  const findAudio = (value) => {
-    if (!value || typeof value !== 'object') return null;
-    if (value.type === 'audio' && typeof value.data === 'string') {
-      return { data: value.data, mimeType: value.mime_type || value.mimeType };
-    }
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        const found = findAudio(item);
-        if (found) return found;
-      }
-      return null;
-    }
-    for (const item of Object.values(value)) {
-      const found = findAudio(item);
-      if (found) return found;
-    }
-    return null;
-  };
-
   let sawQuota = false;
-  for (const model of models) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 7000);
-    try {
-      const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          model,
-          input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: 'Warm, natural, professional adult female delivery in the original language.' }] }] }],
-          response_format: { type: 'audio' },
-          generation_config: {
-            speech_config: [{ voice: 'Aoede' }],
+  let lastProviderStatus = 0;
+  const deadline = Date.now() + 12000;
+
+  outer: for (const key of keys) {
+    for (const model of models) {
+      const remaining = deadline - Date.now();
+      if (remaining < 800) break outer;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), Math.min(7000, remaining));
+
+      try {
+        const upstream = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+          {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'content-type': 'application/json',
+              'x-goog-api-key': key,
+            },
+            body: JSON.stringify({
+              contents: [{
+                role: 'user',
+                parts: [{
+                  text,
+                  speech_metadata: {
+                    style: 'Warm, natural, professional adult female delivery. Speak the text exactly as written in its original language.',
+                  },
+                }],
+              }],
+              generationConfig: {
+                responseModalities: ['AUDIO'],
+                speechConfig: {
+                  voiceConfig: { voice: 'Aoede' },
+                },
+              },
+            }),
           },
-        }),
-      });
-      if (!upstream.ok) {
-        // 429 is account/project quota. Retrying more models with the same key
-        // only burns requests and delays the browser's verified female fallback.
-        if (upstream.status === 429) {
-          sawQuota = true;
-          break;
+        );
+
+        lastProviderStatus = upstream.status;
+        if (!upstream.ok) {
+          if (upstream.status === 429) {
+            sawQuota = true;
+            break;
+          }
+          if (upstream.status === 401 || upstream.status === 403) break;
+          continue;
         }
-        continue;
+
+        const data = await upstream.json();
+        const audio = data?.candidates?.[0]?.content?.parts
+          ?.map((part) => part?.inlineData)
+          .find((part) => part && typeof part.data === 'string' && String(part.mimeType || '').startsWith('audio/'));
+
+        if (!audio?.data) continue;
+        const raw = Uint8Array.from(atob(audio.data), (character) => character.charCodeAt(0));
+        if (!raw.length) continue;
+
+        const isWav = raw.length >= 12
+          && String.fromCharCode(...raw.slice(0, 4)) === 'RIFF'
+          && String.fromCharCode(...raw.slice(8, 12)) === 'WAVE';
+        const output = isWav ? raw : new Uint8Array(pcmToWav(raw));
+
+        return new Response(output, {
+          headers: {
+            'content-type': 'audio/wav',
+            'cache-control': 'no-store',
+            'access-control-allow-origin': ALLOWED_ORIGIN,
+            'x-content-type-options': 'nosniff',
+            'x-angela-voice': 'Aoede',
+            'x-angela-voice-model': model,
+          },
+        });
+      } catch {
+        // Try the next key/model within the bounded deadline.
+      } finally {
+        clearTimeout(timer);
       }
-      const data = await upstream.json();
-      const audio = findAudio(data);
-      if (!audio?.data) continue;
-      const raw = Uint8Array.from(atob(audio.data), (character) => character.charCodeAt(0));
-      if (!raw.length) continue;
-      return new Response(pcmToWav(raw), {
-        headers: {
-          'content-type': 'audio/wav',
-          'cache-control': 'no-store',
-          'access-control-allow-origin': ALLOWED_ORIGIN,
-          'x-content-type-options': 'nosniff',
-          'x-angela-voice': 'Aoede',
-          'x-angela-voice-model': model,
-        },
-      });
-    } catch {
-      // Try next supported Google TTS model.
-    } finally {
-      clearTimeout(timer);
     }
   }
 
   if (sawQuota) {
-    return new Response(JSON.stringify({ error: 'voice_quota_exceeded' }), {
+    return new Response(JSON.stringify({ error: 'voice_quota_exceeded', providerStatus: lastProviderStatus || 429 }), {
       status: 429,
       headers: {
         'content-type': 'application/json; charset=utf-8',
@@ -549,7 +572,8 @@ async function speech(request, env) {
       },
     });
   }
-  return json({ error: 'female_voice_unavailable' }, 503);
+
+  return json({ error: 'female_voice_unavailable', providerStatus: lastProviderStatus || undefined }, 503);
 }
 
 export default {
