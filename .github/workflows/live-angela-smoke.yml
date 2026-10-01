@@ -38,6 +38,9 @@ jobs:
             await page.route('**/api/gemini/live-token', async route => {
               await route.fulfill({status:503,contentType:'application/json',body:'{"error":"live_unavailable"}'});
             });
+            await page.route('**/angela/live-token', async route => {
+              await route.fulfill({status:503,contentType:'application/json',body:'{"error":"live_unavailable"}'});
+            });
 
             await page.addInitScript(() => {
               window.__angelaSpoken = [];
@@ -183,4 +186,4 @@ jobs:
           EOF
           node audit.mjs
 
-# rerun-after-production-access
+# rerun-after-production-fast-fallback
