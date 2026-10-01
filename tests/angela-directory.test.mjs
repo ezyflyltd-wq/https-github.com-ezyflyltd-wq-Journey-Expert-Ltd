@@ -40,6 +40,7 @@ test('Both Pages handlers answer service-only overview questions without provide
         assert.match(data.reply, /Hajj/i);
         assert.match(data.reply, /Study Abroad/i);
         assert.match(data.reply, /Craft Bangla/i);
+        assert.match(data.reply, /01926400400|\+8801926400400/, 'services overview must retain verified hotline/WhatsApp');
         assert.equal(data.language, language);
       }
     }
