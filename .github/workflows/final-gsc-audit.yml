@@ -1,0 +1,58 @@
+name: Final read-only GSC audit
+on:
+  push:
+    branches:
+      - diagnostic/live-angela-smoke-20261001
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Technical SEO audit
+        env:
+          SEO_SITE_URL: 'https://journeyexpertltd.com'
+          SEO_AUDIT_OUTPUT: 'artifacts/seo-page-audit.json'
+          SEO_AUDIT_STRICT: '1'
+        run: |
+          mkdir -p artifacts
+          node scripts/audit-seo-pages.mjs
+      - name: Install Google clients
+        run: python -m pip install --upgrade google-auth requests
+      - name: Verify GSC credential
+        env:
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$GSC_SERVICE_ACCOUNT_JSON" ]; then
+            echo "GSC_CREDENTIAL=BLOCKED"
+            exit 41
+          fi
+          echo "GSC_CREDENTIAL=AVAILABLE"
+      - name: Inspect priority URLs
+        env:
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+          GSC_SITE_URL: 'https://journeyexpertltd.com/'
+          GSC_URL_FILE: 'seo/gsc-top-urls.txt'
+          GSC_OUTPUT: 'artifacts/gsc-indexing-status.json'
+          GSC_STRICT: '0'
+        run: |
+          python scripts/inspect-gsc-indexing.py
+          python - <<'PY'
+          import json
+          d=json.load(open('artifacts/gsc-indexing-status.json'))
+          rows=d if isinstance(d,list) else d.get('results',d.get('inspections',[]))
+          bad=[]
+          print('GSC_ROWS',len(rows))
+          for r in rows:
+              print('GSC_URL',r.get('url'),'VERDICT',r.get('verdict'),'COVERAGE',r.get('coverageState'),'ROBOTS',r.get('robotsTxtState'),'INDEXING',r.get('indexingState'),'LAST_CRAWL',r.get('lastCrawlTime'))
+              if r.get('verdict')!='PASS' or r.get('robotsTxtState')!='ALLOWED' or r.get('indexingState')!='INDEXING_ALLOWED':
+                  bad.append(r.get('url'))
+          if bad:
+              raise SystemExit('GSC priority URL audit failed: '+','.join(bad))
+          print('FINAL_GSC_AUDIT=PASS')
+          PY
