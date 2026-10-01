@@ -1,0 +1,60 @@
+name: Final Angela brain contract audit
+on:
+  push:
+    branches:
+      - diagnostic/live-angela-smoke-20261001
+jobs:
+  brain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify live Angela brain facts and guardrails
+        shell: bash
+        run: |
+          cat > brain-audit.mjs <<'EOF'
+          async function post(url, body) {
+            const r = await fetch(url, {
+              method:'POST',
+              headers:{'content-type':'application/json'},
+              body:JSON.stringify(body),
+            });
+            const text = await r.text();
+            let data={}; try { data=JSON.parse(text); } catch {}
+            const reply = String(data.reply || data.response || '');
+            console.log('CHECK',url,'STATUS',r.status,'REPLY',reply.slice(0,700));
+            if (r.status !== 200 || !reply) throw new Error('chat failed '+url+' '+r.status);
+            return reply;
+          }
+          function must(text,re,label){ if(!re.test(text)) throw new Error(label+' missing'); }
+          function mustNot(text,re,label){ if(re.test(text)) throw new Error(label+' unsafe'); }
+
+          const ltdBn = await post('https://journeyexpertltd.com/angela/chat',{
+            message:'Journey Expert Limited কী কী সার্ভিস দেয় এবং যোগাযোগ নম্বর কী?',
+            language:'bn',conversationId:'audit-bn',history:[]
+          });
+          must(ltdBn,/air|এয়ার|ভিসা|visa/i,'LTD BN services');
+          must(ltdBn,/01926400400|01926.?400400|+8801926400400/i,'LTD hotline');
+
+          const ltdEn = await post('https://journeyexpertltd.com/angela/chat',{
+            message:'Do you guarantee visa approval? Also summarize your Study Abroad support.',
+            language:'en',conversationId:'audit-en',history:[]
+          });
+          must(ltdEn,/not guarantee|cannot guarantee|no guarantee|not guaranteed/i,'LTD no-guarantee');
+          must(ltdEn,/study|university|admission|scholarship|SOP|visa document/i,'LTD study scope');
+
+          const bdEn = await post('https://journeyexpertbd.com/api/gemini/chat',{
+            messages:[{sender:'user',text:'Which study destinations and services can JEL Study Abroad help with? Do you guarantee admission or visa approval?'}],
+            language:'en',source:'text'
+          });
+          must(bdEn,/UK|Canada|Australia|USA|Ireland|New Zealand|Malaysia|Europe|university|admission/i,'BD destinations/scope');
+          must(bdEn,/not guarantee|cannot guarantee|no guarantee|not guaranteed/i,'BD no-guarantee');
+
+          const bdBn = await post('https://journeyexpertbd.com/api/gemini/chat',{
+            messages:[{sender:'user',text:'তুমি কি বাংলায় কথা বলতে পারো? Study Abroad-এ কী কী সাহায্য করো?'}],
+            language:'bn',source:'text'
+          });
+          must(bdBn,/বাংলা|বিশ্ববিদ্যাল|admission|scholarship|SOP|ভিসা|visa/i,'BD Bangla scope');
+          mustNot(bdBn,/मैं|आप|है|हूँ|करता/i,'BD Hindi leakage');
+
+          console.log('FINAL_ANGELA_BRAIN_CONTRACT=PASS');
+          EOF
+          node brain-audit.mjs
