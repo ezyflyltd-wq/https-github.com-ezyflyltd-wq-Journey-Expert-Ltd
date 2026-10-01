@@ -17,7 +17,7 @@ jobs:
       - name: Run real browser Angela audit
         shell: bash
         run: |
-          cat > /tmp/audit.mjs <<'EOF'
+          cat > audit.mjs <<'EOF'
           import { chromium } from 'playwright-core';
           const executablePath = process.env.CHROME_BIN || '/usr/bin/google-chrome';
           const browser = await chromium.launch({
@@ -75,4 +75,4 @@ jobs:
           }
           await browser.close();
           EOF
-          CHROME_BIN="$(which google-chrome || which google-chrome-stable || which chromium || which chromium-browser)" node /tmp/audit.mjs
+          CHROME_BIN="$(which google-chrome || which google-chrome-stable || which chromium || which chromium-browser)" node audit.mjs
