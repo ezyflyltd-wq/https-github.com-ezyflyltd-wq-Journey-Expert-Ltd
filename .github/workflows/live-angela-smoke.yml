@@ -52,7 +52,7 @@ jobs:
             console.log('LTD_BN_REPLY_VISIBLE',body.includes('Angela:'));
             console.log('LTD_BN_CHAT',JSON.stringify(responses.filter(x=>x.url.includes('/angela/chat'))));
 
-            await page.getByRole('button',{name:'EN'}).click();
+            await page.getByRole('dialog',{name:'Angela AI voice assistant'}).getByRole('button',{name:'EN', exact:true}).click();
             await input.fill('What services does Journey Expert Limited provide?');
             await page.getByRole('button',{name:'Send question'}).click();
             await wait(6500);
@@ -92,7 +92,7 @@ jobs:
             console.log('BD_BN_REPLY_VISIBLE',body.includes('বাংলা')||body.includes('অ্যাঞ্জেলা'));
             console.log('BD_BN_CHAT',JSON.stringify(responses.filter(x=>x.url.includes('/api/gemini/chat'))));
 
-            const en=page.getByRole('button',{name:/English|EN/}).first();
+            const en=page.locator('#angela-ai-voice-assistant-widget').getByRole('button',{name:/English|EN/}).first();
             if(await en.count()) await en.click();
             await input.fill('Which countries can JEL Study Abroad help with?');
             await page.locator('#btn-send-angela-message').click();
