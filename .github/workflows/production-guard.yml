@@ -100,4 +100,23 @@ jobs:
           fetch-depth: 0
 
       - name: Update release branch
-        run: git push origin HEAD:refs/heads/release
+        shell: bash
+        run: |
+          set -euo pipefail
+          validated="$GITHUB_SHA"
+          git fetch origin release:refs/remotes/origin/release --force || true
+
+          if git show-ref --verify --quiet refs/remotes/origin/release; then
+            if git merge-base --is-ancestor origin/release "$validated"; then
+              git push origin "$validated":refs/heads/release
+            else
+              git config user.name "JEL Production Guard"
+              git config user.email "actions@users.noreply.github.com"
+              git checkout -B release origin/release
+              git merge --no-ff "$validated" -m "[approved-production-change] Promote validated main $validated to release"
+              git merge-base --is-ancestor "$validated" HEAD
+              git push origin HEAD:refs/heads/release
+            fi
+          else
+            git push origin "$validated":refs/heads/release
+          fi
