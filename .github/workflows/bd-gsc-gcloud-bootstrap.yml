@@ -1,0 +1,38 @@
+name: Bootstrap Google Site Verification APIs
+on:
+  push:
+    branches:
+      - diagnostic/bd-gsc-dns-preflight-20261001
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Authenticate Google service account
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+          create_credentials_file: true
+          export_environment_variables: true
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Show active identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud auth list --filter=status:ACTIVE --format='value(account)'
+          gcloud config set project gen-lang-client-0385966464
+      - name: Enable Service Usage and Site Verification APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud services enable             serviceusage.googleapis.com             siteverification.googleapis.com             --project=gen-lang-client-0385966464             --quiet
+          echo "GCLOUD_API_BOOTSTRAP=PASS"
+      - name: Confirm enabled services
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud services list --enabled             --project=gen-lang-client-0385966464             --filter='config.name:(serviceusage.googleapis.com siteverification.googleapis.com)'             --format='value(config.name)'
