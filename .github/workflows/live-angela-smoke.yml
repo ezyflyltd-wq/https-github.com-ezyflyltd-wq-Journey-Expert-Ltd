@@ -10,7 +10,7 @@ jobs:
       - name: Install Playwright
         run: |
           npm install --no-save playwright@1.55.0
-          npx playwright install --with-deps webkit
+          npx playwright install --with-deps chromium webkit
       - name: Audit SEO, desktop, Android, and Apple WebKit
         shell: bash
         run: |
