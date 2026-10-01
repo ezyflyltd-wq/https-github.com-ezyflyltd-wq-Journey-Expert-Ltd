@@ -1,4 +1,4 @@
-name: Live Angela bilingual browser verification
+name: Live Angela never-silent browser verification
 on:
   push:
     branches:
@@ -9,98 +9,171 @@ jobs:
     steps:
       - name: Install Playwright core
         run: npm install --no-save playwright-core@1.55.0
-      - name: Verify both live Angela widgets
+      - name: Verify live fallback and bilingual chat
         shell: bash
         run: |
           cat > audit.mjs <<'EOF'
           import { chromium } from 'playwright-core';
+
           const browser = await chromium.launch({
             headless: true,
             executablePath: '/usr/bin/google-chrome',
             args: ['--no-sandbox','--autoplay-policy=no-user-gesture-required']
           });
 
-          async function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
-          async function auditLTD(){
-            const ctx=await browser.newContext();
-            const page=await ctx.newPage();
+          async function createPage(ctx) {
+            const page = await ctx.newPage();
+
+            // Force cloud TTS quota failure so the deployed frontend must use
+            // its free device-voice fallback. This isolates the exact behavior
+            // that was previously leaving Angela silent on quota exhaustion.
+            await page.route('**/angela/speech', async route => {
+              await route.fulfill({
+                status: 429,
+                contentType: 'application/json',
+                headers: {'retry-after':'60'},
+                body: JSON.stringify({error:'voice_quota_exceeded'})
+              });
+            });
+            await page.route('**/api/gemini/live-token', async route => {
+              await route.fulfill({status:503,contentType:'application/json',body:'{"error":"live_unavailable"}'});
+            });
+
+            await page.addInitScript(() => {
+              window.__angelaSpoken = [];
+              class FakeUtterance {
+                constructor(text) {
+                  this.text = text;
+                  this.lang = '';
+                  this.voice = null;
+                  this.rate = 1;
+                  this.pitch = 1;
+                  this.onstart = null;
+                  this.onend = null;
+                  this.onerror = null;
+                }
+              }
+              Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+                configurable: true,
+                writable: true,
+                value: FakeUtterance
+              });
+              const synth = window.speechSynthesis;
+              synth.getVoices = () => ([
+                {
+                  name: 'Microsoft Nabanita Online (Natural) - Bengali (Bangladesh)',
+                  lang: 'bn-BD',
+                  localService: true,
+                  default: true,
+                  voiceURI: 'nabanita-bn-bd'
+                },
+                {
+                  name: 'Microsoft Aria Online (Natural) - English (United States)',
+                  lang: 'en-US',
+                  localService: true,
+                  default: false,
+                  voiceURI: 'aria-en-us'
+                }
+              ]);
+              synth.cancel = () => {};
+              synth.resume = () => {};
+              synth.speak = (utterance) => {
+                window.__angelaSpoken.push({
+                  text: String(utterance.text || ''),
+                  lang: String(utterance.lang || ''),
+                  voice: String(utterance.voice?.name || '')
+                });
+                try { utterance.onstart?.(); } catch {}
+                setTimeout(() => { try { utterance.onend?.(); } catch {} }, 10);
+              };
+            });
+
+            return page;
+          }
+
+          async function auditLTD() {
+            const ctx = await browser.newContext();
+            const page = await createPage(ctx);
             const responses=[];
             page.on('response',r=>{
-              if(r.url().includes('/angela/')||r.url().includes('/api/ai/voice-agent'))
-                responses.push({url:r.url(),status:r.status(),ct:r.headers()['content-type']||''});
+              if(r.url().includes('/angela/chat')) responses.push({url:r.url(),status:r.status()});
             });
-            page.on('pageerror',e=>console.log('LTD_PAGEERROR',e.message));
             await page.goto('https://journeyexpertltd.com',{waitUntil:'domcontentloaded',timeout:60000});
-            await wait(2500);
+            await page.waitForTimeout(2500);
+
             const first=page.getByRole('button',{name:'Open free Angela voice assistant'});
             console.log('LTD_FIRST_BUTTON',await first.count());
             await first.click();
-            await wait(5000);
+            await page.waitForTimeout(5000);
             let body=await page.locator('body').innerText();
-            console.log('LTD_GREETING_FIRST_CLICK',body.includes('আসসালামু আলাইকুম'));
-            console.log('LTD_SPEECH_FIRST',JSON.stringify(responses.filter(x=>x.url.includes('/angela/speech'))));
+            console.log('LTD_GREETING_VISIBLE',body.includes('আসসালামু আলাইকুম'));
+            console.log('LTD_FALLBACK_SPOKEN_AFTER_OPEN',JSON.stringify(await page.evaluate(()=>window.__angelaSpoken)));
 
             const agree=page.getByRole('button',{name:/Agree and continue/});
-            if(await agree.count()) { await agree.click(); await wait(800); }
+            if(await agree.count()) { await agree.click(); await page.waitForTimeout(500); }
 
             const input=page.locator('#free-angela-query');
             await input.fill('তুমি কি বাংলা বলতে পারো?');
             await page.getByRole('button',{name:'Send question'}).click();
-            await wait(6500);
+            await page.waitForTimeout(6500);
             body=await page.locator('body').innerText();
-            console.log('LTD_BN_QUERY_VISIBLE',body.includes('তুমি কি বাংলা বলতে পারো?'));
-            console.log('LTD_BN_REPLY_VISIBLE',body.includes('Angela:'));
-            console.log('LTD_BN_CHAT',JSON.stringify(responses.filter(x=>x.url.includes('/angela/chat'))));
+            console.log('LTD_BN_CHAT_200',responses.some(x=>x.status===200));
+            console.log('LTD_BN_REPLY',body.includes('Angela:'));
+            console.log('LTD_FALLBACK_SPOKEN_AFTER_BN',JSON.stringify(await page.evaluate(()=>window.__angelaSpoken)));
 
-            await page.getByRole('dialog',{name:'Angela AI voice assistant'}).getByRole('button',{name:'EN', exact:true}).click();
+            await page.getByRole('dialog',{name:'Angela AI voice assistant'}).getByRole('button',{name:'EN',exact:true}).click();
             await input.fill('What services does Journey Expert Limited provide?');
             await page.getByRole('button',{name:'Send question'}).click();
-            await wait(6500);
+            await page.waitForTimeout(6500);
             body=await page.locator('body').innerText();
-            console.log('LTD_EN_QUERY_VISIBLE',body.includes('What services does Journey Expert Limited provide?'));
-            console.log('LTD_EN_REPLY_VISIBLE',/air ticket|visa|travel|study abroad/i.test(body));
-            console.log('LTD_ALL_SPEECH',JSON.stringify(responses.filter(x=>x.url.includes('/angela/speech'))));
+            console.log('LTD_EN_REPLY',/air ticket|visa|travel|study abroad/i.test(body));
+            console.log('LTD_FALLBACK_SPOKEN_FINAL',JSON.stringify(await page.evaluate(()=>window.__angelaSpoken)));
+
+            const spoken=await page.evaluate(()=>window.__angelaSpoken);
+            if(!spoken.some(x=>x.lang.toLowerCase().startsWith('bn'))) throw new Error('LTD Bangla device fallback did not speak');
+            if(!spoken.some(x=>x.lang.toLowerCase().startsWith('en'))) throw new Error('LTD English device fallback did not speak');
             await ctx.close();
           }
 
-          async function auditBD(){
-            const ctx=await browser.newContext();
-            const page=await ctx.newPage();
+          async function auditBD() {
+            const ctx = await browser.newContext();
+            const page = await createPage(ctx);
             const responses=[];
             page.on('response',r=>{
-              if(r.url().includes('/angela/')||r.url().includes('/api/gemini/chat'))
-                responses.push({url:r.url(),status:r.status(),ct:r.headers()['content-type']||''});
+              if(r.url().includes('/api/gemini/chat')) responses.push({url:r.url(),status:r.status()});
             });
-            page.on('pageerror',e=>console.log('BD_PAGEERROR',e.message));
             await page.goto('https://journeyexpertbd.com',{waitUntil:'domcontentloaded',timeout:60000});
-            await wait(2500);
+            await page.waitForTimeout(2500);
+
             const btn=page.locator('#btn-open-angela-assistant');
             console.log('BD_OPEN_BUTTON',await btn.count());
             await btn.click();
-            await wait(5000);
+            await page.waitForTimeout(5000);
             let body=await page.locator('body').innerText();
-            console.log('BD_GREETING_FIRST_CLICK',body.includes('আসসালামু আলাইকুম'));
-            console.log('BD_SPEECH_FIRST',JSON.stringify(responses.filter(x=>x.url.includes('/angela/speech'))));
+            console.log('BD_GREETING_VISIBLE',body.includes('আসসালামু আলাইকুম'));
+            console.log('BD_FALLBACK_SPOKEN_AFTER_OPEN',JSON.stringify(await page.evaluate(()=>window.__angelaSpoken)));
 
             const input=page.locator('input[placeholder*="এয়ার টিকিট"], input[placeholder*="Ask Angela"]').first();
-            console.log('BD_INPUT_COUNT',await input.count());
             await input.fill('তুমি কি বাংলা বলতে পারো?');
             await page.locator('#btn-send-angela-message').click();
-            await wait(6500);
+            await page.waitForTimeout(6500);
             body=await page.locator('body').innerText();
-            console.log('BD_BN_QUERY_VISIBLE',body.includes('তুমি কি বাংলা বলতে পারো?'));
-            console.log('BD_BN_REPLY_VISIBLE',body.includes('বাংলা')||body.includes('অ্যাঞ্জেলা'));
-            console.log('BD_BN_CHAT',JSON.stringify(responses.filter(x=>x.url.includes('/api/gemini/chat'))));
+            console.log('BD_BN_CHAT_200',responses.some(x=>x.status===200));
+            console.log('BD_BN_REPLY',body.includes('বাংলা')||body.includes('অ্যাঞ্জেলা'));
+            console.log('BD_FALLBACK_SPOKEN_AFTER_BN',JSON.stringify(await page.evaluate(()=>window.__angelaSpoken)));
 
             const en=page.locator('#angela-ai-voice-assistant-widget').getByRole('button',{name:/English|EN/}).first();
             if(await en.count()) await en.click();
             await input.fill('Which countries can JEL Study Abroad help with?');
             await page.locator('#btn-send-angela-message').click();
-            await wait(6500);
+            await page.waitForTimeout(6500);
             body=await page.locator('body').innerText();
-            console.log('BD_EN_QUERY_VISIBLE',body.includes('Which countries can JEL Study Abroad help with?'));
-            console.log('BD_EN_REPLY_VISIBLE',/UK|Canada|Australia|USA|Ireland|New Zealand|Malaysia|Europe/i.test(body));
-            console.log('BD_ALL_SPEECH',JSON.stringify(responses.filter(x=>x.url.includes('/angela/speech'))));
+            console.log('BD_EN_REPLY',/UK|Canada|Australia|USA|Ireland|New Zealand|Malaysia|Europe/i.test(body));
+            console.log('BD_FALLBACK_SPOKEN_FINAL',JSON.stringify(await page.evaluate(()=>window.__angelaSpoken)));
+
+            const spoken=await page.evaluate(()=>window.__angelaSpoken);
+            if(!spoken.some(x=>x.lang.toLowerCase().startsWith('bn'))) throw new Error('BD Bangla device fallback did not speak');
+            if(!spoken.some(x=>x.lang.toLowerCase().startsWith('en'))) throw new Error('BD English device fallback did not speak');
             await ctx.close();
           }
 
