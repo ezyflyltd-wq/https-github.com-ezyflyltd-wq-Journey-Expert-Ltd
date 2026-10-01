@@ -192,6 +192,31 @@ function getPreferredFemaleVoice(voices: SpeechSynthesisVoice[], language: 'en' 
     .sort((a, b) => b.score - a.score)[0]?.voice || null;
 }
 
+function getOpeningGreetingVoice(voices: SpeechSynthesisVoice[], language: 'en' | 'bn'): SpeechSynthesisVoice | null {
+  const strictFemale = getPreferredFemaleVoice(voices, language);
+  if (strictFemale) return strictFemale;
+
+  const maleHints = MALE_VOICE_HINTS[language];
+  const candidates = voices.filter((voice) => {
+    const name = voice.name.toLowerCase();
+    const lang = voice.lang.toLowerCase();
+    const nameTokens = name.split(/[^a-z]+/).filter(Boolean);
+    const explicitlyMale = maleHints.some((hint) => nameTokens.includes(hint));
+    const languageMatch = language === 'bn'
+      ? (lang.startsWith('bn') || /bangla|bengali/.test(name))
+      : lang.startsWith('en');
+    return languageMatch && !explicitlyMale;
+  });
+  return candidates
+    .map((voice) => ({
+      voice,
+      score: (voice.localService ? 20 : 0)
+        + (voice.default ? 5 : 0)
+        + (language === 'bn' && voice.lang.toLowerCase().startsWith('bn-bd') ? 30 : 0),
+    }))
+    .sort((a, b) => b.score - a.score)[0]?.voice || null;
+}
+
 function getFallbackReply(prompt: string, selectedLanguage: 'bn' | 'en'): string {
   const bn = selectedLanguage === 'bn';
   const q = prompt.toLocaleLowerCase();
@@ -415,6 +440,37 @@ export function FreeVoiceAngelaWidget() {
 
   const welcomeText = () => language === 'bn' ? BANGLA_WELCOME : ENGLISH_WELCOME;
 
+  const speakOpeningGreeting = (greeting: string) => {
+    void unlockAudio();
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      void speakWithBrowser(greeting);
+      return;
+    }
+    const voices = voiceCatalogRef.current.length ? voiceCatalogRef.current : window.speechSynthesis.getVoices();
+    const preferred = getOpeningGreetingVoice(voices, language);
+    if (!preferred) {
+      void speakWithBrowser(greeting);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(greeting);
+    utterance.voice = preferred;
+    utterance.lang = preferred.lang || (language === 'bn' ? 'bn-BD' : 'en-US');
+    utterance.rate = language === 'bn' ? 1.0 : 1.0;
+    utterance.pitch = language === 'bn' ? 1.08 : 1.04;
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setError('');
+      setVoiceNotice('');
+    };
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      void speakWithBrowser(greeting);
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+
   const acceptDisclosure = () => {
     void unlockAudio();
     storeConsent();
@@ -422,7 +478,7 @@ export function FreeVoiceAngelaWidget() {
     setIsOpen(true);
     const greeting = welcomeText();
     setLastReply(greeting);
-    void speakWithBrowser(greeting);
+    speakOpeningGreeting(greeting);
   };
 
   const openAssistant = () => {
@@ -431,7 +487,7 @@ export function FreeVoiceAngelaWidget() {
     if (!lastReply) {
       const greeting = welcomeText();
       setLastReply(greeting);
-      void speakWithBrowser(greeting);
+      speakOpeningGreeting(greeting);
     }
   };
 
