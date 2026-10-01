@@ -23,7 +23,7 @@ jobs:
             found_greeting=0
             for src in "${scripts[@]}"
             do
-              if [[ "$src" == http* ]]; then url="$src"; else url="https://$site${src#/}"; fi
+              if [[ "$src" == http* ]]; then url="$src"; else url="https://$site/${src#/}"; fi
               echo "FETCH $url"
               curl -sS --max-time 30 "$url" -o /tmp/app.js || continue
               bytes=$(wc -c </tmp/app.js)
