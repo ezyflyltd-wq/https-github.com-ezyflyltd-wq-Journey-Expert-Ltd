@@ -1,0 +1,30 @@
+name: Final AI Studio public integration audit
+on:
+  push:
+    branches:
+      - diagnostic/ai-studio-20261001
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source contract
+        shell: bash
+        run: |
+          grep -F "https://journey-expert-ltd.ai.studio" functions/api/[[path]].ts
+          grep -F "aistudio.google.com/apps/550a58ac-363d-43b2-814a-e67baa0ac380" SYNC.md
+          echo "AI_STUDIO_SOURCE_CONTRACT=PASS"
+      - name: Probe public AI Studio and production proxy
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in             "https://journey-expert-ltd.ai.studio/"             "https://aistudio.google.com/apps/550a58ac-363d-43b2-814a-e67baa0ac380?showPreview=true&showAssistant=true&project=gen-lang-client-0385966464"             "https://journeyexpertltd.com/api/health"
+          do
+            code=$(curl -L -sS -o /tmp/body -w "%{http_code}" --max-time 30 "$url" || true)
+            final=$(curl -L -sS -o /dev/null -w "%{url_effective}" --max-time 30 "$url" || true)
+            bytes=$(wc -c </tmp/body 2>/dev/null || echo 0)
+            echo "AI_PROBE url=$url code=$code bytes=$bytes final=$final"
+          done
