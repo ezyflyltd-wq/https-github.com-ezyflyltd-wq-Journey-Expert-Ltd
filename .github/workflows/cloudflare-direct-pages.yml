@@ -1,5 +1,6 @@
 name: Cloudflare Direct Pages Deploy
 # [approved-production-change] Reviewed guarded release-branch deployment path.
+# Preview smoke uses the immutable Wrangler deployment URL before production promotion.
 
 on:
   workflow_run:
