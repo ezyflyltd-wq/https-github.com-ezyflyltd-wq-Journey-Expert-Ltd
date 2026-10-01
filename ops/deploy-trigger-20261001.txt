@@ -1,0 +1,4 @@
+JEL production deployment trigger
+Date: 2026-10-01
+Purpose: re-run guarded Cloudflare Pages production deployment after CLOUDFLARE_API_TOKEN was configured.
+No runtime data, DNS, Firebase, Firestore, or application behavior changed by this marker.
