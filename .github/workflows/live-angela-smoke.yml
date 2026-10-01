@@ -1,0 +1,34 @@
+name: Live Angela smoke
+on:
+  push:
+    branches:
+      - diagnostic/live-angela-smoke-20261001
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check live homepages
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -I --fail --max-time 20 https://journeyexpertltd.com/
+          curl -I --fail --max-time 20 https://journeyexpertbd.com/
+      - name: Check Angela speech endpoints
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for url in             https://journeyexpertltd.com/angela/speech             https://journeyexpertbd.com/angela/speech
+          do
+            echo "Testing $url"
+            status=$(curl -sS --max-time 30 -o /tmp/voice.bin -D /tmp/headers.txt               -w "%{http_code}"               -H 'Content-Type: application/json'               --data '{"text":"আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা।","language":"bn"}'               "$url" || true)
+            echo "HTTP=$status"
+            cat /tmp/headers.txt || true
+            file /tmp/voice.bin || true
+            bytes=$(wc -c </tmp/voice.bin || echo 0)
+            echo "BYTES=$bytes"
+            head -c 300 /tmp/voice.bin | strings || true
+            if [ "$status" != "200" ]; then exit 31; fi
+            if [ "$bytes" -lt 1000 ]; then exit 32; fi
+            content_type=$(grep -i '^content-type:' /tmp/headers.txt | tail -1 | tr -d '\r' || true)
+            echo "$content_type" | grep -Eiq 'audio|octet-stream' || exit 33
+          done
