@@ -679,7 +679,7 @@ export function FreeVoiceAngelaWidget() {
       let voices = voiceCatalogRef.current.length
         ? voiceCatalogRef.current
         : window.speechSynthesis.getVoices();
-      let preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+      let preferred = getOpeningGreetingVoice(voices, effectiveLanguage);
 
       // Edge/Chrome/Windows often expose installed voices asynchronously.
       // Refresh once before declaring the verified female fallback unavailable.
@@ -687,13 +687,13 @@ export function FreeVoiceAngelaWidget() {
         await new Promise((resolve) => window.setTimeout(resolve, 220));
         voices = window.speechSynthesis.getVoices();
         if (voices.length) voiceCatalogRef.current = voices;
-        preferred = getPreferredFemaleVoice(voices, effectiveLanguage);
+        preferred = getOpeningGreetingVoice(voices, effectiveLanguage);
       }
       if (!preferred) {
         setIsSpeaking(false);
         setVoiceNotice(effectiveLanguage === 'bn'
-          ? 'Cloud নারী কণ্ঠটি এইবার চালানো যায়নি এবং এই ডিভাইসে নিশ্চিত female voice পাওয়া যায়নি। Chat চালু আছে—পরের প্রশ্ন করুন বা আবার voice চালান।'
-          : 'Cloud female playback failed this time and no verified female device voice is available. Chat remains active—ask the next question or retry voice.');
+          ? 'Cloud voice এইবার পাওয়া যায়নি এবং এই ডিভাইসে বাংলা/নারী-পছন্দের local voice পাওয়া যায়নি। Chat চালু আছে।'
+          : 'Cloud voice was unavailable and no suitable localized female-preferred device voice was found. Chat remains active.');
         return;
       }
       const utterance = new SpeechSynthesisUtterance(cleanText);
