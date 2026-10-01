@@ -1,4 +1,4 @@
-name: Live Angela final browser audit
+name: Live Angela bilingual browser verification
 on:
   push:
     branches:
@@ -9,76 +9,98 @@ jobs:
     steps:
       - name: Install Playwright core
         run: npm install --no-save playwright-core@1.55.0
-      - name: Run final live Angela audit
+      - name: Verify both live Angela widgets
         shell: bash
         run: |
           cat > audit.mjs <<'EOF'
           import { chromium } from 'playwright-core';
-          const executablePath = process.env.CHROME_BIN || '/usr/bin/google-chrome';
           const browser = await chromium.launch({
             headless: true,
-            executablePath,
+            executablePath: '/usr/bin/google-chrome',
             args: ['--no-sandbox','--autoplay-policy=no-user-gesture-required']
           });
 
-          async function auditLTD() {
-            const ctx = await browser.newContext();
-            const page = await ctx.newPage();
-            const requests=[]; const responses=[];
-            page.on('request', r=>{ if(r.url().includes('/angela/')) requests.push(r.method()+' '+r.url()); });
-            page.on('response', r=>{ if(r.url().includes('/angela/')) responses.push(r.status()+' '+r.url()+' '+(r.headers()['content-type']||'')); });
+          async function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+          async function auditLTD(){
+            const ctx=await browser.newContext();
+            const page=await ctx.newPage();
+            const responses=[];
+            page.on('response',r=>{
+              if(r.url().includes('/angela/')||r.url().includes('/api/ai/voice-agent'))
+                responses.push({url:r.url(),status:r.status(),ct:r.headers()['content-type']||''});
+            });
             page.on('pageerror',e=>console.log('LTD_PAGEERROR',e.message));
             await page.goto('https://journeyexpertltd.com',{waitUntil:'domcontentloaded',timeout:60000});
-            await page.waitForTimeout(2500);
+            await wait(2500);
             const first=page.getByRole('button',{name:'Open free Angela voice assistant'});
             console.log('LTD_FIRST_BUTTON',await first.count());
             await first.click();
-            await page.waitForTimeout(6500);
-            console.log('LTD_DISCLOSURE_VISIBLE',await page.getByText('Before you talk with Angela').isVisible().catch(()=>false));
-            console.log('LTD_GREETING_FIRST_CLICK',(await page.locator('body').innerText()).includes('আসসালামু আলাইকুম'));
-            console.log('LTD_SPEECH_200_FIRST',responses.some(x=>x.includes('200 https://journeyexpertltd.com/angela/speech')&&x.includes('audio/wav')));
+            await wait(5000);
+            let body=await page.locator('body').innerText();
+            console.log('LTD_GREETING_FIRST_CLICK',body.includes('আসসালামু আলাইকুম'));
+            console.log('LTD_SPEECH_FIRST',JSON.stringify(responses.filter(x=>x.url.includes('/angela/speech'))));
+
             const agree=page.getByRole('button',{name:/Agree and continue/});
-            if(await agree.count()) { await agree.click(); await page.waitForTimeout(1200); }
+            if(await agree.count()) { await agree.click(); await wait(800); }
+
             const input=page.locator('#free-angela-query');
             await input.fill('তুমি কি বাংলা বলতে পারো?');
             await page.getByRole('button',{name:'Send question'}).click();
-            await page.waitForTimeout(9000);
-            const body=await page.locator('body').innerText();
-            console.log('LTD_QUERY_VISIBLE',body.includes('তুমি কি বাংলা বলতে পারো?'));
-            console.log('LTD_HAS_ANGELA_REPLY',/Angela:/i.test(body));
-            console.log('LTD_CHAT_REQUEST',requests.some(x=>x.includes('/angela/chat')));
-            console.log('LTD_CHAT_RESPONSE',responses.find(x=>x.includes('/angela/chat'))||'NONE');
-            console.log('LTD_SPEECH_RESPONSES',JSON.stringify(responses.filter(x=>x.includes('/angela/speech'))));
+            await wait(6500);
+            body=await page.locator('body').innerText();
+            console.log('LTD_BN_QUERY_VISIBLE',body.includes('তুমি কি বাংলা বলতে পারো?'));
+            console.log('LTD_BN_REPLY_VISIBLE',body.includes('Angela:'));
+            console.log('LTD_BN_CHAT',JSON.stringify(responses.filter(x=>x.url.includes('/angela/chat'))));
+
+            await page.getByRole('button',{name:'EN'}).click();
+            await input.fill('What services does Journey Expert Limited provide?');
+            await page.getByRole('button',{name:'Send question'}).click();
+            await wait(6500);
+            body=await page.locator('body').innerText();
+            console.log('LTD_EN_QUERY_VISIBLE',body.includes('What services does Journey Expert Limited provide?'));
+            console.log('LTD_EN_REPLY_VISIBLE',/air ticket|visa|travel|study abroad/i.test(body));
+            console.log('LTD_ALL_SPEECH',JSON.stringify(responses.filter(x=>x.url.includes('/angela/speech'))));
             await ctx.close();
           }
 
-          async function auditBD() {
-            const ctx = await browser.newContext();
-            const page = await ctx.newPage();
-            const requests=[]; const responses=[];
-            page.on('request', r=>{ if(r.url().includes('/angela/')||r.url().includes('/api/gemini/chat')) requests.push(r.method()+' '+r.url()); });
-            page.on('response', r=>{ if(r.url().includes('/angela/')||r.url().includes('/api/gemini/chat')) responses.push(r.status()+' '+r.url()+' '+(r.headers()['content-type']||'')); });
+          async function auditBD(){
+            const ctx=await browser.newContext();
+            const page=await ctx.newPage();
+            const responses=[];
+            page.on('response',r=>{
+              if(r.url().includes('/angela/')||r.url().includes('/api/gemini/chat'))
+                responses.push({url:r.url(),status:r.status(),ct:r.headers()['content-type']||''});
+            });
             page.on('pageerror',e=>console.log('BD_PAGEERROR',e.message));
             await page.goto('https://journeyexpertbd.com',{waitUntil:'domcontentloaded',timeout:60000});
-            await page.waitForTimeout(2500);
+            await wait(2500);
             const btn=page.locator('#btn-open-angela-assistant');
             console.log('BD_OPEN_BUTTON',await btn.count());
             await btn.click();
-            await page.waitForTimeout(6500);
-            const body1=await page.locator('body').innerText();
-            console.log('BD_GREETING_FIRST_CLICK',body1.includes('আসসালামু আলাইকুম'));
-            console.log('BD_SPEECH_200_FIRST',responses.some(x=>x.includes('200 https://journeyexpertbd.com/angela/speech')&&x.includes('audio/wav')));
-            const input=page.locator('input[placeholder*="প্রশ্ন"], input[placeholder*="question"]').first();
+            await wait(5000);
+            let body=await page.locator('body').innerText();
+            console.log('BD_GREETING_FIRST_CLICK',body.includes('আসসালামু আলাইকুম'));
+            console.log('BD_SPEECH_FIRST',JSON.stringify(responses.filter(x=>x.url.includes('/angela/speech'))));
+
+            const input=page.locator('input[placeholder*="এয়ার টিকিট"], input[placeholder*="Ask Angela"]').first();
+            console.log('BD_INPUT_COUNT',await input.count());
             await input.fill('তুমি কি বাংলা বলতে পারো?');
-            const send=page.getByRole('button',{name:/Send question|Send/i}).last();
-            await send.click();
-            await page.waitForTimeout(9000);
-            const body2=await page.locator('body').innerText();
-            console.log('BD_QUERY_VISIBLE',body2.includes('তুমি কি বাংলা বলতে পারো?'));
-            console.log('BD_HAS_ANGELA_REPLY',body2.includes('বাংলা')||body2.includes('অ্যাঞ্জেলা'));
-            console.log('BD_CHAT_REQUEST',requests.some(x=>x.includes('/api/gemini/chat')));
-            console.log('BD_CHAT_RESPONSE',responses.find(x=>x.includes('/api/gemini/chat'))||'NONE');
-            console.log('BD_SPEECH_RESPONSES',JSON.stringify(responses.filter(x=>x.includes('/angela/speech'))));
+            await page.locator('#btn-send-angela-message').click();
+            await wait(6500);
+            body=await page.locator('body').innerText();
+            console.log('BD_BN_QUERY_VISIBLE',body.includes('তুমি কি বাংলা বলতে পারো?'));
+            console.log('BD_BN_REPLY_VISIBLE',body.includes('বাংলা')||body.includes('অ্যাঞ্জেলা'));
+            console.log('BD_BN_CHAT',JSON.stringify(responses.filter(x=>x.url.includes('/api/gemini/chat'))));
+
+            const en=page.getByRole('button',{name:/English|EN/}).first();
+            if(await en.count()) await en.click();
+            await input.fill('Which countries can JEL Study Abroad help with?');
+            await page.locator('#btn-send-angela-message').click();
+            await wait(6500);
+            body=await page.locator('body').innerText();
+            console.log('BD_EN_QUERY_VISIBLE',body.includes('Which countries can JEL Study Abroad help with?'));
+            console.log('BD_EN_REPLY_VISIBLE',/UK|Canada|Australia|USA|Ireland|New Zealand|Malaysia|Europe/i.test(body));
+            console.log('BD_ALL_SPEECH',JSON.stringify(responses.filter(x=>x.url.includes('/angela/speech'))));
             await ctx.close();
           }
 
@@ -86,4 +108,4 @@ jobs:
           await auditBD();
           await browser.close();
           EOF
-          CHROME_BIN="$(which google-chrome || which google-chrome-stable || which chromium || which chromium-browser)" node audit.mjs
+          node audit.mjs
