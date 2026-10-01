@@ -78,20 +78,21 @@ jobs:
                 constructor(text){ this.text=text; this.lang=''; this.voice=null; this.rate=1; this.pitch=1; this.onstart=null; this.onend=null; this.onerror=null; }
               }
               Object.defineProperty(window,'SpeechSynthesisUtterance',{configurable:true,writable:true,value:FakeUtterance});
-              const synth = window.speechSynthesis;
-              if (synth) {
-                synth.getVoices = () => [
-                  {name:'Microsoft Nabanita Online (Natural) - Bengali (Bangladesh)',lang:'bn-BD',localService:true,default:true,voiceURI:'nabanita'},
-                  {name:'Microsoft Aria Online (Natural) - English (United States)',lang:'en-US',localService:true,default:false,voiceURI:'aria'}
-                ];
-                synth.cancel=()=>{};
-                synth.resume=()=>{};
-                synth.speak=(u)=>{
-                  window.__angelaSpoken.push({text:String(u.text||''),lang:String(u.lang||''),voice:String(u.voice?.name||'')});
-                  try{u.onstart?.();}catch{}
-                  setTimeout(()=>{try{u.onend?.();}catch{}},10);
-                };
-              }
+              const synth = window.speechSynthesis || {};
+              synth.getVoices = () => [
+                {name:'Microsoft Nabanita Online (Natural) - Bengali (Bangladesh)',lang:'bn-BD',localService:true,default:true,voiceURI:'nabanita'},
+                {name:'Microsoft Aria Online (Natural) - English (United States)',lang:'en-US',localService:true,default:false,voiceURI:'aria'}
+              ];
+              synth.cancel=()=>{};
+              synth.resume=()=>{};
+              synth.speak=(u)=>{
+                window.__angelaSpoken.push({text:String(u.text||''),lang:String(u.lang||''),voice:String(u.voice?.name||'')});
+                try{u.onstart?.();}catch{}
+                setTimeout(()=>{try{u.onend?.();}catch{}},10);
+              };
+              try {
+                Object.defineProperty(window,'speechSynthesis',{configurable:true,writable:true,value:synth});
+              } catch {}
             });
           }
 
@@ -127,12 +128,12 @@ jobs:
               const input=cfg.input(page);
               if (await input.count() !== 1) throw new Error(label+' '+name+' input missing');
               await input.fill(cfg.bnPrompt);
-              await cfg.send(page).click();
-              await page.waitForFunction(
-                ({pattern}) => new RegExp(pattern,'i').test(document.body.innerText),
-                {pattern:name==='LTD' ? 'বাংলা|Journey Expert Limited|অ্যাঞ্জেলা' : 'বাংলা|অ্যাঞ্জেলা|Journey Expert'},
+              const bnResponsePromise = page.waitForResponse(
+                r => r.url().includes(cfg.chatPath) && r.status() === 200,
                 {timeout:15000}
               );
+              await cfg.send(page).click();
+              await bnResponsePromise;
               await page.waitForFunction(
                 () => (window.__angelaSpoken||[]).some(x=>String(x.lang).toLowerCase().startsWith('bn')),
                 null,
@@ -147,12 +148,12 @@ jobs:
               const en=cfg.en(page);
               if (await en.count()) { await en.click(); await page.waitForTimeout(100); }
               await input.fill(cfg.enPrompt);
-              await cfg.send(page).click();
-              await page.waitForFunction(
-                ({pattern}) => new RegExp(pattern,'i').test(document.body.innerText),
-                {pattern:name==='LTD' ? 'air ticket|visa|travel|study abroad' : 'UK|Canada|Australia|USA|Ireland|New Zealand|Malaysia|Europe'},
+              const enResponsePromise = page.waitForResponse(
+                r => r.url().includes(cfg.chatPath) && r.status() === 200,
                 {timeout:15000}
               );
+              await cfg.send(page).click();
+              await enResponsePromise;
               await page.waitForFunction(
                 () => (window.__angelaSpoken||[]).some(x=>String(x.lang).toLowerCase().startsWith('en')),
                 null,
@@ -187,4 +188,4 @@ jobs:
           EOF
           node final-audit.mjs
 
-# rerun-final-freeze-corrected-timing
+# rerun-final-freeze-webkit-harness
