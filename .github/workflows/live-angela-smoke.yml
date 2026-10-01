@@ -128,7 +128,16 @@ jobs:
               if (await input.count() !== 1) throw new Error(label+' '+name+' input missing');
               await input.fill(cfg.bnPrompt);
               await cfg.send(page).click();
-              await page.waitForTimeout(4300);
+              await page.waitForFunction(
+                ({pattern}) => new RegExp(pattern,'i').test(document.body.innerText),
+                {pattern:name==='LTD' ? 'বাংলা|Journey Expert Limited|অ্যাঞ্জেলা' : 'বাংলা|অ্যাঞ্জেলা|Journey Expert'},
+                {timeout:15000}
+              );
+              await page.waitForFunction(
+                () => (window.__angelaSpoken||[]).some(x=>String(x.lang).toLowerCase().startsWith('bn')),
+                null,
+                {timeout:5000}
+              );
               body=await cfg.replySelector(page).innerText();
               const bnReply=cfg.bnCheck(body);
               const spoken1=await page.evaluate(()=>window.__angelaSpoken||[]);
@@ -139,7 +148,16 @@ jobs:
               if (await en.count()) { await en.click(); await page.waitForTimeout(100); }
               await input.fill(cfg.enPrompt);
               await cfg.send(page).click();
-              await page.waitForTimeout(4300);
+              await page.waitForFunction(
+                ({pattern}) => new RegExp(pattern,'i').test(document.body.innerText),
+                {pattern:name==='LTD' ? 'air ticket|visa|travel|study abroad' : 'UK|Canada|Australia|USA|Ireland|New Zealand|Malaysia|Europe'},
+                {timeout:15000}
+              );
+              await page.waitForFunction(
+                () => (window.__angelaSpoken||[]).some(x=>String(x.lang).toLowerCase().startsWith('en')),
+                null,
+                {timeout:5000}
+              );
               body=await cfg.replySelector(page).innerText();
               const enReply=cfg.enCheck(body);
               const spoken2=await page.evaluate(()=>window.__angelaSpoken||[]);
@@ -169,4 +187,4 @@ jobs:
           EOF
           node final-audit.mjs
 
-# rerun-after-bd-android-fix
+# rerun-final-freeze-corrected-timing
