@@ -1,42 +1,78 @@
-name: Live Angela frontend audit
+name: Live Angela browser audit
 on:
   push:
     branches:
       - diagnostic/live-angela-smoke-20261001
 jobs:
-  audit:
+  browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Audit live frontend bundles
+      - name: Install Playwright core
+        run: npm install --no-save playwright-core@1.55.0
+      - name: Find Chrome
+        id: chrome
         shell: bash
         run: |
-          set -euo pipefail
-          for site in journeyexpertltd.com journeyexpertbd.com
-          do
-            echo "===== $site ====="
-            curl -sS --max-time 30 "https://$site/" -o /tmp/index.html
-            echo "HTML_BYTES=$(wc -c </tmp/index.html)"
-            grep -oE '<script[^>]+src="[^"]+"' /tmp/index.html || true
-            mapfile -t scripts < <(grep -oE 'src="[^"]+\.js[^"]*"' /tmp/index.html | sed -E 's/^src="|"$//g' | sort -u)
-            echo "SCRIPT_COUNT=${#scripts[@]}"
-            found_angela=0
-            found_greeting=0
-            for src in "${scripts[@]}"
-            do
-              if [[ "$src" == http* ]]; then url="$src"; else url="https://$site/${src#/}"; fi
-              echo "FETCH $url"
-              curl -sS --max-time 30 "$url" -o /tmp/app.js || continue
-              bytes=$(wc -c </tmp/app.js)
-              echo "JS_BYTES=$bytes"
-              if grep -aFq "Angela" /tmp/app.js; then echo "FOUND_ANGELA_IN=$url"; found_angela=1; fi
-              if grep -aFq "আসসালামু আলাইকুম" /tmp/app.js; then echo "FOUND_BANGLA_GREETING_IN=$url"; found_greeting=1; fi
-              if grep -aFq "btn-open-angela-assistant" /tmp/app.js; then echo "FOUND_OPEN_BUTTON_ID_IN=$url"; fi
-              if grep -aFq "female_voice_unavailable" /tmp/app.js; then echo "FOUND_OLD_VOICE_ERROR_IN=$url"; fi
-            done
-            echo "FOUND_ANGELA=$found_angela"
-            echo "FOUND_GREETING=$found_greeting"
-            if [ "$found_angela" -ne 1 ] || [ "$found_greeting" -ne 1 ]; then
-              echo "FRONTEND_CONTRACT_FAIL=$site"
-              exit 41
-            fi
-          done
+          which google-chrome || which google-chrome-stable || which chromium || which chromium-browser
+      - name: Run real browser Angela audit
+        shell: bash
+        run: |
+          cat > /tmp/audit.mjs <<'EOF'
+          import { chromium } from 'playwright-core';
+          const executablePath = process.env.CHROME_BIN || '/usr/bin/google-chrome';
+          const browser = await chromium.launch({
+            headless: true,
+            executablePath,
+            args: ['--no-sandbox','--autoplay-policy=no-user-gesture-required']
+          });
+          const sites = [
+            {name:'LTD', url:'https://journeyexpertltd.com'},
+            {name:'BD', url:'https://journeyexpertbd.com'}
+          ];
+          for (const site of sites) {
+            const ctx = await browser.newContext({ permissions: [] });
+            const page = await ctx.newPage();
+            const requests = [];
+            const responses = [];
+            page.on('request', r => {
+              if (r.url().includes('/angela/')) requests.push(r.method()+' '+r.url());
+            });
+            page.on('response', async r => {
+              if (r.url().includes('/angela/')) responses.push(r.status()+' '+r.url()+' '+(r.headers()['content-type']||''));
+            });
+            page.on('console', m => console.log(site.name,'CONSOLE',m.type(),m.text()));
+            page.on('pageerror', e => console.log(site.name,'PAGEERROR',e.message));
+
+            await page.goto(site.url, {waitUntil:'networkidle', timeout:60000});
+            console.log(site.name,'TITLE',await page.title());
+
+            if (site.name === 'LTD') {
+              const first = page.getByRole('button', {name:'Open free Angela voice assistant'});
+              console.log('LTD_FIRST_BUTTON',await first.count());
+              await first.click();
+              await page.waitForTimeout(800);
+              console.log('LTD_DISCLOSURE_VISIBLE',await page.getByText('Before you talk with Angela').isVisible().catch(()=>false));
+              console.log('LTD_GREETING_BEFORE_AGREE',await page.getByText(/আসসালামু আলাইকুম/).count());
+              const agree = page.getByRole('button', {name:/Agree and continue/});
+              if (await agree.count()) {
+                await agree.click();
+                await page.waitForTimeout(4500);
+              }
+              console.log('LTD_DIALOG',await page.getByRole('dialog',{name:'Angela AI voice assistant'}).count());
+              console.log('LTD_GREETING_AFTER_AGREE',await page.getByText(/আসসালামু আলাইকুম/).count());
+              console.log('LTD_BODY_HAS_GREETING',(await page.locator('body').innerText()).includes('আসসালামু আলাইকুম'));
+            } else {
+              const btn = page.locator('#btn-open-angela-assistant');
+              console.log('BD_OPEN_BUTTON',await btn.count());
+              await btn.click();
+              await page.waitForTimeout(4500);
+              console.log('BD_WIDGET',await page.locator('#angela-ai-voice-assistant-widget').count());
+              console.log('BD_BODY_HAS_GREETING',(await page.locator('body').innerText()).includes('আসসালামু আলাইকুম'));
+            }
+            console.log(site.name,'ANGELA_REQUESTS',JSON.stringify(requests));
+            console.log(site.name,'ANGELA_RESPONSES',JSON.stringify(responses));
+            await ctx.close();
+          }
+          await browser.close();
+          EOF
+          CHROME_BIN="$(which google-chrome || which google-chrome-stable || which chromium || which chromium-browser)" node /tmp/audit.mjs
