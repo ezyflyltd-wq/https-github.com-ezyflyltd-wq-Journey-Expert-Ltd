@@ -59,14 +59,16 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
     return null;
   };
 
+  // Full Bangla/English answers need longer than the old greeting-sized timeout.
+  // Keep one bounded provider attempt; do not abort and restart valid generation.
   let sawQuota = false;
-  const localDeadline = Date.now() + 8000;
+  const localDeadline = Date.now() + 30000;
   localKeys: for (const key of keys) {
     for (const model of models) {
       const remaining = localDeadline - Date.now();
       if (remaining < 700) break localKeys;
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), Math.min(4500, remaining));
+      const timer = setTimeout(() => controller.abort(), remaining);
       try {
       const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
         method: 'POST',
@@ -122,7 +124,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   try {
     const shared = await fetch('https://journeyexpertbd.com/angela/speech', {
       method: 'POST',
-      signal: AbortSignal.timeout(5500),
+      signal: AbortSignal.timeout(32000),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     });

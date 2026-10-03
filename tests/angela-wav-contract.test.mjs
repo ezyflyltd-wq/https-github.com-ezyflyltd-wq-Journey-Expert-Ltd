@@ -20,8 +20,14 @@ for (const [name, run] of [
     try {
       for (const text of ['আমি অ্যাঞ্জেলা।', 'I am Angela.']) {
         globalThis.fetch = async (url, options) => {
-          assert.equal(url, 'https://generativelanguage.googleapis.com/v1beta/interactions');
           const body = JSON.parse(options.body);
+          if (name === 'Pages Worker') {
+            assert.equal(url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-lite-tts:generateContent');
+            assert.equal(body.contents[0].parts[0].text, text);
+            assert.equal(body.generationConfig.speechConfig.voiceConfig.voice, 'Aoede');
+            return Response.json({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/wav', data: wav.toString('base64') } }] } }] });
+          }
+          assert.equal(url, 'https://generativelanguage.googleapis.com/v1beta/interactions');
           assert.equal(body.input[0].content[0].text, text);
           assert.equal(body.generation_config.speech_config[0].voice, 'Aoede');
           return Response.json({ steps: [{ type: 'model_output', content: [{ type: 'audio', mime_type: 'audio/wav', data: wav.toString('base64') }] }] });
