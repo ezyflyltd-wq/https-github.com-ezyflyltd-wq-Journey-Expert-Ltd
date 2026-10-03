@@ -479,14 +479,15 @@ async function speech(request, env) {
 
   let sawQuota = false;
   let lastProviderStatus = 0;
-  const deadline = Date.now() + 12000;
+  // Full replies take longer to render than a short greeting.
+  const deadline = Date.now() + 30000;
 
   outer: for (const key of keys) {
     for (const model of models) {
       const remaining = deadline - Date.now();
       if (remaining < 800) break outer;
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), Math.min(7000, remaining));
+      const timer = setTimeout(() => controller.abort(), remaining);
 
       try {
         const upstream = await fetch(

@@ -508,7 +508,7 @@ export function FreeVoiceAngelaWidget() {
     // the positively identified female device voice.
     const quotaCoolingDown = Date.now() < voiceQuotaCooldownUntilRef.current;
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 11000);
+    const timer = window.setTimeout(() => controller.abort(), 65000);
     try {
       if (quotaCoolingDown) throw new Error('voice_quota_cooldown');
       const response = await fetch('/angela/speech', {
