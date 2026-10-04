@@ -94,7 +94,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
             <div className="flex items-center space-x-2 text-[#111111]">
               <Phone className="w-4 h-4 text-[#0B5D3B] shrink-0" />
               <span>
-                <strong>Phone:</strong> {COMPANY_CONFIG.phone.primary} ({COMPANY_CONFIG.phone.international}) | Office: {COMPANY_CONFIG.phone.office}
+                <strong>Phone:</strong> {COMPANY_CONFIG.phone.primary} ({COMPANY_CONFIG.phone.international})
               </span>
             </div>
             <div className="flex items-center space-x-2 text-[#111111]">

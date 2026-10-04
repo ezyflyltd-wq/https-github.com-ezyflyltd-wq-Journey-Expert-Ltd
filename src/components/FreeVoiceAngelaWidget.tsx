@@ -281,8 +281,8 @@ function getFallbackReply(prompt: string, selectedLanguage: 'bn' | 'en'): string
   }
   if (match('journey expert','jel','company','office','address','contact','phone','whatsapp','email','জার্নি এক্সপার্ট','কোম্পানি','অফিস','ঠিকানা','যোগাযোগ')) {
     return bn
-      ? 'Journey Expert Limited-এর verified contact: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215। WhatsApp/Hotline: +8801926400400; Telephone: +8802 9830404; Email: journeyexpertbd@gmail.com।'
-      : 'Journey Expert Limited verified contact: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215. WhatsApp/Hotline: +8801926400400; Telephone: +8802 9830404; Email: journeyexpertbd@gmail.com.';
+      ? 'Journey Expert Limited-এর verified contact: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215। WhatsApp/Hotline: +8801926400400; Email: journeyexpertbd@gmail.com।'
+      : 'Journey Expert Limited verified contact: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215. WhatsApp/Hotline: +8801926400400; Email: journeyexpertbd@gmail.com.';
   }
   return bn
     ? 'আপনার প্রশ্নের নির্দিষ্ট তথ্যটি বর্তমান verified JEL knowledge-এ নেই। ভুল তথ্য দেওয়ার বদলে এই অংশটি verify করা প্রয়োজন।'

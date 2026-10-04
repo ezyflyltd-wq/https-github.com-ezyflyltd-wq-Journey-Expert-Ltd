@@ -73,16 +73,16 @@ export const COMPANY_INFO: CompanyInfo = {
   phone: {
     primary: '01926-400400',
     international: '+880 1926-400400',
-    office: '+880 2 9830404',
+    office: '+880 1926-400400',
     formattedPrimary: '+880 1926-400400',
-    formattedOffice: '+880 2 9830404',
+    formattedOffice: '+880 1926-400400',
   },
   phones: {
     primary: '01926-400400',
     international: '+880 1926-400400',
-    office: '+880 2 9830404',
+    office: '+880 1926-400400',
     formattedPrimary: '+880 1926-400400',
-    formattedOffice: '+880 2 9830404',
+    formattedOffice: '+880 1926-400400',
   },
   email: {
     primary: 'journeyexpertltd@gmail.com',
