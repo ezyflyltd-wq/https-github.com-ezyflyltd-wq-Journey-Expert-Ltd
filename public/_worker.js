@@ -329,10 +329,16 @@ async function chat(request, env) {
   const message = typeof body?.message === 'string' ? body.message.trim().slice(0, 5000) : '';
   if (!message) return json({ error: 'message_required' }, 400);
   const language = languageFor(message, body?.language);
-  const conversational = conversationReply(message, language);
+  const combinedServices = /service|সার্ভিস|সেবা/i.test(message) && /contact|hotline|phone|ফোন|যোগাযোগ|হটলাইন/i.test(message);
+  const conversational = combinedServices ? null : conversationReply(message, language);
   if (conversational) return json(conversational);
   const retrievedKnowledge = retrieveJelKnowledge(message);
-  if (retrievedKnowledge.primary?.id === 'company_directory') return json({ ...fallback(language, message), language, mode: 'fallback' });
+  // Stable company facts must be complete even when the model quota is exhausted.
+  if (combinedServices) {
+    const services = JEL_SEMANTIC_KNOWLEDGE.find(entry => entry.id === 'services_overview');
+    return json({ reply: services[language], language, mode: 'verified', primaryIntent: 'services_overview', groundingIds: ['services_overview'] });
+  }
+  if (['company_directory', 'services_overview', 'brands'].includes(retrievedKnowledge.primary?.id)) return json({ ...fallback(language, message), language, mode: 'verified' });
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
   if (!key) return json({ ...fallback(language, message), language, mode: 'fallback' });
 
@@ -361,7 +367,7 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
     const requestBody = {
       systemInstruction: { parts: [{ text: system }] },
       contents: [...history, { role: 'user', parts: [{ text: message }] }],
-      generationConfig: { temperature: 0.15, maxOutputTokens: 420 },
+      generationConfig: { temperature: 0.15, maxOutputTokens: 1024, thinkingConfig: { thinkingLevel: 'low' } },
     };
     const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
     if (groundingEnabled) requestBody.tools = [{ google_search: {} }];
@@ -375,7 +381,7 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
       const data = await upstream.json();
       const candidate = data?.candidates?.[0];
       const reply = candidate?.content?.parts?.filter((part) => !part.thought).map((part) => part.text || '').join('').trim();
-      if (reply && !(language === 'bn' && !/[\u0980-\u09FF]/.test(reply)) && !(language === 'en' && /[\u0980-\u09FF]/.test(reply))) {
+      if (reply && candidate.finishReason !== 'MAX_TOKENS' && !(language === 'bn' && !/[\u0980-\u09FF]/.test(reply)) && !(language === 'en' && /[\u0980-\u09FF]/.test(reply))) {
         return json({ reply, language, mode: 'ai', providerModel: model, grounded: Boolean(candidate?.groundingMetadata), groundingEnabled, primaryIntent: retrievedKnowledge.primary?.id || 'unverified', groundingIds: retrievedKnowledge.ids });
       }
     }
