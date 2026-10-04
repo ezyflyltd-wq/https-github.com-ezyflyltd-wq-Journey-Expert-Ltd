@@ -617,7 +617,7 @@ export function FreeVoiceAngelaWidget() {
     // falling back to OS/device voices.
     try {
       const liveController = new AbortController();
-      const liveTimer = window.setTimeout(() => liveController.abort(), 2000);
+      const liveTimer = window.setTimeout(() => liveController.abort(), 14000);
       try {
         const liveBlob = await fetchAngelaLiveFemaleSpeech(cleanText, liveController.signal);
         const context = await contextPromise;
