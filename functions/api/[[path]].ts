@@ -73,7 +73,7 @@ async function handleDirectAngela(request: Request, env: Record<string, string |
 JEL VERIFIED KNOWLEDGE HAS PRIORITY:
 - Slogan: "Your Journey, Our Expertise."
 - Office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215, Bangladesh.
-- WhatsApp/Hotline: +8801926400400. Telephone: +8802 9830404. Email: journeyexpertbd@gmail.com.
+- WhatsApp/Hotline: +8801926400400. Email: journeyexpertbd@gmail.com.
 - Core services: air ticketing and fare quotation, reissue/refund support, visa-document assistance, tours and travel, hotels, Hajj and Umrah, halal tourism, medical tourism, travel insurance, corporate travel management, Meet & Greet, and Study Abroad.
 - Detailed education counselling is handled by JEL Study Abroad at journeyexpertbd.com.
 - JEL Study Abroad covers profile assessment, country/course/university selection, admissions, scholarships, SOP guidance, English tests, student-visa documents, pre-departure and post-arrival guidance.
