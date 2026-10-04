@@ -94,7 +94,7 @@ export async function fetchAngelaLiveFemaleSpeech(text: string, signal: AbortSig
 
     const onAbort = () => fail(new DOMException('Aborted', 'AbortError'));
     signal.addEventListener('abort', onAbort, { once: true });
-    const timer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 5000);
+    const timer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 12000);
 
     socket.onopen = () => {
       socket.send(JSON.stringify({
