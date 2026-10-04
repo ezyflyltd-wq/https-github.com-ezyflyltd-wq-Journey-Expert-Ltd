@@ -142,11 +142,11 @@ jobs:
 
           reply_file="$(mktemp)"
           trap 'rm -f "$reply_file"' EXIT
-          curl --fail --silent --show-error --max-time 30 \
+          curl --fail --silent --show-error --max-time 30 --retry 4 --retry-all-errors --retry-delay 3 \
             --header 'Content-Type: application/json' \
             --data '{"message":"ami Malaysia tourist visa niye jante chai","language":"bn","history":[]}' \
             --output "$reply_file" \
-            "$url/api/ai/voice-agent"
+            "$url/angela/chat"
           python - "$reply_file" <<'PY'
           import json, re, sys
           with open(sys.argv[1], encoding="utf-8") as f:
