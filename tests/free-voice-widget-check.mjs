@@ -153,5 +153,8 @@ console.log('Angela strict female-only voice checks passed.');
 // approved production regression marker: conversational Bangla + cloud female playback
 
 
-assert.equal(widget.includes('liveController.abort(), 47000'), true, 'Live female outer fallback window must allow WebSocket startup and audio generation');
-assert.equal(liveVoice.includes("live_voice_timeout')), 12000"), true, 'Live female renderer must keep a bounded 12s inactivity window');
+assert.equal(widget.includes('liveController.abort(), 14000'), true, 'Live female outer fallback window must stay bounded for conversational latency');
+assert.equal(liveVoice.includes("live_voice_timeout')), 5000"), true, 'Live female renderer must keep a bounded 5s inactivity window');
+
+assert.equal(widget.includes('DEVICE_FIRST_ANGELA_VOICE'), true, 'verified female device voice should start without cloud delay when available');
+assert.equal(widget.includes('LOW_LATENCY_VOICE_INPUT'), true, 'browser speech recognition should be the low-latency input path when available');
