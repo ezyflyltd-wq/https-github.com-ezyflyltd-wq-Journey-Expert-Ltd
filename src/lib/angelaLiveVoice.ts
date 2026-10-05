@@ -97,8 +97,8 @@ export async function fetchAngelaLiveFemaleSpeech(text: string, signal: AbortSig
     signal.addEventListener('abort', onAbort, { once: true });
     // Fail quickly when no audio arrives, but let an active response finish.
     // A fixed 12-second total timer discarded valid chunks on long replies.
-    let timer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 12000);
-    const deadlineTimer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 45000);
+    let timer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 5000);
+    const deadlineTimer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 14000);
     const noteAudioProgress = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 12000);

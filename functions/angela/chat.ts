@@ -313,7 +313,7 @@ ${languageInstruction}\n\nRETRIEVED VERIFIED JEL CONTEXT:\n${retrievedKnowledge.
   const models = ['gemini-3.8-flash', 'gemini-3.5-flash'];
   for (const model of models) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), model === 'gemini-3.8-flash' ? 9000 : 6500);
+    const timer = setTimeout(() => controller.abort(), model === 'gemini-3.8-flash' ? 3200 : 1800);
     try {
       const requestBody: any = {
         systemInstruction: { parts: [{ text: system }] },
@@ -366,7 +366,7 @@ ${languageInstruction}\n\nRETRIEVED VERIFIED JEL CONTEXT:\n${retrievedKnowledge.
   try {
     const shared = await fetch('https://journeyexpertbd.com/api/gemini/chat', {
       method: 'POST',
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(1800),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message,
