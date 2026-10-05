@@ -153,5 +153,5 @@ console.log('Angela strict female-only voice checks passed.');
 // approved production regression marker: conversational Bangla + cloud female playback
 
 
-assert.equal(widget.includes('liveController.abort(), 14000'), true, 'Live female outer fallback window must allow WebSocket startup and audio generation');
-assert.equal(liveVoice.includes("live_voice_timeout')), 12000"), true, 'Live female renderer must keep a bounded 12s generation window');
+assert.equal(widget.includes('liveController.abort(), 47000'), true, 'Live female outer fallback window must allow WebSocket startup and audio generation');
+assert.equal(liveVoice.includes("live_voice_timeout')), 12000"), true, 'Live female renderer must keep a bounded 12s inactivity window');
