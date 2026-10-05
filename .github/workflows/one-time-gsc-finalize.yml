@@ -15,77 +15,99 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install dependencies
-        run: python -m pip install --upgrade google-api-python-client google-auth requests
-      - name: Read current GSC sitemap and URL inspection state
+      - run: python -m pip install --upgrade google-api-python-client google-auth requests
+      - name: Submit both JEL sitemaps and inspect priority URLs
         env:
           GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
         run: |
           python - <<'PY'
-          import json, os
+          import json, os, sys
           import requests
           from google.oauth2 import service_account
           from google.auth.transport.requests import Request
           from googleapiclient.discovery import build
 
-          site="https://journeyexpertltd.com/"
-          urls=[
-            "https://journeyexpertltd.com/",
-            "https://journeyexpertltd.com/flights",
-            "https://journeyexpertltd.com/visa",
-            "https://journeyexpertltd.com/study-abroad",
-          ]
           info=json.loads(os.environ["GSC_SERVICE_ACCOUNT_JSON"])
           creds=service_account.Credentials.from_service_account_info(
-              info, scopes=["https://www.googleapis.com/auth/webmasters.readonly"])
+              info, scopes=["https://www.googleapis.com/auth/webmasters"])
           svc=build("searchconsole","v1",credentials=creds,cache_discovery=False)
+
+          targets=[
+            ("sc-domain:journeyexpertltd.com","https://journeyexpertltd.com/sitemap.xml",[
+              "https://journeyexpertltd.com/",
+              "https://journeyexpertltd.com/flights",
+              "https://journeyexpertltd.com/visa",
+              "https://journeyexpertltd.com/study-abroad"
+            ]),
+            ("sc-domain:journeyexpertbd.com","https://journeyexpertbd.com/sitemap.xml",[
+              "https://journeyexpertbd.com/",
+              "https://journeyexpertbd.com/contact/",
+              "https://journeyexpertbd.com/services/"
+            ])
+          ]
+
           sites=svc.sites().list().execute().get("siteEntry",[])
-          try:
-              sitemaps=svc.sitemaps().list(siteUrl=site).execute().get("sitemap",[])
-              sitemap_error=None
-          except Exception as exc:
-              sitemaps=[]
-              sitemap_error=type(exc).__name__ + ": " + str(exc)[:500]
-          creds.refresh(Request())
-          inspections=[]
-          for url in urls:
-              r=requests.post(
-                  "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect",
-                  headers={"Authorization":f"Bearer {creds.token}","Content-Type":"application/json"},
-                  json={"inspectionUrl":url,"siteUrl":site,"languageCode":"en-US"},
-                  timeout=30)
-              item={"url":url,"http":r.status_code}
-              if r.ok:
-                  idx=r.json().get("inspectionResult",{}).get("indexStatusResult",{})
-                  item.update({
-                      "verdict":idx.get("verdict"),
-                      "coverageState":idx.get("coverageState"),
-                      "robotsTxtState":idx.get("robotsTxtState"),
-                      "indexingState":idx.get("indexingState"),
-                      "userCanonical":idx.get("userCanonical"),
-                      "googleCanonical":idx.get("googleCanonical"),
-                      "lastCrawlTime":idx.get("lastCrawlTime"),
-                      "sitemap":idx.get("sitemap"),
-                  })
-              else:
-                  item["error"]=r.text[:700]
-              inspections.append(item)
-          print(json.dumps({
-              "serviceAccount":info.get("client_email"),
-              "accessibleSites":sites,
-              "sitemapError":sitemap_error,
-              "sitemaps":[{
-                  "path":s.get("path"),
-                  "lastSubmitted":s.get("lastSubmitted"),
-                  "lastDownloaded":s.get("lastDownloaded"),
-                  "isPending":s.get("isPending"),
-                  "warnings":s.get("warnings"),
-                  "errors":s.get("errors"),
-              } for s in sitemaps],
-              "inspections":inspections,
-          },ensure_ascii=False,indent=2))
+          permissions={x.get("siteUrl"):x.get("permissionLevel") for x in sites}
+          output={"accessibleSites":sites,"results":[]}
+          failed=False
+
+          for site,sitemap,urls in targets:
+              row={"site":site,"permission":permissions.get(site),"sitemap":sitemap}
+              try:
+                  svc.sitemaps().submit(siteUrl=site,feedpath=sitemap).execute()
+                  row["submit"]="success"
+              except Exception as exc:
+                  row["submit"]="failed"
+                  row["submitError"]=type(exc).__name__+": "+str(exc)[:700]
+                  failed=True
+
+              try:
+                  listed=svc.sitemaps().list(siteUrl=site).execute().get("sitemap",[])
+              except Exception as exc:
+                  listed=[]
+                  row["listError"]=type(exc).__name__+": "+str(exc)[:700]
+                  failed=True
+              row["sitemaps"]=[{
+                "path":s.get("path"),
+                "lastSubmitted":s.get("lastSubmitted"),
+                "lastDownloaded":s.get("lastDownloaded"),
+                "isPending":s.get("isPending"),
+                "warnings":s.get("warnings"),
+                "errors":s.get("errors")
+              } for s in listed]
+
+              creds.refresh(Request())
+              inspections=[]
+              for url in urls:
+                  r=requests.post(
+                      "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect",
+                      headers={"Authorization":f"Bearer {creds.token}","Content-Type":"application/json"},
+                      json={"inspectionUrl":url,"siteUrl":site,"languageCode":"en-US"},
+                      timeout=30)
+                  item={"url":url,"http":r.status_code}
+                  if r.ok:
+                      idx=r.json().get("inspectionResult",{}).get("indexStatusResult",{})
+                      item.update({
+                        "verdict":idx.get("verdict"),
+                        "coverageState":idx.get("coverageState"),
+                        "robotsTxtState":idx.get("robotsTxtState"),
+                        "indexingState":idx.get("indexingState"),
+                        "userCanonical":idx.get("userCanonical"),
+                        "googleCanonical":idx.get("googleCanonical"),
+                        "lastCrawlTime":idx.get("lastCrawlTime"),
+                        "sitemap":idx.get("sitemap")
+                      })
+                  else:
+                      item["error"]=r.text[:700]
+                      failed=True
+                  inspections.append(item)
+              row["inspections"]=inspections
+              output["results"].append(row)
+
+          print(json.dumps(output,ensure_ascii=False,indent=2))
+          if failed:
+              sys.exit(1)
           PY
