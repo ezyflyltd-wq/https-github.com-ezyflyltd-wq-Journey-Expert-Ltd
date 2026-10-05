@@ -502,13 +502,42 @@ export function FreeVoiceAngelaWidget() {
       webAudioSourceRef.current = null;
     }
 
-    // CLOUD_FEMALE_PRIMARY_FAST: use the same JEL-rendered female voice across
-    // Windows, Android, macOS and iOS when free Gemini TTS is available.
+    // DEVICE_FIRST_ANGELA_VOICE: a verified local female voice starts immediately
+    // when available. This removes cloud wait from normal follow-up turns and
+    // preserves free quota. Cloud Aoede remains the fallback.
+    if (window.speechSynthesis) {
+      let fastVoices = voiceCatalogRef.current.length ? voiceCatalogRef.current : window.speechSynthesis.getVoices();
+      if (!fastVoices.length) {
+        await new Promise((resolve) => window.setTimeout(resolve, 120));
+        fastVoices = window.speechSynthesis.getVoices();
+        if (fastVoices.length) voiceCatalogRef.current = fastVoices;
+      }
+      const fastVoice = getOpeningGreetingVoice(fastVoices, effectiveLanguage);
+      if (fastVoice) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.voice = fastVoice;
+        utterance.lang = fastVoice.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US');
+        utterance.rate = effectiveLanguage === 'bn' ? 1.05 : 1.02;
+        utterance.pitch = effectiveLanguage === 'bn' ? 1.1 : 1.04;
+        utterance.onstart = () => {
+          setIsSpeaking(true);
+          setError('');
+          setVoiceNotice('');
+        };
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(utterance);
+        return;
+      }
+    }
+
+    // CLOUD_FEMALE_PRIMARY_FAST: use cloud female audio when no verified local female voice exists.
     // A recent 429 skips the provider during Retry-After and moves straight to
     // the positively identified female device voice.
     const quotaCoolingDown = Date.now() < voiceQuotaCooldownUntilRef.current;
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 65000);
+    const timer = window.setTimeout(() => controller.abort(), 4500);
     try {
       if (quotaCoolingDown) throw new Error('voice_quota_cooldown');
       const response = await fetch('/angela/speech', {
@@ -617,7 +646,7 @@ export function FreeVoiceAngelaWidget() {
     // falling back to OS/device voices.
     try {
       const liveController = new AbortController();
-      const liveTimer = window.setTimeout(() => liveController.abort(), 47000);
+      const liveTimer = window.setTimeout(() => liveController.abort(), 14000);
       try {
         const liveBlob = await fetchAngelaLiveFemaleSpeech(cleanText, liveController.signal);
         const context = await contextPromise;
@@ -723,10 +752,29 @@ export function FreeVoiceAngelaWidget() {
     setLastTranscript(cleanPrompt);
     setInput('');
 
+    const normalizedPrompt = cleanPrompt.toLowerCase().replace(/\s+/g, ' ').trim();
+    const asksBangla = /(বাংলা|বাংলায়|বাংলায়|bangla|bengali|bengla)/i.test(normalizedPrompt)
+      && /(কথা|বলতে|বুঝতে|পারো|পারেন|পারবে|পারবেন|speak|talk|understand)/i.test(normalizedPrompt)
+      && normalizedPrompt.length < 180;
+    const greetingOnly = /^(?:hi|hello|hey|হ্যালো|হাই|সালাম|আসসালামু আলাইকুম)(?:\s+(?:angela|অ্যাঞ্জেলা))?[!?.,\s]*$/i.test(normalizedPrompt);
+    if (asksBangla || greetingOnly) {
+      const reply = getFallbackReply(cleanPrompt, language);
+      setHistory((turns) => [
+        ...turns,
+        { role: 'user', content: cleanPrompt },
+        { role: 'assistant', content: reply },
+      ].slice(-12));
+      setLastReply(reply);
+      setError('');
+      setIsLoading(false);
+      void speak(reply);
+      return;
+    }
+
     try {
       const response = await fetch('/angela/chat', {
         method: 'POST',
-        signal: AbortSignal.timeout(18000),
+        signal: AbortSignal.timeout(8000),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: cleanPrompt,
@@ -773,7 +821,7 @@ export function FreeVoiceAngelaWidget() {
     const audio = await blobToBase64(blob);
     const response = await fetch('/angela/transcribe', {
       method: 'POST',
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(7000),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         audio,
@@ -840,6 +888,13 @@ export function FreeVoiceAngelaWidget() {
     setIsSpeaking(false);
     setError('');
     void unlockAudio();
+
+    // LOW_LATENCY_VOICE_INPUT: use browser speech recognition first when available.
+    // This avoids record-upload-transcribe latency and uses no Gemini transcription quota.
+    if (getSpeechRecognition()) {
+      startBrowserRecognitionFallback();
+      return;
+    }
 
     if (!recordingSupported) {
       startBrowserRecognitionFallback();
