@@ -4,6 +4,7 @@ Last updated: 2026-10-06
 Phase: 1 Discovery complete; Phase 2 next
 
 ## DONE
+- Meta Pixel ID 1294635368719190 configured in Cloudflare Pages production and preview environments.
 - Confirmed production site: https://journeyexpertltd.com
 - Confirmed Cloudflare Free Website zone active.
 - Confirmed Cloudflare Pages project: journey-expert-ltd-main.
