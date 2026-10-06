@@ -47,6 +47,7 @@ const EnterpriseBlueprintView = lazy(() => import('./components/EnterpriseBluepr
 import { MainViewModule, PortalType } from './types';
 import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
 import { RouteMetadata } from './seo/RouteMetadata';
+import { trackMetaPageView } from './lib/metaPixel';
 import { DeferredServiceWidget } from './components/seo/DeferredServiceWidget';
 import { FreeVoiceAngelaWidget, isPublicAngelaRoute } from './components/FreeVoiceAngelaWidget';
 import { ServiceRouteShell } from './components/seo/ServiceRouteShell';
@@ -93,6 +94,10 @@ export default function App() {
   React.useEffect(() => {
     migrateLegacyHash();
   }, []);
+
+  React.useEffect(() => {
+    trackMetaPageView();
+  }, [location.pathname, location.search]);
 
   const openAngela = () => {
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('jel:open-angela'));
