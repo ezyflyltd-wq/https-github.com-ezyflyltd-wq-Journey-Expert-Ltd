@@ -11,50 +11,42 @@ interface RouteSeo {
   description: string;
   type?: 'website' | 'service';
   noindex?: boolean;
-  keywords?: string;
 }
 
 const ROUTE_SEO: Record<string, RouteSeo> = {
   '/': {
     title: 'Journey Expert Ltd. | AI Travel, Visa & Global Mobility',
     description: 'AI-powered travel, visa consultancy, study-abroad, Hajj and Umrah, and global mobility services from Bangladesh.',
-    keywords: 'Bangladesh travel agency, flights, visa consultancy, study abroad, Hajj Umrah, global mobility',
   },
   '/flights': {
     title: 'Flight Search from Bangladesh | Journey Expert Ltd.',
     description: 'Explore flight-search assistance from Bangladesh for international and domestic journeys with Journey Expert Ltd.',
     type: 'service',
-    keywords: 'flight search Bangladesh, Dhaka flights, international airfare, travel agency',
   },
   '/hotels': {
     title: 'Halal Hotels and Accommodation | Journey Expert Ltd.',
     description: 'Discover halal-friendly hotel and accommodation planning for international travel, holidays, and pilgrimage journeys.',
     type: 'service',
-    keywords: 'halal hotels, hotel booking Bangladesh, Muslim-friendly accommodation',
   },
   '/packages': {
     title: 'Tour Packages and Holidays | Journey Expert Ltd.',
     description: 'Explore curated tours, holidays, family travel, luxury experiences, and custom itineraries from Journey Expert Ltd.',
     type: 'service',
-    keywords: 'tour packages Bangladesh, holidays, custom travel itinerary',
   },
   '/visa': {
     title: 'Visa Information and Application Support for Bangladesh Travellers | Journey Expert Ltd.',
     description: 'Destination research, document preparation, checklist review, and human-assisted visa application support for Bangladesh travellers. Requirements and decisions come from the relevant authority.',
     type: 'service',
-    keywords: 'visa information Bangladesh, visa application support, UK visa, Canada visa, Schengen visa',
   },
   '/study-abroad': {
     title: 'Study Abroad and University Admissions | Journey Expert Ltd.',
     description: 'Explore study-abroad counseling, university admissions, scholarships, CAS and I-20 guidance, and student visa support.',
     type: 'service',
-    keywords: 'study abroad Bangladesh, university admission, student visa, scholarships',
   },
   '/hajj-umrah': {
     title: 'Hajj and Umrah Travel Services | Journey Expert Ltd.',
     description: 'Explore faith-centered Hajj and Umrah travel planning, accommodation, transfers, and pilgrimage support.',
     type: 'service',
-    keywords: 'Hajj packages Bangladesh, Umrah packages, Makkah Madinah travel',
   },
   '/healthcare-insurance': {
     title: 'Travel Healthcare and Insurance Support | Journey Expert Ltd.',
@@ -306,7 +298,6 @@ export function RouteMetadata() {
     upsertMeta('name', 'twitter:title', seo.title);
     upsertMeta('name', 'twitter:description', seo.description);
     upsertMeta('name', 'twitter:image', DEFAULT_IMAGE);
-    if (seo.keywords) upsertMeta('name', 'keywords', seo.keywords);
     upsertCanonical(canonical);
 
     let jsonLd = document.head.querySelector<HTMLScriptElement>('script[data-route-jsonld]');
