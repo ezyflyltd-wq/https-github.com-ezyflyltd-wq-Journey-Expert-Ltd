@@ -36,12 +36,12 @@ export const WhyJourneyExpertSection: React.FC<WhyJourneyExpertSectionProps> = (
     },
     {
       title: 'GLOBAL ACCESS',
-      tagline: 'Direct Airline & University Gateways',
+      tagline: 'Travel & Education Access',
       description:
-        'Direct API connections to Sabre, Amadeus, Galileo, and over 500 accredited universities spanning North America, Europe, Australia, and Asia.',
+        'Travel-supplier and education-research workflows designed to support flight enquiries, destination planning and study-abroad guidance across multiple markets.',
       icon: Globe2,
       badge: 'Global Footprint',
-      highlight: 'Wholesale B2B fare access passed directly to our private clients.',
+      highlight: 'Supplier availability and commercial terms are confirmed case by case.',
     },
     {
       title: 'PERSONAL SERVICE',
