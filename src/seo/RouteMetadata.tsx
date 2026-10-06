@@ -86,7 +86,7 @@ const ROUTE_SEO: Record<string, RouteSeo> = {
   '/seo-growth': {
     title: 'SEO and Growth Platform | Journey Expert Ltd.',
     description: 'Explore Journey Expert’s search, content, growth, and digital marketing platform capabilities.',
-    type: 'service',,
+    type: 'service',
     noindex: true
   },
   '/customer-support': {
@@ -97,13 +97,13 @@ const ROUTE_SEO: Record<string, RouteSeo> = {
   '/international-expansion': {
     title: 'International Expansion and Partnerships | Journey Expert Ltd.',
     description: 'Explore Journey Expert’s international travel, partnership, and global mobility expansion capabilities.',
-    type: 'service',,
+    type: 'service',
     noindex: true
   },
   '/innovation-lab': {
     title: 'Innovation Lab and Future Mobility | Journey Expert Ltd.',
     description: 'Explore future mobility, travel technology, AI research, and innovation concepts from Journey Expert Ltd.',
-    type: 'service',,
+    type: 'service',
     noindex: true
   },
   '/business-units': {
@@ -114,7 +114,7 @@ const ROUTE_SEO: Record<string, RouteSeo> = {
   '/developer': {
     title: 'Developer and API Gateway | Journey Expert Ltd.',
     description: 'Explore Journey Expert API gateway, integration, developer, and partner technology concepts.',
-    type: 'service',,
+    type: 'service',
     noindex: true
   },
   '/knowledge': {
@@ -135,25 +135,25 @@ const ROUTE_SEO: Record<string, RouteSeo> = {
   '/ai-agent-ecosystem': {
     title: 'AI Agent Ecosystem | Journey Expert Ltd.',
     description: 'Explore Journey Expert’s AI assistant, automation, support, and intelligent-workforce concepts.',
-    type: 'service',,
+    type: 'service',
     noindex: true
   },
   '/enterprise/blueprint': {
     title: 'Enterprise Travel Platform Blueprint | Journey Expert Ltd.',
     description: 'Explore the Journey Expert enterprise travel, mobility, AI, data, and operating-platform blueprint.',
-    type: 'service',,
+    type: 'service',
     noindex: true
   },
   '/enterprise/design-system': {
     title: 'Website and Design System | Journey Expert Ltd.',
     description: 'Explore the Journey Expert website experience, design system, brand tokens, and interface standards.',
-    type: 'service',,
+    type: 'service',
     noindex: true
   },
   '/enterprise/cms-knowledge': {
     title: 'Headless CMS and Travel Knowledge | Journey Expert Ltd.',
     description: 'Explore the Journey Expert content, knowledge, destination, and travel-advisory platform.',
-    type: 'service',,
+    type: 'service',
     noindex: true
   },
   '/analytics': {
