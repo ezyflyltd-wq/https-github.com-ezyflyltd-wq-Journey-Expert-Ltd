@@ -29,9 +29,9 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">Multi-GDS Fare Engine</h2>
+              <h2 className="text-[#093F31] font-extrabold text-sm font-serif">Flight Search Assistance</h2>
               <p className="text-xs text-[#666666] mt-1 font-medium leading-relaxed">
-                Direct connections to Sabre, Amadeus & Travelport Galileo for lowest fare search.
+                Fare-search and quotation assistance across supported supplier and GDS/OTA workflows. Final fare, seat and ticketing availability require supplier confirmation.
               </p>
             </div>
           </div>
@@ -275,13 +275,10 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
       <div className="bg-white py-6 px-4 border-t border-[#ECECEC] text-xs font-medium">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold text-[#666666]">Supported Payment Gateways:</span>
-            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">bKash</span>
-            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">Nagad</span>
-            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">SSLCommerz</span>
-            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">VISA</span>
-            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">MasterCard</span>
-            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">Stripe</span>
+            <span className="text-[11px] font-bold text-[#666666]">Payment options:</span>
+            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">Bank Transfer</span>
+            <span className="bg-[#F8FAF9] text-[#111111] border border-[#ECECEC] text-[10px] font-bold px-2.5 py-0.5 rounded-md">Cards / Mobile Payments where available</span>
+            <span className="text-[10px] text-[#666666]">Final payment method is confirmed for each transaction.</span>
           </div>
 
           <div className="text-[#666666] text-[11px] text-center md:text-right font-medium">
