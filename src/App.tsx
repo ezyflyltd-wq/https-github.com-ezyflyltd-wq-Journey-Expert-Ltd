@@ -371,8 +371,8 @@ export default function App() {
       </main>
 
       {/* Public Angela widget; protected portal routes intentionally do not mount it. */}
-      {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && <FreeVoiceAngelaWidget />
-      <CookieConsent />}
+      {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && <FreeVoiceAngelaWidget />}
+      <CookieConsent />
 
       {/* Global Footer */}
       <DeferredFooter onPortalChange={navigateToPortal} onModuleChange={navigateToModule} />
