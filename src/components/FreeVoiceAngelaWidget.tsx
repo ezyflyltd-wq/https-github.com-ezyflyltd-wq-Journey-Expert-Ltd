@@ -314,6 +314,7 @@ export function FreeVoiceAngelaWidget() {
   const webAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const voiceCatalogRef = useRef<SpeechSynthesisVoice[]>([]);
   const voiceQuotaCooldownUntilRef = useRef(0);
+  const speechCacheRef = useRef(new Map<string, Blob>());
 
   const recordingSupported = typeof window !== 'undefined'
     && typeof MediaRecorder !== 'undefined'
@@ -491,6 +492,8 @@ export function FreeVoiceAngelaWidget() {
     const effectiveLanguage = language;
     const cleanText = text.replace(/[*#_`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 520);
     if (!cleanText) return;
+    const cacheKey = `${effectiveLanguage}:${cleanText}`;
+    const cachedSpeech = speechCacheRef.current.get(cacheKey);
 
     setError('');
     setVoiceNotice('');
@@ -510,8 +513,10 @@ export function FreeVoiceAngelaWidget() {
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 65000);
     try {
-      if (quotaCoolingDown) throw new Error('voice_quota_cooldown');
-      const response = await fetch('/angela/speech', {
+      if (quotaCoolingDown && !cachedSpeech) throw new Error('voice_quota_cooldown');
+      const response = cachedSpeech
+        ? new Response(cachedSpeech, { headers: { 'content-type': 'audio/wav' } })
+        : await fetch('/angela/speech', {
         method: 'POST',
         signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
@@ -524,8 +529,15 @@ export function FreeVoiceAngelaWidget() {
         throw new Error('voice_quota_exceeded');
       }
       if (response.ok && response.headers.get('content-type')?.includes('audio/wav')) {
-        voiceQuotaCooldownUntilRef.current = 0;
+        if (!cachedSpeech) voiceQuotaCooldownUntilRef.current = 0;
         const blob = await response.blob();
+        if (!cachedSpeech) {
+          speechCacheRef.current.set(cacheKey, blob);
+          if (speechCacheRef.current.size > 8) {
+            const oldest = speechCacheRef.current.keys().next().value;
+            if (oldest !== undefined) speechCacheRef.current.delete(oldest);
+          }
+        }
         const context = await contextPromise;
 
         // Some Chromium/Windows builds reject a valid WAV in decodeAudioData()
@@ -1030,7 +1042,12 @@ export function FreeVoiceAngelaWidget() {
               )}
             </div>
             {lastTranscript && <p className="border-l-2 border-[#C7A44D] pl-3 leading-5"><strong>You:</strong> {lastTranscript}</p>}
-            {lastReply && <p className="border-l-2 border-[#0B6B53] pl-3 leading-5"><strong>Angela:</strong> {lastReply}</p>}
+            {lastReply && <div className="border-l-2 border-[#0B6B53] pl-3 leading-5">
+              <p><strong>Angela:</strong> {lastReply}</p>
+              <button type="button" disabled={isLoading || isListening || isSpeaking} onClick={() => { setVoiceEnabled(true); void speakWithBrowser(lastReply); }} className="mt-2 inline-flex items-center gap-1 rounded-lg border border-[#0B6B53]/20 px-3 py-2 font-semibold text-[#0B6B53] disabled:opacity-50">
+                <Volume2 className="h-4 w-4" /> {language === 'bn' ? 'আবার শুনুন' : 'Listen again'}
+              </button>
+            </div>}
             {error && <p className="rounded-lg bg-[#FFF1F0] p-2 text-[#B42318]">{error}</p>}
             {voiceNotice && <p className="rounded-lg bg-amber-50 p-2 text-amber-800">{voiceNotice}</p>}
             <form onSubmit={(event) => { event.preventDefault(); void askAssistant(input); }} className="flex gap-2 border-t border-[#E8E1CF] pt-3">
