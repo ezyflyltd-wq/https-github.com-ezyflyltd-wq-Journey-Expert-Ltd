@@ -1,5 +1,37 @@
 const ALLOWED_ORIGIN = 'https://journeyexpertltd.com';
 
+const KNOWN_PAGE_ROUTES = new Set([
+  '/', '/about', '/flights', '/hotels', '/packages', '/visa', '/study-abroad',
+  '/business-units', '/craft-bangla', '/corporate-travel', '/ai/travel-planner',
+  '/mobile-apps', '/seo-growth', '/analytics', '/healthcare-insurance',
+  '/hajj-umrah', '/concierge', '/dmc-marketplace', '/developer',
+  '/customer/loyalty', '/enterprise/design-system', '/enterprise/cms-knowledge',
+  '/business/crm', '/business/finance', '/business/hr', '/ai-agent-ecosystem',
+  '/roadmap', '/investors', '/security', '/data-platform', '/mobile-superapp',
+  '/b2b-marketplace', '/growth-marketing', '/customer-support',
+  '/international-expansion', '/innovation-lab', '/enterprise/blueprint',
+  '/customer', '/agent', '/admin', '/architecture',
+  '/contact', '/privacy', '/terms', '/refund', '/cookies'
+]);
+
+function isKnownAssetOrStatic(pathname) {
+  return pathname.startsWith('/assets/')
+    || pathname.startsWith('/privacy/')
+    || pathname.startsWith('/terms/')
+    || pathname.startsWith('/refund/')
+    || pathname.startsWith('/cookies/')
+    || pathname.startsWith('/contact/')
+    || /^\/(robots\.txt|sitemap\.xml|site\.webmanifest|favicon\.ico)$/i.test(pathname)
+    || /\.[a-z0-9]{2,8}$/i.test(pathname);
+}
+
+function notFoundResponse() {
+  return new Response(
+    '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Page Not Found | Journey Expert Ltd.</title></head><body style="font-family:system-ui;padding:48px;max-width:720px;margin:auto"><h1>Page not found</h1><p>The requested Journey Expert Ltd. page does not exist.</p><p><a href="/">Return to Journey Expert</a></p></body></html>',
+    { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } },
+  );
+}
+
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: {
@@ -598,6 +630,12 @@ export default {
       model: 'gemini-3.8-flash',
       googleSearchGrounding: env.GOOGLE_SEARCH_GROUNDING === 'true',
     });
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      const normalizedPath = url.pathname.replace(/\/+$/, '') || '/';
+      if (!KNOWN_PAGE_ROUTES.has(normalizedPath) && !isKnownAssetOrStatic(url.pathname)) {
+        return notFoundResponse();
+      }
+    }
     return env.ASSETS.fetch(request);
   },
 };
