@@ -318,6 +318,20 @@ export function RouteMetadata() {
         '@type': 'TravelAgency',
         name: 'Journey Expert Ltd.',
         url: SITE_URL,
+        telephone: '+8801926400400',
+        email: 'journeyexpertltd@gmail.com',
+        identifier: 'Trade / Travel Agency / Civil Aviation Licence No. 102',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: '189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon',
+          addressLocality: 'Dhaka',
+          postalCode: '1215',
+          addressCountry: 'BD',
+        },
+        sameAs: [
+          'https://www.facebook.com/journeyexpertltd',
+          'https://www.instagram.com/journeyexpertltd/',
+        ],
       },
     });
   }, [pathname]);
