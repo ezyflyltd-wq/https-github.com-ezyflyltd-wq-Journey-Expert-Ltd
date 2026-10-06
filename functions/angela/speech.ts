@@ -62,7 +62,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   // Full Bangla/English answers need longer than the old greeting-sized timeout.
   // Keep one bounded provider attempt; do not abort and restart valid generation.
   let sawQuota = false;
-  const localDeadline = Date.now() + 30000;
+  const localDeadline = Date.now() + 11000;
   localKeys: for (const key of keys) {
     for (const model of models) {
       const remaining = localDeadline - Date.now();
@@ -117,34 +117,6 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
         clearTimeout(timer);
       }
     }
-  }
-
-  // The Study Abroad renderer is an independent same-brand female TTS path.
-  // It must be attempted especially after corporate 429/quota exhaustion.
-  try {
-    const shared = await fetch('https://journeyexpertbd.com/angela/speech', {
-      method: 'POST',
-      signal: AbortSignal.timeout(32000),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    if (shared.ok && shared.headers.get('content-type')?.includes('audio/wav')) {
-      const audio = await shared.arrayBuffer();
-      if (audio.byteLength > 1000) {
-        return new Response(audio, {
-          status: 200,
-          headers: {
-            'Content-Type': 'audio/wav',
-            'Cache-Control': 'no-store',
-            'X-Content-Type-Options': 'nosniff',
-            'X-Angela-Voice': shared.headers.get('X-Angela-Voice') || 'Aoede',
-            'X-Angela-Voice-Model': 'jel-study-shared-' + (shared.headers.get('X-Angela-Voice-Model') || 'tts'),
-          },
-        });
-      }
-    }
-  } catch {
-    // Fall through to the client-side ranked female device voice.
   }
 
   if (sawQuota) {

@@ -271,7 +271,11 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
     'company',
     'identity',
   ]);
-  if (retrievedKnowledge.primary && deterministicJelIntents.has(retrievedKnowledge.primary.id)) {
+  const asksOverview = /^(?:what (?:are|services|does)|which services|list (?:your|all)|tell me about (?:your|jel)|আপনাদের (?:কি কি|কী কী|সেবা|সার্ভিস)|কি কি সেবা|কী কী সেবা)/i.test(message)
+    || /^(?:hajj|umrah|visa|air ticketing|study abroad|tours|hotels|হজ|উমরাহ|ভিসা|স্টাডি)(?: services?| সার্ভিস| সেবা)?[?.!।\s]*$/i.test(message);
+  const directIdentity = ['contact', 'identity', 'company_directory', 'brands'].includes(retrievedKnowledge.primary?.id || '')
+    && !/how|why|কেন|কিভাবে|কীভাবে/i.test(message);
+  if (retrievedKnowledge.primary && deterministicJelIntents.has(retrievedKnowledge.primary.id) && (asksOverview || directIdentity)) {
     return json({ ...fallback(language, message), language, mode: 'verified' });
   }
 
@@ -313,7 +317,7 @@ ${languageInstruction}\n\nRETRIEVED VERIFIED JEL CONTEXT:\n${retrievedKnowledge.
   const models = ['gemini-3.8-flash', 'gemini-3.5-flash'];
   for (const model of models) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), model === 'gemini-3.8-flash' ? 3200 : 1800);
+    const timer = setTimeout(() => controller.abort(), model === 'gemini-3.8-flash' ? 6000 : 1800);
     try {
       const requestBody: any = {
         systemInstruction: { parts: [{ text: system }] },
@@ -330,6 +334,7 @@ ${languageInstruction}\n\nRETRIEVED VERIFIED JEL CONTEXT:\n${retrievedKnowledge.
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
         body: JSON.stringify(requestBody),
       });
+      if ([401, 403, 429].includes(upstream.status)) break;
       if (!upstream.ok) continue;
 
       const data: any = await upstream.json();
@@ -358,43 +363,6 @@ ${languageInstruction}\n\nRETRIEVED VERIFIED JEL CONTEXT:\n${retrievedKnowledge.
     } finally {
       clearTimeout(timer);
     }
-  }
-
-  // Reuse the independent JEL Study Abroad brain when the corporate Gemini
-  // credential is rate-limited or temporarily unavailable. Both public portals
-  // share the verified Journey Expert service scope.
-  try {
-    const shared = await fetch('https://journeyexpertbd.com/api/gemini/chat', {
-      method: 'POST',
-      signal: AbortSignal.timeout(1800),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        language,
-        history: history.map((turn: any) => ({
-          role: turn.role === 'model' ? 'assistant' : 'user',
-          content: turn.parts?.[0]?.text || '',
-        })),
-      }),
-    });
-    if (shared.ok) {
-      const data: any = await shared.json();
-      const reply = typeof data?.reply === 'string' ? data.reply.trim() : '';
-      if (reply
-        && !(language === 'bn' && !/[\u0980-\u09FF]/.test(reply))
-        && !(language === 'en' && /[\u0980-\u09FF]/.test(reply))) {
-        return json({
-          reply: reply.slice(0, 1800),
-          language,
-          mode: data.mode === 'fallback' ? 'fallback' : 'ai',
-          providerModel: 'jel-study-shared-' + (data.providerModel || 'gemini'),
-          primaryIntent: data.primaryIntent || retrievedKnowledge.primary?.id || 'unverified',
-          groundingIds: data.groundingIds || retrievedKnowledge.ids,
-        });
-      }
-    }
-  } catch {
-    // Preserve the verified local semantic fallback below.
   }
 
   return json({ ...fallback(language, message), language, mode: 'fallback' });

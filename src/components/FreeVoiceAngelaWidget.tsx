@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, RefreshCw, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { normalizePath } from '../routing/routes';
-import { fetchAngelaLiveFemaleSpeech } from '../lib/angelaLiveVoice';
+import { fetchAngelaSpeech } from '../lib/angelaAudio';
+import { AngelaPlayback } from '../lib/angelaPlayback';
 
 type SpeechRecognitionEventLike = {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -82,7 +83,7 @@ async function decodePcmWav(context: AudioContext, blob: Blob): Promise<AudioBuf
   return buffer;
 }
 // [approved-production-change] Cross-platform Angela voice/knowledge hardening reviewed for production.
-const BANGLA_WELCOME = 'আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা, Journey Expert Limited-এর AI সহকারী। আমি আপনাকে কীভাবে সাহায্য করতে পারি? এয়ার টিকিট, ভিসা সহায়তা, ট্যুর ও হোটেল, হজ ও ওমরাহ, হালাল ট্যুরিজম, মেডিকেল ট্যুরিজম, ইন্স্যুরেন্স, কর্পোরেট ট্রাভেল, Meet & Greet অথবা Study Abroad—যেকোনো বিষয়ে প্রশ্ন করতে পারেন।';
+const BANGLA_WELCOME = 'আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা।';
 const ENGLISH_WELCOME = "Assalamu Alaikum. I am Angela, Journey Expert Limited's AI assistant. How can I help you today? You can ask me about air tickets, visa assistance, tours and hotels, Hajj and Umrah, halal tourism, medical tourism, insurance, corporate travel, Meet & Greet, or Study Abroad.";
 const PUBLIC_WIDGET_PATHS = new Set([
   '/',
@@ -292,6 +293,39 @@ function getFallbackReply(prompt: string, selectedLanguage: 'bn' | 'en'): string
 export function FreeVoiceAngelaWidget() {
   const [hasAcceptedDisclosure, setHasAcceptedDisclosure] = useState(readStoredConsent);
   const [isOpen, setIsOpen] = useState(false);
+  const playbackRef = useRef<AngelaPlayback | null>(null);
+  if (!playbackRef.current) playbackRef.current = new AngelaPlayback();
+  const requestRef = useRef<AbortController | null>(null);
+  const inputGenerationRef = useRef(0);
+  const voiceEnabledRef = useRef(true);
+  const cancelActivity = () => {
+    inputGenerationRef.current += 1;
+    requestRef.current?.abort();
+    requestRef.current = null;
+    playbackRef.current?.cancel();
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (recognition) {
+      recognition.onresult = recognition.onerror = recognition.onend = null;
+      try { recognition.stop(); } catch { /* ended */ }
+    }
+    if (recordingTimeoutRef.current) window.clearTimeout(recordingTimeoutRef.current);
+    recordingTimeoutRef.current = null;
+    const recorder = mediaRecorderRef.current;
+    mediaRecorderRef.current = null;
+    if (recorder) {
+      recorder.onstop = recorder.ondataavailable = recorder.onerror = null;
+      if (recorder.state === 'recording') recorder.stop();
+    }
+    mediaStreamRef.current?.getTracks().forEach(track => track.stop());
+    mediaStreamRef.current = null;
+    mediaChunksRef.current = [];
+    setIsLoading(false);
+    setIsListening(false);
+    setIsSpeaking(false);
+  };
+  const closeAssistant = () => { cancelActivity(); setIsOpen(false); };
+
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -322,6 +356,7 @@ export function FreeVoiceAngelaWidget() {
 
   useEffect(() => {
     return () => {
+      cancelActivity();
       recognitionRef.current?.stop();
       if (recordingTimeoutRef.current) window.clearTimeout(recordingTimeoutRef.current);
       if (mediaRecorderRef.current?.state === 'recording') {
@@ -366,6 +401,7 @@ export function FreeVoiceAngelaWidget() {
   }, [isOpen]);
 
   const unlockAudio = async () => {
+    playbackRef.current?.prime();
     if (typeof window === 'undefined') return null;
 
     // Prime one reusable HTMLAudio element during the user's click/mic gesture.
@@ -422,37 +458,6 @@ export function FreeVoiceAngelaWidget() {
 
   const welcomeText = () => language === 'bn' ? BANGLA_WELCOME : ENGLISH_WELCOME;
 
-  const speakOpeningGreeting = (greeting: string) => {
-    void unlockAudio();
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      void speakWithBrowser(greeting);
-      return;
-    }
-    const voices = voiceCatalogRef.current.length ? voiceCatalogRef.current : window.speechSynthesis.getVoices();
-    const preferred = getOpeningGreetingVoice(voices, language);
-    if (!preferred) {
-      void speakWithBrowser(greeting);
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(greeting);
-    utterance.voice = preferred;
-    utterance.lang = preferred.lang || (language === 'bn' ? 'bn-BD' : 'en-US');
-    utterance.rate = language === 'bn' ? 1.0 : 1.0;
-    utterance.pitch = language === 'bn' ? 1.08 : 1.04;
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      setError('');
-      setVoiceNotice('');
-    };
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      void speakWithBrowser(greeting);
-    };
-    window.speechSynthesis.speak(utterance);
-  };
-
   const beginGreetingPlayback = (greeting: string) => {
     // Cloud female TTS is the primary opening path. It uses the reusable,
     // click-primed HTMLAudio/WebAudio route and only falls back to device speech
@@ -462,7 +467,12 @@ export function FreeVoiceAngelaWidget() {
   };
 
   const openFirstTimeAssistant = () => {
-    const greeting = welcomeText();
+    cancelActivity();
+    playbackRef.current?.prime();
+    voiceEnabledRef.current = true;
+    setVoiceEnabled(true);
+    setLanguage('bn');
+    const greeting = BANGLA_WELCOME;
     setIsOpen(true);
     setLastReply(greeting);
     beginGreetingPlayback(greeting);
@@ -480,273 +490,42 @@ export function FreeVoiceAngelaWidget() {
   };
 
   const openAssistant = () => {
+    cancelActivity();
+    playbackRef.current?.prime();
     setIsOpen(true);
-    const greeting = welcomeText();
+    voiceEnabledRef.current = true;
+    setVoiceEnabled(true);
+    setLanguage('bn');
+    const greeting = BANGLA_WELCOME;
     setLastReply(greeting);
     beginGreetingPlayback(greeting);
   };
 
   async function speakWithBrowser(text: string) {
-    if (typeof window === 'undefined') return;
-    const effectiveLanguage = language;
-    const cleanText = text.replace(/[*#_`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 520);
-    if (!cleanText) return;
-
-    setError('');
+    if (!voiceEnabledRef.current) return;
     setVoiceNotice('');
-    const contextPromise = unlockAudio();
-
-    if (webAudioSourceRef.current) {
-      try { webAudioSourceRef.current.stop(); } catch { /* already stopped */ }
-      try { webAudioSourceRef.current.disconnect(); } catch { /* already disconnected */ }
-      webAudioSourceRef.current = null;
-    }
-
-    // DEVICE_FIRST_ANGELA_VOICE: a verified local female voice starts immediately
-    // when available. This removes cloud wait from normal follow-up turns and
-    // preserves free quota. Cloud Aoede remains the fallback.
-    if (window.speechSynthesis) {
-      let fastVoices = voiceCatalogRef.current.length ? voiceCatalogRef.current : window.speechSynthesis.getVoices();
-      if (!fastVoices.length) {
-        await new Promise((resolve) => window.setTimeout(resolve, 120));
-        fastVoices = window.speechSynthesis.getVoices();
-        if (fastVoices.length) voiceCatalogRef.current = fastVoices;
-      }
-      const fastVoice = getOpeningGreetingVoice(fastVoices, effectiveLanguage);
-      if (fastVoice) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.voice = fastVoice;
-        utterance.lang = fastVoice.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US');
-        utterance.rate = effectiveLanguage === 'bn' ? 1.05 : 1.02;
-        utterance.pitch = effectiveLanguage === 'bn' ? 1.1 : 1.04;
-        utterance.onstart = () => {
-          setIsSpeaking(true);
-          setError('');
-          setVoiceNotice('');
-        };
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
-        window.speechSynthesis.speak(utterance);
-        return;
-      }
-    }
-
-    // CLOUD_FEMALE_PRIMARY_FAST: use cloud female audio when no verified local female voice exists.
-    // A recent 429 skips the provider during Retry-After and moves straight to
-    // the positively identified female device voice.
-    const quotaCoolingDown = Date.now() < voiceQuotaCooldownUntilRef.current;
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 4500);
-    try {
-      if (quotaCoolingDown) throw new Error('voice_quota_cooldown');
-      const response = await fetch('/angela/speech', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText, language: effectiveLanguage }),
-      });
-      if (response.status === 429) {
-        const retryAfter = Number(response.headers.get('retry-after'));
-        const seconds = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(300, Math.max(15, retryAfter)) : 60;
-        voiceQuotaCooldownUntilRef.current = Date.now() + seconds * 1000;
-        throw new Error('voice_quota_exceeded');
-      }
-      if (response.ok && response.headers.get('content-type')?.includes('audio/wav')) {
-        voiceQuotaCooldownUntilRef.current = 0;
-        const blob = await response.blob();
-        const context = await contextPromise;
-
-        // Some Chromium/Windows builds reject a valid WAV in decodeAudioData()
-        // even though HTMLAudio can play it. Preserve the working cloud female
-        // response by falling back to HTMLAudio before device speech.
-        if (context?.state === 'running') {
-          try {
-            const decoded = await context.decodeAudioData((await blob.arrayBuffer()).slice(0));
-            const source = context.createBufferSource();
-            source.buffer = decoded;
-            source.connect(context.destination);
-            webAudioSourceRef.current = source;
-            source.onended = () => {
-              if (webAudioSourceRef.current === source) webAudioSourceRef.current = null;
-              try { source.disconnect(); } catch { /* already disconnected */ }
-              setIsSpeaking(false);
-            };
-            setIsSpeaking(true);
-            setError('');
-            setVoiceNotice('');
-            source.start(0);
-            return;
-          } catch (decodeError) {
-            console.warn('Angela WebAudio decode failed; trying manual PCM WAV decoder.', decodeError);
-            try {
-              const manual = await decodePcmWav(context, blob);
-              if (manual) {
-                const source = context.createBufferSource();
-                source.buffer = manual;
-                source.connect(context.destination);
-                webAudioSourceRef.current = source;
-                source.onended = () => {
-                  if (webAudioSourceRef.current === source) webAudioSourceRef.current = null;
-                  try { source.disconnect(); } catch { /* already disconnected */ }
-                  setIsSpeaking(false);
-                };
-                setIsSpeaking(true);
-                setError('');
-                setVoiceNotice('');
-                source.start(0);
-                return;
-              }
-            } catch (manualDecodeError) {
-              console.warn('Angela manual WAV decode failed; retrying cloud female WAV with HTMLAudio.', manualDecodeError);
-            }
-          }
-        }
-
-        const url = URL.createObjectURL(blob);
-        const audio = audioRef.current || new Audio();
-        audioRef.current?.pause();
-        if (audioRef.current?.src?.startsWith('blob:')) URL.revokeObjectURL(audioRef.current.src);
-        audioRef.current = audio;
-        audio.pause();
-        audio.src = url;
-        audio.preload = 'auto';
-        audio.muted = false;
-        audio.volume = 1;
-        audio.dataset.angelaPrimed = 'true';
-        audio.onended = () => {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(url);
-          if (audioRef.current === audio) audioRef.current = null;
-        };
-        audio.onerror = () => {
-          setIsSpeaking(false);
-        };
-        setIsSpeaking(true);
-        try {
-          await audio.play();
-        } catch {
-          if (context?.state === 'suspended') {
-            try { await context.resume(); } catch { /* retry still falls through */ }
-          }
-          await audio.play();
-        }
-        setError('');
-        setVoiceNotice('');
-        return;
-      }
-    } catch {
-      // Continue immediately to device voice fallback.
-    } finally {
-      window.clearTimeout(timer);
-    }
-
-    // GEMINI_LIVE_FEMALE_SECONDARY: when unary/server TTS is quota-limited,
-    // request a one-use token and render Aoede directly in the browser before
-    // falling back to OS/device voices.
-    try {
-      const liveController = new AbortController();
-      const liveTimer = window.setTimeout(() => liveController.abort(), 14000);
-      try {
-        const liveBlob = await fetchAngelaLiveFemaleSpeech(cleanText, liveController.signal);
-        const context = await contextPromise;
-        const url = URL.createObjectURL(liveBlob);
-        const audio = audioRef.current || new Audio();
-        audioRef.current?.pause();
-        if (audioRef.current?.src?.startsWith('blob:')) URL.revokeObjectURL(audioRef.current.src);
-        audioRef.current = audio;
-        audio.src = url;
-        audio.preload = 'auto';
-        audio.muted = false;
-        audio.volume = 1;
-        audio.onended = () => {
-          setIsSpeaking(false);
-          URL.revokeObjectURL(url);
-          if (audioRef.current === audio) audioRef.current = null;
-        };
-        audio.onerror = () => setIsSpeaking(false);
-        if (context?.state === 'suspended') {
-          try { await context.resume(); } catch { /* HTMLAudio still gets a chance */ }
-        }
-        setIsSpeaking(true);
-        await audio.play();
-        setError('');
-        setVoiceNotice('');
-        return;
-      } finally {
-        window.clearTimeout(liveTimer);
-      }
-    } catch (liveError) {
-      console.warn('Angela Gemini Live female fallback unavailable; trying device female voice.', liveError);
-    }
-
-    // device voice fallback: rank female/localized voices and penalize known male
-    // voices so free cloud quota exhaustion does not make Angela silent or robotic.
-    try {
-      if (!window.speechSynthesis) throw new Error('speech_synthesis_unavailable');
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.resume?.();
-
-      let voices = voiceCatalogRef.current.length
-        ? voiceCatalogRef.current
-        : window.speechSynthesis.getVoices();
-      let preferred = getOpeningGreetingVoice(voices, effectiveLanguage);
-
-      // Edge/Chrome/Windows often expose installed voices asynchronously.
-      // Refresh once before declaring the verified female fallback unavailable.
-      if (!preferred) {
-        await new Promise((resolve) => window.setTimeout(resolve, 220));
-        voices = window.speechSynthesis.getVoices();
-        if (voices.length) voiceCatalogRef.current = voices;
-        preferred = getOpeningGreetingVoice(voices, effectiveLanguage);
-      }
-      if (!preferred) {
-        setIsSpeaking(false);
-        setVoiceNotice(effectiveLanguage === 'bn'
-          ? 'Cloud voice এইবার পাওয়া যায়নি এবং এই ডিভাইসে বাংলা/নারী-পছন্দের local voice পাওয়া যায়নি। Chat চালু আছে।'
-          : 'Cloud voice was unavailable and no suitable localized female-preferred device voice was found. Chat remains active.');
-        return;
-      }
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = preferred.lang || (effectiveLanguage === 'bn' ? 'bn-BD' : 'en-US');
-      utterance.rate = effectiveLanguage === 'bn' ? 1.03 : 1.0;
-      utterance.pitch = effectiveLanguage === 'bn' ? 1.12 : 1.04;
-      utterance.voice = preferred;
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setError('');
-      };
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setError('');
-      };
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        setVoiceNotice(effectiveLanguage === 'bn'
-          ? 'এইবার device female voice চালানো যায়নি। Chat চালু আছে—আবার voice চেষ্টা করুন।'
-          : 'The device female voice could not play this time. Chat remains active—retry voice.');
-      };
-
-      window.speechSynthesis.speak(utterance);
-      return;
-    } catch {
-      setIsSpeaking(false);
-      setVoiceNotice(effectiveLanguage === 'bn'
-        ? 'Cloud voice সাময়িকভাবে পাওয়া যাচ্ছে না এবং এই browser-এ verified female device voice নেই। Chat বন্ধ হয়নি।'
-        : 'Cloud voice is temporarily unavailable and this browser has no verified female device voice. Chat is still active.');
-    }
+    const voices = window.speechSynthesis?.getVoices() || voiceCatalogRef.current;
+    const effectiveLanguage = /[\u0980-\u09FF]/.test(text) ? 'bn' : 'en';
+    const voice = text === BANGLA_WELCOME ? null : getOpeningGreetingVoice(voices, effectiveLanguage);
+    await playbackRef.current!.play(text, voice, fetchAngelaSpeech, setIsSpeaking,
+      () => setVoiceNotice(effectiveLanguage === 'bn'
+        ? 'এই মুহূর্তে অডিও চালানো যায়নি। উত্তরটি লেখা আছে—শুনতে আবার চেষ্টা করুন।'
+        : 'Audio could not play this time. The answer is visible—please retry playback.'));
   }
 
   const speak = async (text: string) => {
-    if (!voiceEnabled) return;
+    if (!voiceEnabledRef.current) return;
     await speakWithBrowser(text);
   };
 
   const askAssistant = async (prompt: string) => {
     void unlockAudio();
     const cleanPrompt = prompt.trim();
-    if (!cleanPrompt || isLoading) return;
+    if (!cleanPrompt) return;
+    cancelActivity();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timer = setTimeout(() => controller.abort(), 10000);
     setIsLoading(true);
     setError('');
     setLastTranscript(cleanPrompt);
@@ -767,6 +546,8 @@ export function FreeVoiceAngelaWidget() {
       setLastReply(reply);
       setError('');
       setIsLoading(false);
+      clearTimeout(timer);
+      requestRef.current = null;
       void speak(reply);
       return;
     }
@@ -774,7 +555,7 @@ export function FreeVoiceAngelaWidget() {
     try {
       const response = await fetch('/angela/chat', {
         method: 'POST',
-        signal: AbortSignal.timeout(8000),
+        signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: cleanPrompt,
@@ -785,6 +566,7 @@ export function FreeVoiceAngelaWidget() {
       });
       if (!response.ok) throw new Error('AI endpoint unavailable');
       const data = await response.json();
+      if (requestRef.current !== controller) return;
       const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt, language));
       setHistory((turns) => [
         ...turns,
@@ -795,12 +577,14 @@ export function FreeVoiceAngelaWidget() {
       setError('');
       void speak(reply);
     } catch {
+      if (requestRef.current !== controller) return;
       const fallback = getFallbackReply(cleanPrompt, language);
       setLastReply(fallback);
       setError(language === 'bn' ? 'লাইভ AI সাময়িকভাবে অনুপলব্ধ; যাচাইকৃত JEL fallback দেখানো হচ্ছে।' : 'Live AI is temporarily unavailable; a verified JEL fallback is shown.');
       void speak(fallback);
     } finally {
-      setIsLoading(false);
+      clearTimeout(timer);
+      if (requestRef.current === controller) { requestRef.current = null; setIsLoading(false); }
     }
   };
 
@@ -878,6 +662,8 @@ export function FreeVoiceAngelaWidget() {
   };
 
   const startListening = async () => {
+    cancelActivity();
+    const generation = inputGenerationRef.current;
     audioRef.current?.pause();
     if (webAudioSourceRef.current) {
       try { webAudioSourceRef.current.stop(); } catch { /* already stopped */ }
@@ -903,6 +689,7 @@ export function FreeVoiceAngelaWidget() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (generation !== inputGenerationRef.current) { stream.getTracks().forEach(track => track.stop()); return; }
       mediaStreamRef.current = stream;
       const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
       const mimeType = candidates.find((type) => MediaRecorder.isTypeSupported(type)) || '';
@@ -929,9 +716,11 @@ export function FreeVoiceAngelaWidget() {
         try {
           setIsLoading(true);
           const transcript = await transcribeRecordedAudio(blob);
+          if (generation !== inputGenerationRef.current) return;
           setIsLoading(false);
           await askAssistant(transcript);
         } catch {
+          if (generation !== inputGenerationRef.current) return;
           setIsLoading(false);
           setError(language === 'bn'
             ? 'আপনার কথাটি লেখা হিসেবে ধরতে পারিনি। আবার বলুন বা লিখে প্রশ্ন করুন।'
@@ -973,6 +762,7 @@ export function FreeVoiceAngelaWidget() {
   };
 
   const resetConversation = () => {
+    cancelActivity();
     const recognition = recognitionRef.current;
     recognitionRef.current = null;
     try { recognition?.stop(); } catch { /* already ended */ }
@@ -1030,7 +820,7 @@ export function FreeVoiceAngelaWidget() {
               <p className="mt-3 text-xs leading-5 text-[#555555]">Replies may be incomplete or inaccurate. Do not share passport, bank, payment, password, or other sensitive information. For verified support, call <a className="font-bold text-[#0B6B53] underline" href="tel:+8801926400400">+880 1926-400400</a>.</p>
               <div className="mt-4 flex flex-col gap-3 border-t border-[#E8E1CF] pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <button type="button" className="inline-flex min-h-11 items-center justify-center bg-[#093F31] px-5 py-3 text-sm font-bold text-white hover:bg-[#0B6B53] focus:outline-none focus:ring-2 focus:ring-[#C7A44D] focus:ring-offset-2" onClick={acceptDisclosure}>Agree and continue / সম্মত হয়ে চালিয়ে যান</button>
-                <button type="button" className="text-sm font-semibold text-[#0B6B53] underline" onClick={() => setIsOpen(false)}>Not now / এখন নয়</button>
+                <button type="button" className="text-sm font-semibold text-[#0B6B53] underline" onClick={closeAssistant}>Not now / এখন নয়</button>
               </div>
             </aside>
           </div>
@@ -1053,12 +843,12 @@ export function FreeVoiceAngelaWidget() {
             </div>
             <div className="flex items-center gap-1">
               <div className="mr-1 flex items-center rounded-lg bg-white/10 p-0.5 text-[10px]">
-                <button type="button" className={`rounded px-1.5 py-0.5 ${language === 'en' ? 'bg-white font-bold text-[#0B5D3B]' : 'text-white/80'}`} onClick={() => setLanguage('en')}>EN</button>
-                <button type="button" className={`rounded px-1.5 py-0.5 ${language === 'bn' ? 'bg-white font-bold text-[#0B5D3B]' : 'text-white/80'}`} onClick={() => setLanguage('bn')}>বাংলা</button>
+                <button type="button" className={`rounded px-1.5 py-0.5 ${language === 'en' ? 'bg-white font-bold text-[#0B5D3B]' : 'text-white/80'}`} onClick={() => { cancelActivity(); setLanguage('en'); }}>EN</button>
+                <button type="button" className={`rounded px-1.5 py-0.5 ${language === 'bn' ? 'bg-white font-bold text-[#0B5D3B]' : 'text-white/80'}`} onClick={() => { cancelActivity(); setLanguage('bn'); }}>বাংলা</button>
               </div>
-              <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => setVoiceEnabled((value) => !value)} className="rounded-lg p-1.5 text-amber-300 hover:bg-white/10">{voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-white/60" />}</button>
+              <button type="button" aria-label={voiceEnabled ? 'Mute spoken replies' : 'Enable spoken replies'} onClick={() => { voiceEnabledRef.current = !voiceEnabledRef.current; setVoiceEnabled(voiceEnabledRef.current); if (!voiceEnabledRef.current) { playbackRef.current?.cancel(); setIsSpeaking(false); } }} className="rounded-lg p-1.5 text-amber-300 hover:bg-white/10">{voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-white/60" />}</button>
               <button type="button" aria-label="New chat" onClick={resetConversation} className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white"><RefreshCw className="h-4 w-4" /></button>
-              <button type="button" aria-label="Close Angela assistant" onClick={() => setIsOpen(false)} className="rounded-lg p-1.5 text-white/80 hover:bg-white/10"><X className="h-5 w-5" /></button>
+              <button type="button" aria-label="Close Angela assistant" onClick={closeAssistant} className="rounded-lg p-1.5 text-white/80 hover:bg-white/10"><X className="h-5 w-5" /></button>
             </div>
           </header>
           <div className={`flex items-center gap-2 border-b px-3 py-1.5 text-[11px] font-medium ${

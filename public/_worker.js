@@ -363,7 +363,7 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
     : [];
   const model = 'gemini-3.8-flash';
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const requestBody = {
       systemInstruction: { parts: [{ text: system }] },
@@ -487,7 +487,7 @@ async function speech(request, env) {
   let sawQuota = false;
   let lastProviderStatus = 0;
   // Full replies take longer to render than a short greeting.
-  const deadline = Date.now() + 30000;
+  const deadline = Date.now() + 11000;
 
   outer: for (const key of keys) {
     for (const model of models) {
@@ -497,34 +497,17 @@ async function speech(request, env) {
       const timer = setTimeout(() => controller.abort(), remaining);
 
       try {
-        const upstream = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-          {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-              'content-type': 'application/json',
-              'x-goog-api-key': key,
-            },
-            body: JSON.stringify({
-              contents: [{
-                role: 'user',
-                parts: [{
-                  text,
-                  speech_metadata: {
-                    style: 'Warm, natural, professional adult female delivery. Speak the text exactly as written in its original language.',
-                  },
-                }],
-              }],
-              generationConfig: {
-                responseModalities: ['AUDIO'],
-                speechConfig: {
-                  voiceConfig: { voice: 'Aoede' },
-                },
-              },
-            }),
-          },
-        );
+        const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+          method: 'POST', signal: controller.signal,
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+          body: JSON.stringify({
+            model,
+            input: [{ type: 'user_input', content: [{ type: 'text', text,
+              annotations: [{ type: 'speech_metadata', style: 'Warm, natural, professional adult female delivery. Speak the exact text in its original language.' }] }] }],
+            response_format: { type: 'audio' },
+            generation_config: { speech_config: [{ voice: 'Aoede' }] },
+          }),
+        });
 
         lastProviderStatus = upstream.status;
         if (!upstream.ok) {
@@ -537,9 +520,7 @@ async function speech(request, env) {
         }
 
         const data = await upstream.json();
-        const audio = data?.candidates?.[0]?.content?.parts
-          ?.map((part) => part?.inlineData)
-          .find((part) => part && typeof part.data === 'string' && String(part.mimeType || '').startsWith('audio/'));
+        const audio = data?.steps?.flatMap(step => step.content || []).find(part => part.type === 'audio' && typeof part.data === 'string');
 
         if (!audio?.data) continue;
         const raw = Uint8Array.from(atob(audio.data), (character) => character.charCodeAt(0));
