@@ -26,6 +26,7 @@ function conversationalReply(message: string, language: 'bn' | 'en') {
     .replace(/\s+/g, ' ')
     .trim();
 
+  if (/hotline|phone|contact|whatsapp|হটলাইন|ফোন|নম্বর|নাম্বার|যোগাযোগ|হোয়াটসঅ্যাপ|হোয়াটসঅ্যাপ/i.test(q)) return null;
   const bn = language === 'bn';
   const answer = (bnText: string, enText: string) => ({
     reply: bn ? bnText : enText,
@@ -91,6 +92,14 @@ Known JEL brands/co-brands include JEL Study Abroad, JEL Meet & Greet, JEL Compl
 
 
 const JEL_SEMANTIC_KNOWLEDGE = [
+  {
+    id: 'contact', priority: 50,
+    keywords: ['hotline', 'phone number', 'contact number', 'telephone', 'whatsapp', 'হটলাইন', 'ফোন নম্বর', 'ফোন নাম্বার', 'নাম্বার', 'নম্বর', 'যোগাযোগ', 'হোয়াটসঅ্যাপ', 'হোয়াটসঅ্যাপ'],
+    facts: 'Journey Expert Limited hotline and WhatsApp: 01926400400 in Bangladesh, +8801926400400 internationally.',
+    bn: 'আমাদের হটলাইন ও WhatsApp নম্বর 01926400400। বিদেশ থেকে যোগাযোগের জন্য +8801926400400 ব্যবহার করুন।',
+    en: 'Our hotline and WhatsApp number is 01926400400 in Bangladesh, or +8801926400400 internationally.'
+  },
+
   {
     id: 'services_overview', priority: 120,
     keywords: ['what services','which services','services provide','services does','services offer','jel services','journey expert services','all services','কি কি সার্ভিস','কী কী সার্ভিস','কি কি সেবা','কী কী সেবা','সার্ভিস দেয়','সার্ভিস দেয়','সব সার্ভিস','সকল সার্ভিস'],
@@ -220,11 +229,15 @@ function retrieveJelKnowledge(query) {
 
 function semanticFallback(language, message) {
   const retrieved = retrieveJelKnowledge(message);
-  const reply = retrieved.primary
+  let reply = retrieved.primary
     ? (language === 'bn' ? retrieved.primary.bn : retrieved.primary.en)
     : (language === 'bn'
       ? 'আপনার প্রশ্নের নির্দিষ্ট তথ্যটি বর্তমান verified JEL knowledge-এ নেই। ভুল তথ্য দেওয়ার বদলে এই অংশটি verify করা প্রয়োজন।'
       : 'That specific detail is not present in the current verified JEL knowledge. Rather than invent an answer, that detail needs to be verified.');
+  if (retrieved.primary?.id !== 'contact' && retrieved.ids.includes('contact')) {
+    const contact = JEL_SEMANTIC_KNOWLEDGE.find(entry => entry.id === 'contact')!;
+    reply += '\n\n' + (language === 'bn' ? contact.bn : contact.en);
+  }
   return {
     reply,
     primaryIntent: retrieved.primary?.id || 'unverified',
