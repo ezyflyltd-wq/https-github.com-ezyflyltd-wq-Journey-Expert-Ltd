@@ -11,6 +11,11 @@ const publicRoutes = {
     keywords: 'Bangladesh travel agency, flights, visa consultancy, study abroad, Hajj Umrah, global mobility',
     type: 'WebSite',
   },
+  '/about': {
+    title: 'About Journey Expert Ltd. | Bangladesh Travel & Mobility',
+    description: 'Learn about Journey Expert Limited, its travel and global mobility services, verified contact details and service standards.',
+    type: 'WebPage',
+  },
   '/flights': {
     title: 'Flight Search from Bangladesh | Journey Expert Ltd.',
     description: 'Explore flight-search assistance from Bangladesh for international and domestic journeys with Journey Expert Ltd.',
@@ -82,24 +87,9 @@ const publicRoutes = {
     description: 'Explore the Journey Expert mobile and super-app product experience for travel and global mobility.',
     type: 'Service',
   },
-  '/seo-growth': {
-    title: 'SEO and Growth Platform | Journey Expert Ltd.',
-    description: 'Explore Journey Expert’s search, content, growth, and digital marketing platform capabilities.',
-    type: 'Service',
-  },
   '/customer-support': {
     title: 'Customer Support and AI Contact Center | Journey Expert Ltd.',
     description: 'Explore customer support, service requests, knowledge, and AI contact-center capabilities.',
-    type: 'Service',
-  },
-  '/international-expansion': {
-    title: 'International Expansion and Partnerships | Journey Expert Ltd.',
-    description: 'Explore Journey Expert’s international travel, partnership, and global mobility expansion capabilities.',
-    type: 'Service',
-  },
-  '/innovation-lab': {
-    title: 'Innovation Lab and Future Mobility | Journey Expert Ltd.',
-    description: 'Explore future mobility, travel technology, AI research, and innovation concepts from Journey Expert Ltd.',
     type: 'Service',
   },
   '/business-units': {
@@ -107,39 +97,22 @@ const publicRoutes = {
     description: 'Explore Journey Expert Ltd. business units across travel, education, mobility, technology, and support services.',
     type: 'Service',
   },
-  '/developer': {
-    title: 'Developer and API Gateway | Journey Expert Ltd.',
-    description: 'Explore Journey Expert API gateway, integration, developer, and partner technology concepts.',
-    type: 'Service',
-  },
   '/ai/travel-planner': {
     title: 'AI Travel Planner | Journey Expert Ltd.',
     description: 'Explore AI-assisted travel planning, destination ideas, itinerary support, and visa guidance.',
     type: 'Service',
   },
-  '/ai-agent-ecosystem': {
-    title: 'AI Agent Ecosystem | Journey Expert Ltd.',
-    description: 'Explore Journey Expert’s AI assistant, automation, support, and intelligent-workforce concepts.',
-    type: 'Service',
-  },
-  '/enterprise/blueprint': {
-    title: 'Enterprise Travel Platform Blueprint | Journey Expert Ltd.',
-    description: 'Explore the Journey Expert enterprise travel, mobility, AI, data, and operating-platform blueprint.',
-    type: 'Service',
-  },
-  '/enterprise/design-system': {
-    title: 'Website and Design System | Journey Expert Ltd.',
-    description: 'Explore the Journey Expert website experience, design system, brand tokens, and interface standards.',
-    type: 'Service',
-  },
-  '/enterprise/cms-knowledge': {
-    title: 'Headless CMS and Travel Knowledge | Journey Expert Ltd.',
-    description: 'Explore the Journey Expert content, knowledge, destination, and travel-advisory platform.',
-    type: 'Service',
-  },
 };
 
 const internalRoutes = {
+  '/seo-growth': 'SEO and Growth Workspace',
+  '/international-expansion': 'International Expansion Workspace',
+  '/innovation-lab': 'Innovation Lab Workspace',
+  '/developer': 'Developer and API Workspace',
+  '/ai-agent-ecosystem': 'AI Agent Ecosystem Workspace',
+  '/enterprise/blueprint': 'Enterprise Blueprint Workspace',
+  '/enterprise/design-system': 'Design System Workspace',
+  '/enterprise/cms-knowledge': 'CMS and Knowledge Workspace',
   '/analytics': 'Business Intelligence Dashboard',
   '/customer/loyalty': 'Customer Loyalty Workspace',
   '/business/crm': 'CRM and Sales Workspace',
@@ -226,10 +199,25 @@ function renderRoute(route) {
       '@type': 'TravelAgency',
       name: 'Journey Expert Ltd.',
       url: siteUrl,
+      telephone: '+8801926400400',
+      email: 'journeyexpertltd@gmail.com',
+      identifier: 'Trade / Travel Agency / Civil Aviation Licence No. 102',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: '189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon',
+        addressLocality: 'Dhaka',
+        postalCode: '1215',
+        addressCountry: 'BD',
+      },
+      sameAs: [
+        'https://www.facebook.com/journeyexpertltd',
+        'https://www.instagram.com/journeyexpertltd/',
+      ],
     },
   });
 
   return shell
+    .replace(/\s*<meta name="keywords"[^>]*\/>/g, '')
     .replace('<div id="root"></div>', `<div id="root">${staticContentFor(route, seo)}</div>`)
     .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(seo.title)}</title>`)
     .replace(/<meta name="robots" content="[^"]*" \/>/, `<meta name="robots" content="${robots}" />`)
