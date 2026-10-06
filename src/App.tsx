@@ -52,6 +52,7 @@ import { DeferredServiceWidget } from './components/seo/DeferredServiceWidget';
 import { FreeVoiceAngelaWidget, isPublicAngelaRoute } from './components/FreeVoiceAngelaWidget';
 import { ServiceRouteShell } from './components/seo/ServiceRouteShell';
 import { ProtectedPortalGate } from './components/ProtectedPortalGate';
+import { CookieConsent } from './components/CookieConsent';
 const Home3DExperience = lazy(() => import('./components/home3d/Home3DExperience').then(({ Home3DExperience }) => ({ default: Home3DExperience })));
 import {
   Plane,
@@ -370,7 +371,8 @@ export default function App() {
       </main>
 
       {/* Public Angela widget; protected portal routes intentionally do not mount it. */}
-      {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && <FreeVoiceAngelaWidget />}
+      {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && <FreeVoiceAngelaWidget />
+      <CookieConsent />}
 
       {/* Global Footer */}
       <DeferredFooter onPortalChange={navigateToPortal} onModuleChange={navigateToModule} />
