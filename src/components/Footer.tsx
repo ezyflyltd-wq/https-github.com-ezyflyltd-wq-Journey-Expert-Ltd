@@ -119,6 +119,15 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
             </div>
           </div>
 
+          <nav aria-label="Follow Journey Expert" className="flex flex-wrap gap-3 pt-3">
+            {[
+              ['Facebook', 'https://www.facebook.com/journeyexpertltd'],
+              ['Instagram', 'https://www.instagram.com/journeyexpertltd/'],
+              ['YouTube', 'https://www.youtube.com/@JELSTUDYABROAD'],
+              ['WhatsApp', 'https://wa.me/8801926400400'],
+            ].map(([label, href]) => <a key={label} href={href} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-[#0B6B53]/20 px-3 py-2 text-[#0B6B53] font-semibold hover:bg-white">{label}</a>)}
+          </nav>
+
           {COMPANY_CONFIG.accreditations && COMPANY_CONFIG.accreditations.length > 0 && (
             <div className="pt-2 flex items-center space-x-2 flex-wrap gap-y-1">
               <span className="text-[10px] uppercase font-bold text-[#666666] tracking-wider">Accreditations:</span>
