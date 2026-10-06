@@ -124,7 +124,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
               ['Facebook', 'https://www.facebook.com/journeyexpertltd'],
               ['Instagram', 'https://www.instagram.com/journeyexpertltd/'],
               ['YouTube', 'https://www.youtube.com/@JELSTUDYABROAD'],
-              ['WhatsApp', 'https://wa.me/8801926400400'],
+              ['WhatsApp', 'https://wa.me/8801926400400?text=Assalamu%20Alaikum%20Journey%20Expert%20Limited.%20I%20visited%20journeyexpertltd.com%20and%20would%20like%20assistance.'],
             ].map(([label, href]) => <a key={label} href={href} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-[#0B6B53]/20 px-3 py-2 text-[#0B6B53] font-semibold hover:bg-white">{label}</a>)}
           </nav>
 
