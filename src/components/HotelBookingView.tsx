@@ -35,7 +35,7 @@ export const HotelBookingView: React.FC = () => {
             Curated Hotels in Dubai, Cox's Bazar & Makkah
           </h2>
           <p className="text-xs text-[#666666] mt-1 font-medium">
-            Best rate guarantee with instant confirmation and flexible cancellation policies.
+            Hotel search assistance with supplier-confirmed rates, availability and cancellation terms.
           </p>
         </div>
 
