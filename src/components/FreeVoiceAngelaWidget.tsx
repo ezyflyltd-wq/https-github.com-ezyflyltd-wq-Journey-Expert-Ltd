@@ -5,7 +5,7 @@ function resolveAngelaLanguage(message, selected) {
   if (/[\u0980-\u09FF]/.test(message)) return 'bn';
   if (/\b(ami|amar|amake|apni|apnar|apnader|tumi|tomar|tomader|chai|jabo|jete|koto|kivabe|ki|keno|kobe|hobe|korbo|korte|lagbe|bolen|diben|pari|parbo)\b/i.test(message)) return 'bn';
   if (/\b(what|which|how|where|when|can|could|please|tell|your|you|services)\b/i.test(message)) return 'en';
-  return selected === 'en' ? 'en' : 'bn';
+  return selected === 'bn' ? 'bn' : 'en';
 }
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, RefreshCw, Send, Volume2, VolumeX, X } from 'lucide-react';
