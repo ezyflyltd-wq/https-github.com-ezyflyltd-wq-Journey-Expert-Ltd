@@ -5,7 +5,7 @@ function resolveAngelaLanguage(message, selected) {
   if (/[\u0980-\u09FF]/.test(message)) return 'bn';
   if (/\b(ami|amar|amake|apni|apnar|apnader|tumi|tomar|tomader|chai|jabo|jete|koto|kivabe|ki|keno|kobe|hobe|korbo|korte|lagbe|bolen|diben|pari|parbo)\b/i.test(message)) return 'bn';
   if (/\b(what|which|how|where|when|can|could|please|tell|your|you|services)\b/i.test(message)) return 'en';
-  return selected === 'en' ? 'en' : 'bn';
+  return selected === 'bn' ? 'bn' : 'en';
 }
 const ALLOWED_ORIGIN = 'https://journeyexpertltd.com';
 
@@ -32,7 +32,7 @@ const languageFor = (message, requested) => {
 const JEL_SEMANTIC_KNOWLEDGE = [
   {
     id: 'contact', priority: 50,
-    keywords: ['hotline', 'phone number', 'contact number', 'telephone', 'number', 'nombor', 'namber', 'whatsapp', 'হটলাইন', 'ফোন নম্বর', 'ফোন নাম্বার', 'নাম্বার', 'নম্বর', 'যোগাযোগ', 'হোয়াটসঅ্যাপ', 'হোয়াটসঅ্যাপ'],
+    keywords: ['hotline', 'phone number', 'contact number', 'telephone', 'phone nombor', 'phone namber', 'whatsapp', 'হটলাইন', 'ফোন নম্বর', 'ফোন নাম্বার', 'নাম্বার', 'নম্বর', 'যোগাযোগ', 'হোয়াটসঅ্যাপ', 'হোয়াটসঅ্যাপ'],
     facts: 'Journey Expert Limited hotline and WhatsApp: 01926400400 in Bangladesh, +8801926400400 internationally.',
     bn: 'আমাদের হটলাইন ও WhatsApp নম্বর 01926400400। বিদেশ থেকে যোগাযোগের জন্য +8801926400400 ব্যবহার করুন।',
     en: 'Our hotline and WhatsApp number is 01926400400 in Bangladesh, or +8801926400400 internationally.'
