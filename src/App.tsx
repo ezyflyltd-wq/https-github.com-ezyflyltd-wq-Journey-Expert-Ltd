@@ -47,10 +47,12 @@ const EnterpriseBlueprintView = lazy(() => import('./components/EnterpriseBluepr
 import { MainViewModule, PortalType } from './types';
 import { getModuleForPath, getPathForModule, getPathForPortal, getPortalForPath, migrateLegacyHash } from './routing/routes';
 import { RouteMetadata } from './seo/RouteMetadata';
+import { trackMetaPageView } from './lib/metaPixel';
 import { DeferredServiceWidget } from './components/seo/DeferredServiceWidget';
 import { FreeVoiceAngelaWidget, isPublicAngelaRoute } from './components/FreeVoiceAngelaWidget';
 import { ServiceRouteShell } from './components/seo/ServiceRouteShell';
 import { ProtectedPortalGate } from './components/ProtectedPortalGate';
+import { CookieConsent } from './components/CookieConsent';
 const Home3DExperience = lazy(() => import('./components/home3d/Home3DExperience').then(({ Home3DExperience }) => ({ default: Home3DExperience })));
 import {
   Plane,
@@ -93,6 +95,10 @@ export default function App() {
   React.useEffect(() => {
     migrateLegacyHash();
   }, []);
+
+  React.useEffect(() => {
+    trackMetaPageView();
+  }, [location.pathname, location.search]);
 
   const openAngela = () => {
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('jel:open-angela'));
@@ -366,6 +372,7 @@ export default function App() {
 
       {/* Public Angela widget; protected portal routes intentionally do not mount it. */}
       {activePortal === 'main' && isPublicAngelaRoute(location.pathname) && <FreeVoiceAngelaWidget />}
+      <CookieConsent />
 
       {/* Global Footer */}
       <DeferredFooter onPortalChange={navigateToPortal} onModuleChange={navigateToModule} />
