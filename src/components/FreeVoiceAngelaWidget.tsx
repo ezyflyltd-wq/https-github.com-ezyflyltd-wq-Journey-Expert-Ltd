@@ -1,3 +1,12 @@
+function resolveAngelaLanguage(message, selected) {
+  // Explicit language instructions override the previous conversation language.
+  if (/(?:answer|reply|respond|speak|talk|বলুন|বলো|উত্তর).*?(?:in\s+)?(?:english|ইংরেজি)|(?:english|ইংরেজি)(?:\s+please|তে\s*(?:বলুন|বলো|উত্তর))/i.test(message)) return 'en';
+  if (/(?:answer|reply|respond|speak|talk).*?(?:bangla|bengali)|বাংলা(?:য়|য়|তে)?\s*(?:উত্তর|বলুন|বলো)/i.test(message)) return 'bn';
+  if (/[\u0980-\u09FF]/.test(message)) return 'bn';
+  if (/\b(ami|amar|amake|apni|apnar|apnader|tumi|tomar|tomader|chai|jabo|jete|koto|kivabe|ki|keno|kobe|hobe|korbo|korte|lagbe|bolen|diben|pari|parbo)\b/i.test(message)) return 'bn';
+  if (/\b(what|which|how|where|when|can|could|please|tell|your|you|services)\b/i.test(message)) return 'en';
+  return selected === 'en' ? 'en' : 'bn';
+}
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, RefreshCw, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { normalizePath } from '../routing/routes';
@@ -522,6 +531,8 @@ export function FreeVoiceAngelaWidget() {
     void unlockAudio();
     const cleanPrompt = prompt.trim();
     if (!cleanPrompt) return;
+    const responseLanguage = resolveAngelaLanguage(cleanPrompt, language);
+    setLanguage(responseLanguage);
     cancelActivity();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -536,8 +547,9 @@ export function FreeVoiceAngelaWidget() {
       && /(কথা|বলতে|বুঝতে|পারো|পারেন|পারবে|পারবেন|speak|talk|understand)/i.test(normalizedPrompt)
       && normalizedPrompt.length < 180;
     const greetingOnly = /^(?:hi|hello|hey|হ্যালো|হাই|সালাম|আসসালামু আলাইকুম)(?:\s+(?:angela|অ্যাঞ্জেলা))?[!?.,\s]*$/i.test(normalizedPrompt);
-    if (asksBangla || greetingOnly) {
-      const reply = getFallbackReply(cleanPrompt, language);
+    const hasBusinessQuestion = /hotline|phone|contact|whatsapp|number|nombor|namber|ফোন|নম্বর|নাম্বার|যোগাযোগ|visa|ভিসা|ticket|টিকিট|umrah|উমরাহ|হজ|study|service|সার্ভিস/i.test(normalizedPrompt);
+    if ((asksBangla && !hasBusinessQuestion) || greetingOnly) {
+      const reply = getFallbackReply(cleanPrompt, responseLanguage);
       setHistory((turns) => [
         ...turns,
         { role: 'user', content: cleanPrompt },
@@ -559,7 +571,7 @@ export function FreeVoiceAngelaWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: cleanPrompt,
-          language,
+          language: responseLanguage,
           conversationId,
           history,
         }),
@@ -567,7 +579,7 @@ export function FreeVoiceAngelaWidget() {
       if (!response.ok) throw new Error('AI endpoint unavailable');
       const data = await response.json();
       if (requestRef.current !== controller) return;
-      const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt, language));
+      const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt, responseLanguage));
       setHistory((turns) => [
         ...turns,
         { role: 'user', content: cleanPrompt },
@@ -578,7 +590,7 @@ export function FreeVoiceAngelaWidget() {
       void speak(reply);
     } catch {
       if (requestRef.current !== controller) return;
-      const fallback = getFallbackReply(cleanPrompt, language);
+      const fallback = getFallbackReply(cleanPrompt, responseLanguage);
       setLastReply(fallback);
       setError(language === 'bn' ? 'লাইভ AI সাময়িকভাবে অনুপলব্ধ; যাচাইকৃত JEL fallback দেখানো হচ্ছে।' : 'Live AI is temporarily unavailable; a verified JEL fallback is shown.');
       void speak(fallback);
