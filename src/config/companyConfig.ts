@@ -116,7 +116,7 @@ export const COMPANY_INFO: CompanyInfo = {
     darkBackground: '#081C15',
     text: '#1A1A1A',
   },
-  accreditations: [],
+  accreditations: ['Trade / Travel Agency / Civil Aviation Licence No. 102'],
 };
 
 export const COMPANY_CONFIG = COMPANY_INFO;

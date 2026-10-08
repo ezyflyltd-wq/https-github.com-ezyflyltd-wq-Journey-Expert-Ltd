@@ -62,7 +62,8 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
   const [destination, setDestination] = useState('London (LHR)');
   const [tripType, setTripType] = useState<'round' | 'oneWay'>('round');
   const [travelClass, setTravelClass] = useState('Economy');
-  const [travelDate, setTravelDate] = useState('2026-09-15');
+  const today = new Date().toLocaleDateString('en-CA');
+  const [travelDate, setTravelDate] = useState(today);
 
   const handleGlobeDestinationSelect = (dest: DestinationPoint) => {
     setSelectedDestination(dest);
@@ -272,6 +273,7 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
                     id="hero-departure-date"
                     name="departureDate"
                     type="date"
+                    min={today}
                     value={travelDate}
                     onChange={(e) => setTravelDate(e.target.value)}
                     className="w-full bg-transparent text-sm font-bold text-white focus:outline-none"

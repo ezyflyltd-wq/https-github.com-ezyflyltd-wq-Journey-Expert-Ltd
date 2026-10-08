@@ -1,7 +1,8 @@
-import { Fragment } from 'react';
+import { Fragment, lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import App from '../App';
-import { CookiePolicy } from '../components/CookiePolicy';
+
+const CookiePolicy = lazy(() => import('../components/CookiePolicy').then(({ CookiePolicy }) => ({ default: CookiePolicy })));
 
 const ROUTE_PATHS = [
   '/',
@@ -58,7 +59,7 @@ const ROUTE_PATHS = [
 export function AppRouter() {
   return (
     <Routes>
-      <Route path="/cookies" element={<CookiePolicy />} />
+      <Route path="/cookies" element={<Suspense fallback={<div className="p-8" aria-busy="true">Loading Cookie Policy…</div>}><CookiePolicy /></Suspense>} />
       {ROUTE_PATHS.map((path) => (
         <Fragment key={path}>
           <Route path={path} element={<App />} />

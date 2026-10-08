@@ -7,19 +7,12 @@ const SCRIPT_ID = 'jel-meta-pixel-script';
 
 type Consent = 'unknown' | 'granted' | 'denied';
 let inMemoryConsent: Exclude<Consent, 'unknown'> | undefined;
-type Fbq = ((...args: unknown[]) => void) & {
+type Fbq = ((...args: any[]) => void) & {
   loaded?: boolean;
   version?: string;
   queue?: unknown[];
   callMethod?: (...args: unknown[]) => void;
 };
-
-declare global {
-  interface Window {
-    fbq?: Fbq;
-    _fbq?: Fbq;
-  }
-}
 
 function readConsent(): Consent {
   if (typeof window === 'undefined') return 'unknown';

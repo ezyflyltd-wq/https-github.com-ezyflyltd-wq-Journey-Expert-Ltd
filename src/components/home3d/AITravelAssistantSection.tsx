@@ -44,7 +44,7 @@ export const AITravelAssistantSection: React.FC<AITravelAssistantSectionProps> =
     highlights: [
       'Live airfare optimization across 900+ global carriers with zero hidden agency fees',
       'Embassy document readiness scoring and appointment tracking for UK, Canada & Schengen',
-      'Direct CAS & I-20 application assistance for students with guaranteed scholarship review',
+      'CAS/I-20 related admissions guidance and scholarship-opportunity review where applicable',
       'Exclusive VIP 5-Star clock tower hotel packages for Umrah with guided Ziyarat tours',
     ],
     suggestedAction: {
@@ -126,7 +126,7 @@ export const AITravelAssistantSection: React.FC<AITravelAssistantSectionProps> =
           highlights: [
             'Customized day-by-day travel itinerary with verified local DMC tour guides',
             'Accurate embassy checklist and visa file organization support',
-            'Instant 24/7 flight monitoring and rebooking guarantee',
+            'Flight-change guidance and rebooking assistance subject to airline and supplier rules',
           ],
           suggestedAction: {
             label: 'Launch Visa Requirement Portal',

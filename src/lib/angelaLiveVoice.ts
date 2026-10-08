@@ -71,6 +71,7 @@ export async function fetchAngelaLiveFemaleSpeech(text: string, signal: AbortSig
 
     const cleanup = () => {
       clearTimeout(timer);
+      clearTimeout(deadlineTimer);
       signal.removeEventListener('abort', onAbort);
       try { socket.close(); } catch { /* already closed */ }
     };
@@ -94,7 +95,14 @@ export async function fetchAngelaLiveFemaleSpeech(text: string, signal: AbortSig
 
     const onAbort = () => fail(new DOMException('Aborted', 'AbortError'));
     signal.addEventListener('abort', onAbort, { once: true });
-    const timer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 12000);
+    // Fail quickly when no audio arrives, but let an active response finish.
+    // A fixed 12-second total timer discarded valid chunks on long replies.
+    let timer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 5000);
+    const deadlineTimer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 14000);
+    const noteAudioProgress = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 12000);
+    };
 
     socket.onopen = () => {
       socket.send(JSON.stringify({
@@ -138,6 +146,7 @@ export async function fetchAngelaLiveFemaleSpeech(text: string, signal: AbortSig
             const audio = part?.inlineData;
             if (audio?.data && (!audio.mimeType || String(audio.mimeType).includes('audio'))) {
               chunks.push(base64ToBytes(audio.data));
+              noteAudioProgress();
             }
           }
         }

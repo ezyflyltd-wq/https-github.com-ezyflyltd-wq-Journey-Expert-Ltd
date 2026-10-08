@@ -37,10 +37,10 @@ export const CORE_SERVICES: ServiceCardData[] = [
     title: 'FLIGHTS',
     tagline: 'International & Domestic Air Ticketing',
     description:
-      'Direct Sabre, Amadeus & Galileo GDS connections. Search, compare, and instantly issue e-tickets across 900+ global airlines with seat selection and baggage clarity.',
+      'Flight-search and ticketing assistance using supported supplier and GDS/OTA workflows. Final fares, schedules, seats, baggage rules and issuance are confirmed from the applicable supplier source.',
     icon: Plane,
     badge: 'Multi-GDS Engine',
-    highlights: ['Lowest Fare Guarantee', 'Instant E-Ticket Issuance', 'Baggage & Meal Customization'],
+    highlights: ['Fare Comparison Support', 'Ticketing Assistance', 'Baggage & Fare-Rule Guidance'],
     gradient: 'from-[#0B5D3B]/40 via-[#081C15] to-[#040E0A]',
     accentColor: '#10B981',
   },
