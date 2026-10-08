@@ -11,6 +11,11 @@ const publicRoutes = {
     keywords: 'Bangladesh travel agency, flights, visa consultancy, study abroad, Hajj Umrah, global mobility',
     type: 'WebSite',
   },
+  '/cookies': {
+    title: 'Cookie Policy | Journey Expert Ltd.',
+    description: 'Learn how Journey Expert Ltd. stores analytics preferences and uses optional, consent-gated Meta Pixel measurement.',
+    type: 'WebPage',
+  },
   '/flights': {
     title: 'Flight Search from Bangladesh | Journey Expert Ltd.',
     description: 'Explore flight-search assistance from Bangladesh for international and domestic journeys with Journey Expert Ltd.',

@@ -50,6 +50,7 @@ export const PORTAL_PATHS: Record<Exclude<PortalType, 'main'>, string> = {
 export const ROUTE_PATHS = [
   ...Object.values(MODULE_PATHS),
   ...Object.values(PORTAL_PATHS),
+  '/cookies',
   '/ai/*',
   '/customer/*',
   '/agent/*',
