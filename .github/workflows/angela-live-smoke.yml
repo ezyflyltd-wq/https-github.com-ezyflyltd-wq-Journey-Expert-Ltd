@@ -101,7 +101,7 @@ jobs:
               *) asset="https://journeyexpertltd.com/$script" ;;
             esac
             curl --fail --silent --show-error --location --max-time 20 "$asset" -o "$js"
-            grep -q 'cloud female primary; device voice fallback' "$js"
+            grep -q 'verified female device first; cloud fallback' "$js"
             grep -qi 'nabanita' "$js"
             grep -qi 'sangeeta' "$js"
             grep -qi 'lekha' "$js"
