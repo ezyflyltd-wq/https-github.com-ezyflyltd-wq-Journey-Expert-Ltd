@@ -1,3 +1,12 @@
+function resolveAngelaLanguage(message, selected) {
+  // Explicit language instructions override the previous conversation language.
+  if (/(?:answer|reply|respond|speak|talk|বলুন|বলো|উত্তর).*?(?:in\s+)?(?:english|ইংরেজি)|(?:english|ইংরেজি)(?:\s+please|তে\s*(?:বলুন|বলো|উত্তর))/i.test(message)) return 'en';
+  if (/(?:answer|reply|respond|speak|talk).*?(?:bangla|bengali)|বাংলা(?:য়|য়|তে)?\s*(?:উত্তর|বলুন|বলো)/i.test(message)) return 'bn';
+  if (/[\u0980-\u09FF]/.test(message)) return 'bn';
+  if (/\b(ami|amar|amake|apni|apnar|apnader|tumi|tomar|tomader|chai|jabo|jete|koto|kivabe|ki|keno|kobe|hobe|korbo|korte|lagbe|bolen|diben|pari|parbo)\b/i.test(message)) return 'bn';
+  if (/\b(what|which|how|where|when|can|could|please|tell|your|you|services)\b/i.test(message)) return 'en';
+  return selected === 'bn' ? 'bn' : 'en';
+}
 const ALLOWED_ORIGIN = 'https://journeyexpertltd.com';
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
@@ -21,6 +30,15 @@ const languageFor = (message, requested) => {
 
 
 const JEL_SEMANTIC_KNOWLEDGE = [
+  {
+    id: 'contact', priority: 50,
+    keywords: ['hotline', 'phone number', 'contact number', 'telephone', 'phone nombor', 'phone namber', 'whatsapp', 'হটলাইন', 'ফোন নম্বর', 'ফোন নাম্বার', 'নাম্বার', 'নম্বর', 'যোগাযোগ', 'হোয়াটসঅ্যাপ', 'হোয়াটসঅ্যাপ'],
+    facts: 'Journey Expert Limited hotline and WhatsApp: 01926400400 in Bangladesh, +8801926400400 internationally.',
+    bn: 'আমাদের হটলাইন ও WhatsApp নম্বর 01926400400। বিদেশ থেকে যোগাযোগের জন্য +8801926400400 ব্যবহার করুন।',
+    en: 'Our hotline and WhatsApp number is 01926400400 in Bangladesh, or +8801926400400 internationally.'
+  },
+
+
   {
     id: 'services_overview', priority: 120,
     keywords: ['what services','which services','services provide','services does','services offer','jel services','journey expert services','all services','কি কি সার্ভিস','কী কী সার্ভিস','কি কি সেবা','কী কী সেবা','সার্ভিস দেয়','সার্ভিস দেয়','সব সার্ভিস','সকল সার্ভিস'],
@@ -150,11 +168,14 @@ function retrieveJelKnowledge(query) {
 
 function semanticFallback(language, message) {
   const retrieved = retrieveJelKnowledge(message);
-  const reply = retrieved.primary
+  let reply = retrieved.primary
     ? (language === 'bn' ? retrieved.primary.bn : retrieved.primary.en)
     : (language === 'bn'
       ? 'আপনার প্রশ্নের নির্দিষ্ট তথ্যটি বর্তমান verified JEL knowledge-এ নেই। ভুল তথ্য দেওয়ার বদলে এই অংশটি verify করা প্রয়োজন।'
       : 'That specific detail is not present in the current verified JEL knowledge. Rather than invent an answer, that detail needs to be verified.');
+  if (retrieved.primary?.id !== 'contact' && retrieved.ids.includes('contact')) {
+    reply += '\n\n' + JEL_SEMANTIC_KNOWLEDGE.find(entry => entry.id === 'contact')[language];
+  }
   return {
     reply,
     primaryIntent: retrieved.primary?.id || 'unverified',
@@ -328,9 +349,9 @@ async function chat(request, env) {
   try { body = await readJson(request); } catch { return json({ error: 'invalid_json' }, 400); }
   const message = typeof body?.message === 'string' ? body.message.trim().slice(0, 5000) : '';
   if (!message) return json({ error: 'message_required' }, 400);
-  const language = languageFor(message, body?.language);
-  const combinedServices = /service|সার্ভিস|সেবা/i.test(message) && /contact|hotline|phone|ফোন|যোগাযোগ|হটলাইন/i.test(message);
-  const hasContactQuestion = /contact|hotline|phone|whatsapp|ফোন|যোগাযোগ|হটলাইন/i.test(message);
+  const language = resolveAngelaLanguage(message, body?.language);
+  const combinedServices = /service|সার্ভিস|সেবা/i.test(message) && /contact|hotline|phone|ফোন|নম্বর|নাম্বার|যোগাযোগ|হটলাইন|number|nombor|namber/i.test(message);
+  const hasContactQuestion = /contact|hotline|phone|whatsapp|ফোন|নম্বর|নাম্বার|যোগাযোগ|হটলাইন|number|nombor|namber/i.test(message);
   const conversational = combinedServices || hasContactQuestion ? null : conversationReply(message, language);
   if (conversational) return json(conversational);
   const retrievedKnowledge = retrieveJelKnowledge(message);
@@ -339,7 +360,7 @@ async function chat(request, env) {
     const services = JEL_SEMANTIC_KNOWLEDGE.find(entry => entry.id === 'services_overview');
     return json({ reply: services[language], language, mode: 'verified', primaryIntent: 'services_overview', groundingIds: ['services_overview'] });
   }
-  if (['company_directory', 'services_overview', 'brands'].includes(retrievedKnowledge.primary?.id)) return json({ ...fallback(language, message), language, mode: 'verified' });
+  if (['company_directory', 'services_overview', 'brands', 'contact'].includes(retrievedKnowledge.primary?.id)) return json({ ...fallback(language, message), language, mode: 'verified' });
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
   if (!key) return json({ ...fallback(language, message), language, mode: 'fallback' });
 
