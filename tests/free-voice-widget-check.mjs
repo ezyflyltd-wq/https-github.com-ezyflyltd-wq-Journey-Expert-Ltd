@@ -17,16 +17,16 @@ assert.equal(widget.includes('MediaRecorder'), true, 'the widget must prefer bro
 assert.equal(widget.includes("fetch('/angela/transcribe'"), true, 'the widget must send recorded audio to the same-origin Gemini transcription route');
 assert.equal(widget.includes('speechSynthesis'), true, 'the widget must include browser speech synthesis');
 assert.equal(widget.includes("fetch('/angela/chat'"), true, 'the widget must use the Worker-independent Pages Angela brain');
-assert.equal(widget.includes("cloud female voice as the primary cross-device voice"), true, 'the disclosure must explain the consistent cloud-female primary path');
+assert.equal(widget.includes('verified localized female voice already available on your device'), true, 'the disclosure must explain verified device-first speech');
 assert.equal(widget.includes("fetch('/api/voice/elevenlabs'"), false, 'the free widget must not call ElevenLabs');
 assert.equal(widget.includes("fetch('/api/voice/status'"), false, 'the free widget must not probe a paid voice provider');
 assert.equal(widget.includes("useState<'en' | 'bn'>('bn')"), true, 'Angela must offer only explicit Bangla and English modes');
 assert.equal(widget.includes("setLanguage('auto')"), false, 'Angela must not expose Auto mode');
 assert.equal(widget.includes("setLanguage('hi')"), false, 'Angela must not expose Hindi mode');
-assert.equal(widget.includes('CLOUD_FEMALE_PRIMARY_FAST'), true, 'Angela must prefer bounded cloud female speech before resilient device fallback');
+assert.equal(widget.includes('DEVICE_FIRST_ANGELA_VOICE'), true, 'Angela must prefer a verified localized female device voice before cloud fallback');
 assert.equal(server.includes("app.post('/api/voice/gemini'"), true, 'the AI Studio server must expose Gemini female TTS');
-assert.equal(widget.includes('Voice output: Angela · cloud female + device fallback'), true, 'Angela UI must disclose the hybrid cross-device voice policy');
-assert.equal(widget.includes('data-voice-contract="cloud female primary; device voice fallback"'), true, 'deployed widget must expose the cloud-female/device-fallback production contract');
+assert.equal(widget.includes('Voice output: Angela · verified female device first + cloud fallback'), true, 'Angela UI must disclose the verified device-first voice policy');
+assert.equal(widget.includes('data-voice-contract="verified female device first; cloud fallback"'), true, 'deployed widget must expose the verified device-first production contract');
 assert.equal(widget.includes('+8801926400400'), true, 'the human-support phone number must be callable');
 assert.equal(widget.includes('bottom-[max(0.75rem,env(safe-area-inset-bottom))]'), true, 'the public launcher must respect mobile safe areas');
 assert.equal(widget.includes('Talk to Angela · কথা বলুন'), true, 'the launcher must be customer-visible and bilingual');
@@ -56,7 +56,7 @@ assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a
 
 assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
 assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
-assert.equal(widget.includes('device voice fallback'), true, 'voice output must remain device-capable when cloud quota is unavailable');
+assert.equal(widget.includes('DEVICE_FIRST_ANGELA_VOICE'), true, 'verified device speech must remain available independently of cloud quota');
 assert.equal(widget.includes('FEMALE_VOICE_HINTS'), true, 'Angela must rank localized female voices across device families');
 assert.equal(widget.includes('MALE_VOICE_HINTS'), true, 'Angela must penalize known male voice names');
 assert.equal(widget.includes('voiceCatalogRef'), true, 'Angela must warm the browser/OS voice catalogue before use');
@@ -141,7 +141,7 @@ assert.match(unknownSemantic.reply, /not present|verified/i, 'unknown company de
 console.log('Angela semantic fallback checks passed.');
 
 assert.equal(widget.includes('STRICT_FEMALE_ONLY'), true, 'browser fallback must never use an unverified male/default voice');
-assert.equal(widget.includes('verified female device voice'), true, 'browser fallback must become text-only when no verified female voice exists');
+assert.equal(widget.includes('return getPreferredFemaleVoice(voices, language);'), true, 'browser speech must use only the strict verified-female voice selector');
 assert.equal(pagesSpeech.includes("'Aoede'"), true, 'Pages-native Angela speech must use Aoede');
 assert.equal(pagesWorker.includes("'Aoede'"), true, 'advanced Pages Worker speech must use Aoede');
 assert.equal(worker.includes("'Aoede'"), true, 'standalone Angela Worker speech must use Aoede');
@@ -153,5 +153,8 @@ console.log('Angela strict female-only voice checks passed.');
 // approved production regression marker: conversational Bangla + cloud female playback
 
 
-assert.equal(widget.includes('liveController.abort(), 14000'), true, 'Live female outer fallback window must allow WebSocket startup and audio generation');
-assert.equal(liveVoice.includes("live_voice_timeout')), 12000"), true, 'Live female renderer must keep a bounded 12s generation window');
+assert.equal(liveVoice.includes("deadlineTimer = window.setTimeout(() => fail(new Error('live_voice_timeout')), 14000)"), true, 'Live female deadline must stay bounded for conversational latency');
+assert.equal(liveVoice.includes("live_voice_timeout')), 5000"), true, 'Live female renderer must keep a bounded 5s inactivity window');
+
+assert.equal(widget.includes('DEVICE_FIRST_ANGELA_VOICE'), true, 'verified female device voice should start without cloud delay when available');
+assert.equal(widget.includes('LOW_LATENCY_VOICE_INPUT'), true, 'browser speech recognition should be the low-latency input path when available');

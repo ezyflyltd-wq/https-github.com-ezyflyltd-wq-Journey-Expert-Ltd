@@ -604,7 +604,7 @@ export const MobileEcosystemView: React.FC = () => {
                         </div>
                         <div className="text-[11px] text-white">08:25 DAC ➔ 15:45 LHR (Direct)</div>
                         <span className="text-[9px] bg-emerald-900 px-2 py-0.5 rounded-full text-emerald-300">
-                          Lowest Fare Guarantee
+                          Fare Check Required
                         </span>
                       </div>
 
