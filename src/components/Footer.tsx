@@ -258,6 +258,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
             <a href="/hajj-umrah" className="hover:text-[#0B6B53] transition-colors">Hajj & Umrah</a>
             <a href="/corporate-travel" className="hover:text-[#0B6B53] transition-colors">Corporate Travel</a>
             <a href="/portals" className="hover:text-[#0B6B53] transition-colors">All Portals</a>
+            <a href="/cookies" className="hover:text-[#0B6B53] transition-colors">Cookie Policy</a>
           </div>
         </nav>
       </div>
