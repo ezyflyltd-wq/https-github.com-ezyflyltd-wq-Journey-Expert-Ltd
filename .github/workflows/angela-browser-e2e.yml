@@ -19,6 +19,7 @@ jobs:
           const puppeteer = require('/tmp/jel-browser/node_modules/puppeteer-core');
           const fs = require('fs');
           const {execFileSync}=require('child_process');
+          (async()=>{
           const chrome = ['google-chrome','chromium','chromium-browser'].map(x=>{
             try{return execFileSync('which',[x]).toString().trim()}catch{return ''}
           }).find(Boolean);
@@ -75,6 +76,7 @@ jobs:
             await page.screenshot({path:'/tmp/angela-e2e.png',fullPage:true}).catch(()=>{});
           }finally{await browser.close()}
           if(!passed)process.exitCode=1;
+          })().catch(err=>{console.error(err);process.exitCode=1});
           NODE
       - name: Publish failure screenshot when available
         if: failure()
