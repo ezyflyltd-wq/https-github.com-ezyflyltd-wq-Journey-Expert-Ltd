@@ -58,6 +58,24 @@ export class AngelaPlayback {
       const synth = window.speechSynthesis;
       const isBangla = /[\u0980-\u09FF]/.test(clean);
       const wanted = isBangla ? 'bn' : 'en';
+      // Some mobile browsers register installed voices only after voiceschanged.
+      // Wait briefly before falling back to quota-limited cloud TTS.
+      if (synth && synth.getVoices().length === 0) {
+        await new Promise<void>(resolve => {
+          let settled = false;
+          const done = () => {
+            if (settled) return;
+            settled = true;
+            synth.removeEventListener('voiceschanged', done);
+            clearTimeout(timer);
+            resolve();
+          };
+          const timer = setTimeout(done, 650);
+          synth.addEventListener('voiceschanged', done);
+          synth.getVoices();
+        });
+      }
+      if (!current()) return;
       const voices = synth?.getVoices() || [];
       const feminine = /female|zira|samantha|victoria|aria|jenny|heera|tania|priya|kalpana/i;
       const preferredVoice = voice && voice.lang.toLowerCase().startsWith(wanted) ? voice
