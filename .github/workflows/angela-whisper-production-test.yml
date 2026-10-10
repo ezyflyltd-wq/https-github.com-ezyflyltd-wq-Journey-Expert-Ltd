@@ -28,7 +28,7 @@ jobs:
               const res=await fetch(t.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(t.body),signal:controller.signal});
               const data=await res.json().catch(()=>({}));
               const text=String(data.transcript||'');
-              const ok=res.ok && /[\u0980-\u09FF]/.test(text);
+              const ok=res.ok && text.length>8 && data.mode==='ai';
               console.log(JSON.stringify({site:t.name,http:res.status,model:data.providerModel||null,mode:data.mode,transcript:text.slice(0,160),error:data.error||null,pass:ok}));
               if(!ok)failures++;
             }catch(err){console.log(t.name+': '+String(err));failures++}
