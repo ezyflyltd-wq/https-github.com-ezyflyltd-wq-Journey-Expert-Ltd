@@ -27,7 +27,9 @@ jobs:
             const page=await browser.newPage();
             await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true,deviceScaleFactor:2});
             await page.setUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36');
-            const errors=[];
+            const errors=[];const networkFailures=[];
+            page.on('console',m=>{if(m.type()==='error')errors.push('console '+m.text().slice(0,220))});
+            page.on('requestfailed',r=>networkFailures.push(r.url().split('?')[0]+' '+r.failure()?.errorText));
             page.on('pageerror',e=>errors.push(String(e).slice(0,150)));
             const home=await page.goto('https://journeyexpertltd.com/',{waitUntil:'domcontentloaded',timeout:30000});
             console.log('MOBILE_HOME',home.status());
@@ -39,10 +41,10 @@ jobs:
                 await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(x=>x.textContent.includes('Agree and continue')),{timeout:11000});
               } catch (err) {
                 const diag=await page.evaluate(()=>({text:document.body.innerText.slice(-1400),buttons:[...document.querySelectorAll('button')].map(b=>({label:b.getAttribute('aria-label'),text:b.textContent.slice(0,70)})).slice(-18)}));
-                console.log('MOBILE_OPEN_DIAGNOSTIC',JSON.stringify(diag));
+                console.log('MOBILE_OPEN_DIAGNOSTIC',JSON.stringify({...diag,errors,networkFailures,dom:{ready:await page.evaluate(()=>document.readyState),url:page.url()}}));
                 // Clicking before React hydration can miss the mobile launcher.
                 const launcher=await page.$('button[aria-label="Open free Angela voice assistant"],button[aria-label="Open Angela AI voice assistant"]');
-                if(launcher){ await launcher.click(); }
+                if(launcher){ await launcher.click(); await page.evaluate(()=>document.querySelector('button[aria-label="Open free Angela voice assistant"]')?.click()); }
                 await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(x=>x.textContent.includes('Agree and continue'))||!!document.querySelector('#free-angela-query'),{timeout:12000});
               }
               await page.evaluate(()=>[...document.querySelectorAll('button')].find(x=>x.textContent.includes('Agree and continue'))?.click());
