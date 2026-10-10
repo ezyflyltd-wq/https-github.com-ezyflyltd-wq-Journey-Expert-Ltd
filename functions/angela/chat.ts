@@ -327,10 +327,10 @@ RULES:
 - For detailed education counselling, journeyexpertbd.com is the dedicated JEL Study Abroad portal when useful.
 ${languageInstruction}\n\nRETRIEVED VERIFIED JEL CONTEXT:\n${retrievedKnowledge.text}\n\nSTRICT SEMANTIC ACCURACY CONTRACT:\n- For JEL-specific facts, use only the retrieved verified context.\n- If the exact JEL-specific fact is absent, say it is not verified; do not fill the gap from model memory.\n- Answer the exact service/topic asked about; do not substitute a neighbouring intent.\n- Changing facts such as price, inventory, rules, fees, dates and processing times require current official/supplier verification.`;
 
-  const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'];
+  const models = ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
   for (const model of models) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), model === 'gemini-3.8-flash' ? 6000 : 1800);
+    const timer = setTimeout(() => controller.abort(), model === 'gemini-3.5-flash-lite' ? 2300 : 1700);
     try {
       const requestBody: any = {
         systemInstruction: { parts: [{ text: system }] },
