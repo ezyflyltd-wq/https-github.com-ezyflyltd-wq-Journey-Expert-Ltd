@@ -330,7 +330,7 @@ ${languageInstruction}\n\nRETRIEVED VERIFIED JEL CONTEXT:\n${retrievedKnowledge.
   const models = ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
   for (const model of models) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), model === 'gemini-3.5-flash-lite' ? 2300 : 1700);
+    const timer = setTimeout(() => controller.abort(), model === 'gemini-3.5-flash-lite' ? 6500 : 3500);
     try {
       const requestBody: any = {
         systemInstruction: { parts: [{ text: system }] },
