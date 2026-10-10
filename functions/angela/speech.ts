@@ -44,7 +44,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   ].filter((model): model is string => Boolean(model))));
   const findAudio = (value: any): { data: string } | null => {
     if (!value || typeof value !== 'object') return null;
-    if (value.type === 'audio' && typeof value.data === 'string') return { data: value.data };
+    if (typeof value.data === 'string' && (value.type === 'audio' || String(value.mimeType || value.mime_type || '').startsWith('audio/'))) return { data: value.data };
     if (Array.isArray(value)) {
       for (const item of value) {
         const found = findAudio(item);
