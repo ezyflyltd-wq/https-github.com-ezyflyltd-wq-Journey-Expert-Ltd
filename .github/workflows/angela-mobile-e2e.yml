@@ -34,7 +34,17 @@ jobs:
             await page.waitForSelector('button[aria-label="Open free Angela voice assistant"],button[aria-label="Open Angela AI voice assistant"]',{timeout:15000});
             await page.click('button[aria-label="Open free Angela voice assistant"],button[aria-label="Open Angela AI voice assistant"]');
             if(!(await page.$('#free-angela-query'))){
-              await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(x=>x.textContent.includes('Agree and continue')),{timeout:8000});
+              const consentSelector='button';
+              try {
+                await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(x=>x.textContent.includes('Agree and continue')),{timeout:11000});
+              } catch (err) {
+                const diag=await page.evaluate(()=>({text:document.body.innerText.slice(-1400),buttons:[...document.querySelectorAll('button')].map(b=>({label:b.getAttribute('aria-label'),text:b.textContent.slice(0,70)})).slice(-18)}));
+                console.log('MOBILE_OPEN_DIAGNOSTIC',JSON.stringify(diag));
+                // Clicking before React hydration can miss the mobile launcher.
+                const launcher=await page.$('button[aria-label="Open free Angela voice assistant"],button[aria-label="Open Angela AI voice assistant"]');
+                if(launcher){ await launcher.click(); }
+                await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(x=>x.textContent.includes('Agree and continue'))||!!document.querySelector('#free-angela-query'),{timeout:12000});
+              }
               await page.evaluate(()=>[...document.querySelectorAll('button')].find(x=>x.textContent.includes('Agree and continue'))?.click());
             }
             await page.waitForSelector('#free-angela-query',{timeout:12000});
