@@ -27,7 +27,10 @@ jobs:
               console.log('LEGACY_CHAT',JSON.stringify({http:r.status,answerLength:String(data.reply||'').length,
                 hasResponse:!!data.reply,handoffRequired:data.handoffRequired||false,
                 responsePreview:String(data.reply||'').slice(0,150)}));
-              if(!r.ok||!data.reply)process.exitCode=1;
+              const answer=String(data.reply||'');
+              const passes=r.ok&&answer.length>50&&/Journey Expert|flight|ticket|travel|visa|study abroad/i.test(answer)&&!/I understand your question\. Please share your destination/i.test(answer);
+              console.log('LEGACY_RELEVANCE',JSON.stringify({pass:passes,sourceCount:Array.isArray(data.usedSources)?data.usedSources.length:0,language:data.language||null}));
+              if(!passes)process.exitCode=1;
             }finally{clearTimeout(t)}
           })().catch(e=>{console.log('LEGACY_CHECK_ERROR',String(e));process.exitCode=1});
           NODE
