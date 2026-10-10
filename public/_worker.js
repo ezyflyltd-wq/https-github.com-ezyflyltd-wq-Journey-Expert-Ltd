@@ -670,7 +670,7 @@ async function freeFemaleSpeech(text, env) {
 // native Bengali female speech when Pages itself lacks that secret.
 async function getNativeAngelaSpeech(text) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 17000);
+  const timer = setTimeout(() => controller.abort(), 21500);
   try {
     const response = await fetch(
       'https://journey-expert-ltd-main.journeyexpertltd.workers.dev/api/angela/native-tts', {
@@ -678,7 +678,16 @@ async function getNativeAngelaSpeech(text) {
       headers: {'content-type': 'application/json','origin':'https://journeyexpertltd.com'},
       body: JSON.stringify({text})
     });
-    if (!response.ok || !response.headers.get('content-type')?.includes('audio/wav')) return null;
+    if (!response.ok) {
+      console.warn('Native Aoede proxy HTTP status', response.status);
+      if (response.status === 429) {
+        return new Response(JSON.stringify({error:'voice_quota_exceeded'}),{
+          status:429,headers:{'content-type':'application/json','retry-after':'60','cache-control':'no-store'}
+        });
+      }
+      return null;
+    }
+    if (!response.headers.get('content-type')?.includes('audio/wav')) return null;
     const wav = new Uint8Array(await response.arrayBuffer());
     if (wav.length < 1200 || String.fromCharCode(...wav.subarray(0,4)) !== 'RIFF'
       || String.fromCharCode(...wav.subarray(8,12)) !== 'WAVE') return null;
