@@ -78,11 +78,10 @@ export class AngelaPlayback {
       if (!current()) return;
       const voices = synth?.getVoices() || [];
       const feminine = /female|zira|samantha|victoria|aria|jenny|heera|tania|priya|kalpana/i;
-      const preferredVoice = voice && voice.lang.toLowerCase().startsWith(wanted) ? voice
+      const preferredVoice = voice && voice.lang.toLowerCase().startsWith(wanted) && feminine.test(voice.name) ? voice
         : voices.find(v => v.lang.toLowerCase().startsWith(wanted) && feminine.test(v.name))
-        || voices.find(v => v.lang.toLowerCase().startsWith(wanted))
         || null;
-      if (synth) {
+      if (synth && preferredVoice) {
         const played = await new Promise<boolean>((resolve) => {
           const utterance = new SpeechSynthesisUtterance(clean);
           this.utterance = utterance;
