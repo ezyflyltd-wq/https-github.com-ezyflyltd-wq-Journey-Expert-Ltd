@@ -656,7 +656,13 @@ export function FreeVoiceAngelaWidget() {
     recognition.onerror = () => {
       if (recognitionRef.current === recognition) recognitionRef.current = null;
       setIsListening(false);
-      setError(language === 'bn' ? 'আপনার কথা শোনা যায়নি। আবার চেষ্টা করুন বা লিখে প্রশ্ন করুন।' : 'Voice input could not be heard. Please try again or type your question.');
+      // Recover from unsupported/offline browser speech recognition by
+      // switching once to MediaRecorder and the same-origin transcriber.
+      if (recordingSupported) {
+        void startListening(true);
+      } else {
+        setError(language === 'bn' ? 'আপনার কথা শোনা যায়নি। আবার চেষ্টা করুন বা লিখে প্রশ্ন করুন।' : 'Voice input could not be heard. Please try again or type your question.');
+      }
     };
     recognition.onend = () => {
       if (recognitionRef.current === recognition) recognitionRef.current = null;
@@ -673,7 +679,7 @@ export function FreeVoiceAngelaWidget() {
     }
   };
 
-  const startListening = async () => {
+  const startListening = async (preferRecording = false) => {
     cancelActivity();
     const generation = inputGenerationRef.current;
     audioRef.current?.pause();
@@ -689,7 +695,7 @@ export function FreeVoiceAngelaWidget() {
 
     // LOW_LATENCY_VOICE_INPUT: use browser speech recognition first when available.
     // This avoids record-upload-transcribe latency and uses no Gemini transcription quota.
-    if (getSpeechRecognition()) {
+    if (!preferRecording && getSpeechRecognition()) {
       startBrowserRecognitionFallback();
       return;
     }
