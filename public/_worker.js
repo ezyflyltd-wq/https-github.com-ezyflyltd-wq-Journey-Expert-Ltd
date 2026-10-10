@@ -335,6 +335,20 @@ async function chat(request, env) {
   const conversational = combinedServices || hasContactQuestion ? null : conversationReply(message, language);
   if (conversational) return json(conversational);
   const retrievedKnowledge = retrieveJelKnowledge(message);
+  // Decisions belong to universities/embassies, not an agency. Handle these
+  // safety-critical questions deterministically even if the free AI quota runs
+  // out. This is a verified company policy, not a live immigration decision.
+  const normalizedGuarantee = message.toLowerCase();
+  if (/guarantee|guaranteed|100%|assured|শতভাগ|গ্যারান্টি|নিশ্চিত/.test(normalizedGuarantee)
+      && /visa|admission|scholarship|university|student|ভিসা|ভর্তি|স্কলারশিপ|বিশ্ববিদ্যালয়|স্টুডেন্ট/.test(normalizedGuarantee)) {
+    return json({
+      reply: language === 'bn'
+        ? 'না। কোনো এজেন্সি স্টুডেন্ট ভিসা, বিশ্ববিদ্যালয়ে ভর্তি বা স্কলারশিপ নিশ্চিত করতে পারে না। সংশ্লিষ্ট বিশ্ববিদ্যালয় ও ইমিগ্রেশন কর্তৃপক্ষই সিদ্ধান্ত দেয়। জার্নি এক্সপার্ট লিমিটেড আবেদন ও প্রয়োজনীয় কাগজপত্র প্রস্তুতিতে সহায়তা করতে পারে।'
+        : 'No. Neither JEL nor any travel agency can guarantee visa approval, admission or scholarships. Final decisions belong to the relevant authorities. Journey Expert Limited can help with guidance and documentation.',
+      language, mode:'verified', primaryIntent:'outcome_guarantee',
+      groundingIds:['visa_assistance','study_abroad']
+    });
+  }
   // Stable company facts must be complete even when the model quota is exhausted.
   if (combinedServices) {
     const services = JEL_SEMANTIC_KNOWLEDGE.find(entry => entry.id === 'services_overview');
