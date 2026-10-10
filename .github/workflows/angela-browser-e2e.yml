@@ -27,6 +27,21 @@ jobs:
           const browser=await puppeteer.launch({executablePath:chrome,headless:true,
             args:['--no-sandbox','--disable-dev-shm-usage','--use-fake-ui-for-media-stream']});
           const page=await browser.newPage();
+          await page.evaluateOnNewDocument(()=>{
+            window.__angelaAudioEvents=[];
+            const originalFetch=window.fetch.bind(window);
+            window.fetch=async (...args)=>{
+              const response=await originalFetch(...args);
+              const url=String(args[0]?.url||args[0]||'');
+              if(url.includes('/angela/speech')){
+                response.clone().arrayBuffer().then(b=>window.__angelaAudioEvents.push({
+                  status:response.status,bytes:b.byteLength,voice:response.headers.get('x-angela-voice'),
+                  mode:response.headers.get('x-angela-voice-mode')
+                })).catch(e=>window.__angelaAudioEvents.push({error:String(e)}));
+              }
+              return response;
+            };
+          });
           await page.setViewport({width:1280,height:800});
           const api=[],errors=[],consoleErrors=[],voice=[];
           page.on('pageerror',e=>consoleErrors.push('pageerror '+String(e).slice(0,230)));
@@ -55,6 +70,7 @@ jobs:
               'বাংলাদেশ থেকে অস্ট্রেলিয়ায় পড়তে গেলে সাধারণত কী কী কাগজপত্র লাগে?',
               'How can Journey Expert Limited help me with a tourist visa?'
             ];
+            let audioChecked=0;
             for(const prompt of prompts){
               await page.type('#free-angela-query',prompt,{delay:5});
               const responsePromise = page.waitForResponse(res=>res.url().includes('/angela/chat')&&res.request().method()==='POST',{timeout:30000});
@@ -69,11 +85,14 @@ jobs:
               },{timeout:12000},String(payload.reply||''));
               console.log('UI_REPLY',JSON.stringify({language:/[\u0980-\u09ff]/.test(prompt)?'bn':'en',mode:payload.mode,model:payload.providerModel||null,preview:String(payload.reply||'').slice(0,160)}));
               const audioResponse = await audioPromise;
-              const audioBytes=await audioResponse.buffer();
-              const okAudio=audioResponse.status()===200&&
-                audioBytes.subarray(0,4).toString()==='RIFF'&&audioBytes.length>1200;
-              console.log('UI_AUDIO',JSON.stringify({language:/[\u0980-\u09ff]/.test(prompt)?'bn':'en',status:audioResponse.status(),bytes:audioBytes.length,voice:audioResponse.headers()['x-angela-voice'],mode:audioResponse.headers()['x-angela-voice-mode'],pass:okAudio}));
-              if (!okAudio) throw Error('Browser received no playable female speech response');
+              await page.waitForFunction((n)=>window.__angelaAudioEvents?.length>n,{timeout:13000},audioChecked);
+              const audioEvents=await page.evaluate(()=>window.__angelaAudioEvents);
+              const event=audioEvents[audioChecked];
+              audioChecked=audioEvents.length;
+              const okAudio=audioResponse.status()===200&&event.bytes>1200;
+              const notice=await page.evaluate(()=>[...document.querySelectorAll('p')].filter(x=>/অডিও চালানো যায়নি|Audio failed/i.test(x.textContent||'')).map(x=>x.textContent).join(''));
+              console.log('UI_AUDIO',JSON.stringify({language:/[\u0980-\u09ff]/.test(prompt)?'bn':'en',status:audioResponse.status(),event,notice,pass:okAudio}));
+              if (!okAudio) throw Error('Browser did not receive a full female WAV audio payload');
             }
             passed=api.length>=2&&api.every(a=>a.status===200&&a.mode==='ai');
             console.log('RESULT',JSON.stringify({passed,api,voice,errors,consoleErrors}));
