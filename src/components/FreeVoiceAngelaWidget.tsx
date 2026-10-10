@@ -83,7 +83,17 @@ async function decodePcmWav(context: AudioContext, blob: Blob): Promise<AudioBuf
   return buffer;
 }
 // [approved-production-change] Cross-platform Angela voice/knowledge hardening reviewed for production.
-const BANGLA_WELCOME = 'আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা। আমি আপনাকে কীভাবে সাহায্য করতে পারি?';
+function resolveAngelaLanguage(text: string, current: "bn" | "en"): "bn" | "en" {
+  if (/(?:in|speak|reply|answer|respond|explain)\s+(?:in\s+)?english\b|ইংরেজিতে|ইংলিশে/i.test(text)) return "en";
+  if (/(?:in|speak|reply|answer|respond|explain)\s+(?:in\s+)?(?:bangla|bengali)\b|বাংলায়|বাংলায়/i.test(text)) return "bn";
+  if (/[\u0980-\u09ff]/.test(text)) return "bn";
+  if (/\b(?:ami|amar|apni|apnar|apnader|tumi|tomar|kivabe|kibhabe|koto|chai|chachi|bolun|korbo|achen|ache)\b/i.test(text)) return "bn";
+  if (/\b(?:what|where|when|how|please|could|would|explain|tell|your|services)\b/i.test(text)) return "en";
+  return current;
+}
+
+
+const BANGLA_WELCOME = 'আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা।';
 const ENGLISH_WELCOME = "Assalamu Alaikum. I am Angela, Journey Expert Limited's AI assistant. How can I help you today? You can ask me about air tickets, visa assistance, tours and hotels, Hajj and Umrah, halal tourism, medical tourism, insurance, corporate travel, Meet & Greet, or Study Abroad.";
 const PUBLIC_WIDGET_PATHS = new Set([
   '/',
@@ -522,6 +532,8 @@ export function FreeVoiceAngelaWidget() {
     void unlockAudio();
     const cleanPrompt = prompt.trim();
     if (!cleanPrompt) return;
+    const requestedLanguage = resolveAngelaLanguage(cleanPrompt, language);
+    setLanguage(requestedLanguage);
     cancelActivity();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -537,7 +549,7 @@ export function FreeVoiceAngelaWidget() {
       && normalizedPrompt.length < 180;
     const greetingOnly = /^(?:hi|hello|hey|হ্যালো|হাই|সালাম|আসসালামু আলাইকুম)(?:\s+(?:angela|অ্যাঞ্জেলা))?[!?.,\s]*$/i.test(normalizedPrompt);
     if (asksBangla || greetingOnly) {
-      const reply = getFallbackReply(cleanPrompt, language);
+      const reply = getFallbackReply(cleanPrompt, requestedLanguage);
       setHistory((turns) => [
         ...turns,
         { role: 'user', content: cleanPrompt },
@@ -559,7 +571,7 @@ export function FreeVoiceAngelaWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: cleanPrompt,
-          language,
+          language: requestedLanguage,
           conversationId,
           history,
         }),
@@ -567,7 +579,7 @@ export function FreeVoiceAngelaWidget() {
       if (!response.ok) throw new Error('AI endpoint unavailable');
       const data = await response.json();
       if (requestRef.current !== controller) return;
-      const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt, language));
+      const reply = String(data.reply || data.response || getFallbackReply(cleanPrompt, requestedLanguage));
       setHistory((turns) => [
         ...turns,
         { role: 'user', content: cleanPrompt },
@@ -578,9 +590,9 @@ export function FreeVoiceAngelaWidget() {
       void speak(reply);
     } catch {
       if (requestRef.current !== controller) return;
-      const fallback = getFallbackReply(cleanPrompt, language);
+      const fallback = getFallbackReply(cleanPrompt, requestedLanguage);
       setLastReply(fallback);
-      setError(language === 'bn' ? 'লাইভ AI সাময়িকভাবে অনুপলব্ধ; যাচাইকৃত JEL fallback দেখানো হচ্ছে।' : 'Live AI is temporarily unavailable; a verified JEL fallback is shown.');
+      setError(requestedLanguage === 'bn' ? 'লাইভ AI সাময়িকভাবে অনুপলব্ধ; যাচাইকৃত JEL fallback দেখানো হচ্ছে।' : 'Live AI is temporarily unavailable; a verified JEL fallback is shown.');
       void speak(fallback);
     } finally {
       clearTimeout(timer);
