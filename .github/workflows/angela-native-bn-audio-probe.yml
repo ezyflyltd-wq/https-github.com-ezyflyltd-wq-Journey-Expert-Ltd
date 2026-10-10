@@ -14,6 +14,22 @@ jobs:
           node <<'NODE'
           (async()=>{
             let fail=0;
+            for (const [site,url] of [
+              ['LTD Health','https://journeyexpertltd.com/angela/health'],
+              ['BD Health','https://journeyexpertbd.com/api/health'],
+            ]) {
+              try {
+                const r=await fetch(url);
+                const obj=await r.json();
+                console.log('RUNTIME_BINDING',JSON.stringify({
+                  site,http:r.status,
+                  geminiCredentialBound:obj.geminiCredentialBound ?? obj.checks?.gemini ?? obj.integrations?.gemini ?? null,
+                  workersAiBound:obj.workersAiBound ?? null,
+                  status:obj.status||null,
+                  safeFields:Object.keys(obj).slice(0,12)
+                }));
+              }catch(e){console.log('RUNTIME_BINDING_ERROR',JSON.stringify({site,error:String(e)}))}
+            }
             const cases=[
               ['LTD Bangla','https://journeyexpertltd.com/angela/speech','আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা। আপনার যাত্রায় কীভাবে সাহায্য করতে পারি?',true],
               ['LTD English','https://journeyexpertltd.com/angela/speech','Hello, I am Angela. How can I assist with your journey today?',false],
