@@ -626,7 +626,7 @@ async function speech(request, env) {
     if (freeVoice) return freeVoice;
     const bengali = /[\u0980-\u09FF]/.test(text);
     return json({ error: bengali ? 'native_bengali_voice_required' : 'female_voice_unavailable',
-      detail: bengali ? 'English-only phonetic Banglish TTS disabled due to incorrect pronunciation. Use a Bengali female device voice or native Bengali TTS.' : 'English female TTS unavailable' }, bengali ? 422 : 503);
+      detail: bengali ? 'English-only phonetic Banglish TTS disabled due to incorrect pronunciation. Use a Bengali female device voice or native Bengali TTS.' : 'English female TTS unavailable', diagnostic: 'missing_runtime_gemini_key' }, bengali ? 422 : 503);
   }
 
   // Both listed Gemini speech models have a documented free tier. The first
@@ -741,7 +741,7 @@ export default {
         'access-control-allow-headers': 'Content-Type',
       },
     });
-    if (url.pathname === '/angela/health') return json({ app: 'Journey Expert Angela', routeMarker: 'jel-ltd-angela-health-20261010', status: 'advanced-worker-reachable', chatModel: 'gemini-3.5-flash-lite' });
+    if (url.pathname === '/angela/health') return json({ app: 'Journey Expert Angela', routeMarker: 'jel-ltd-angela-health-20261010', status: 'advanced-worker-reachable', chatModel: 'gemini-3.5-flash-lite', geminiCredentialBound: Boolean(String(env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim()), workersAiBound: Boolean(env.AI && typeof env.AI.run === 'function'), nativeTtsModel: 'gemini-3.8-flash-lite-tts' });
     if (url.pathname === '/angela/chat') return chat(request, env);
     if (url.pathname === '/angela/transcribe') return transcribe(request, env);
     if (url.pathname === '/angela/speech') return speech(request, env);
