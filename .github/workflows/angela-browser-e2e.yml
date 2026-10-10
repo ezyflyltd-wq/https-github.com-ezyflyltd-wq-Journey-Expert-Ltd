@@ -69,7 +69,7 @@ jobs:
               },{timeout:12000},String(payload.reply||''));
               console.log('UI_REPLY',JSON.stringify({language:/[\u0980-\u09ff]/.test(prompt)?'bn':'en',mode:payload.mode,model:payload.providerModel||null,preview:String(payload.reply||'').slice(0,160)}));
               const audioResponse = await audioPromise;
-              const audioBytes=Buffer.from(await audioResponse.arrayBuffer());
+              const audioBytes=await audioResponse.buffer();
               const okAudio=audioResponse.status()===200&&
                 audioBytes.subarray(0,4).toString()==='RIFF'&&audioBytes.length>1200;
               console.log('UI_AUDIO',JSON.stringify({language:/[\u0980-\u09ff]/.test(prompt)?'bn':'en',status:audioResponse.status(),bytes:audioBytes.length,voice:audioResponse.headers()['x-angela-voice'],mode:audioResponse.headers()['x-angela-voice-mode'],pass:okAudio}));
