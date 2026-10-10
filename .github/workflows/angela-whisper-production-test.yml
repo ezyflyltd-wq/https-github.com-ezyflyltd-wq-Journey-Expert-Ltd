@@ -1,0 +1,38 @@
+name: Angela Live Microphone Transcription Test
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-whisper-production-test.yml']
+  workflow_dispatch:
+jobs:
+  voice-transcript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Test prerecorded Bangla voice through both active transcription endpoints
+        run: |
+          node <<'NODE'
+          const audioRes = await fetch('https://journeyexpertltd.com/audio/angela-welcome-bn.mp3');
+          console.log('Audio file:', audioRes.status, audioRes.headers.get('content-type'));
+          if (!audioRes.ok) process.exit(1);
+          const audio = Buffer.from(await audioRes.arrayBuffer()).toString('base64');
+          const targets = [
+            {name:'LTD',url:'https://journeyexpertltd.com/angela/transcribe',body:{audio,mimeType:'audio/mpeg',language:'bn'}},
+            {name:'BD',url:'https://journeyexpertbd.com/api/gemini/chat',body:{audio,mimeType:'audio/mpeg',language:'bn',mode:'transcribe'}},
+          ];
+          let failures=0;
+          for(const t of targets){
+            const controller=new AbortController();
+            const timer=setTimeout(()=>controller.abort(),24000);
+            try {
+              const res=await fetch(t.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(t.body),signal:controller.signal});
+              const data=await res.json().catch(()=>({}));
+              const text=String(data.transcript||'');
+              const ok=res.ok && /[\u0980-\u09FF]/.test(text);
+              console.log(JSON.stringify({site:t.name,http:res.status,model:data.providerModel||null,mode:data.mode,transcript:text.slice(0,160),error:data.error||null,pass:ok}));
+              if(!ok)failures++;
+            }catch(err){console.log(t.name+': '+String(err));failures++}
+            finally{clearTimeout(timer)}
+          }
+          process.exitCode=failures?1:0;
+          NODE
