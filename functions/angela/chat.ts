@@ -293,7 +293,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
   }
 
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
-  if (!key) return json({ ...fallback(language, message), language, mode: 'fallback' });
+  if (!key) return json({ reply: language === 'bn' ? 'এই মুহূর্তে AI সংযোগ পাওয়া যাচ্ছে না। আপনার প্রশ্নটি আবার লিখুন অথবা Journey Expert Limited-এর WhatsApp 01926400400-এ যোগাযোগ করুন।' : 'The AI connection is temporarily unavailable. Please retry or contact Journey Expert Limited on WhatsApp 01926400400.', language, mode: 'ai_unavailable' });
 
   const history = Array.isArray(body?.history)
     ? body.history
@@ -378,5 +378,5 @@ ${languageInstruction}\n\nRETRIEVED VERIFIED JEL CONTEXT:\n${retrievedKnowledge.
     }
   }
 
-  return json({ ...fallback(language, message), language, mode: 'fallback' });
+  return json({ reply: language === 'bn' ? 'এই মুহূর্তে AI সেবা থেকে আপনার নির্দিষ্ট প্রশ্নের উত্তর পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন অথবা WhatsApp 01926400400-এ যোগাযোগ করুন।' : 'The AI service could not answer this specific question right now. Please retry or contact WhatsApp 01926400400.', language, mode: 'ai_unavailable' });
 }
