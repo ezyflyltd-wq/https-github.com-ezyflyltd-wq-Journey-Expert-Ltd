@@ -58,9 +58,19 @@ jobs:
             let pass=0;
             for(const prompt of prompts){
               await page.type('#free-angela-query',prompt,{delay:5});
+              await page.waitForFunction(()=>!!document.querySelector('#free-angela-query')?.value && !document.querySelector('button[aria-label="Send question"]')?.disabled,{timeout:9000});
+              console.log('MOBILE_BEFORE_SUBMIT',JSON.stringify(await page.evaluate(()=>({text:document.querySelector('#free-angela-query')?.value,disabled:document.querySelector('button[aria-label="Send question"]')?.disabled}))));
               const responsePromise=page.waitForResponse(x=>x.url().includes('/angela/chat')&&x.request().method()==='POST',{timeout:28000});
               await page.click('button[aria-label="Send question"]');
-              const response=await responsePromise;
+              let response;
+              try {response=await responsePromise;}
+              catch(err) {
+                console.log('MOBILE_SEND_DIAGNOSTIC',JSON.stringify({
+                  state:await page.evaluate(()=>({text:document.querySelector('#free-angela-query')?.value,lastReply:[...document.querySelectorAll('p')].find(x=>x.textContent.startsWith('Angela:'))?.textContent.slice(0,200),buttons:[...document.querySelectorAll('button')].filter(x=>x.textContent.includes('Thinking')||x.getAttribute('aria-label')==='Send question').map(x=>({label:x.getAttribute('aria-label'),disabled:x.disabled}))})),
+                  errors,networkFailures,
+                }));
+                throw err;
+              }
               const data=await response.json();
               const reply=String(data.reply||'');
               if(response.status()!==200||data.mode!=='ai'||reply.length<20){
