@@ -9,6 +9,7 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
     'access-control-allow-methods': 'GET,POST,OPTIONS',
     'access-control-allow-headers': 'Content-Type',
     'x-content-type-options': 'nosniff',
+    'x-angela-backend': 'jel-ltd-advanced-worker-free-lite-20261010',
   },
 });
 
@@ -341,7 +342,7 @@ async function chat(request, env) {
   }
   if (['company_directory', 'services_overview', 'brands'].includes(retrievedKnowledge.primary?.id)) return json({ ...fallback(language, message), language, mode: 'verified' });
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
-  if (!key) return json({ ...fallback(language, message), language, mode: 'fallback' });
+  if (!key) return json({ reply: language === 'bn' ? 'Angela-র AI সংযোগটি এখন কনফিগার করা নেই। নির্দিষ্ট প্রশ্নের জন্য WhatsApp 01926400400-এ যোগাযোগ করুন।' : 'Angela AI is not configured right now. For detailed assistance contact WhatsApp 01926400400.', language, mode: 'ai_unavailable', reason: 'missing_key' });
 
   const system = `You are Angela, the official female AI Assistant of Journey Expert Ltd. (JEL), Bangladesh, on journeyexpertltd.com.
 JEL verified knowledge has priority. Slogan: "Your Journey, Our Expertise." Office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215, Bangladesh. WhatsApp/hotline: +8801926400400. Email: journeyexpertbd@gmail.com.
@@ -361,14 +362,16 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
         .slice(-8)
         .map((turn) => ({ role: turn.role === 'assistant' ? 'model' : 'user', parts: [{ text: turn.content.trim().slice(0, 1800) }] }))
     : [];
-  const model = 'gemini-3.8-flash';
+  // Free-eligible Lite model first; never silently fall back to a paid tier.
+  const model = 'gemini-3.5-flash-lite';
+  let lastProviderStatus = 0;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
+  const timer = setTimeout(() => controller.abort(), 11000);
   try {
     const requestBody = {
       systemInstruction: { parts: [{ text: system }] },
       contents: [...history, { role: 'user', parts: [{ text: message }] }],
-      generationConfig: { temperature: 0.15, maxOutputTokens: 1024, thinkingConfig: { thinkingLevel: 'low' } },
+      generationConfig: { maxOutputTokens: 900 },
     };
     const groundingEnabled = env.GOOGLE_SEARCH_GROUNDING === 'true';
     if (groundingEnabled) requestBody.tools = [{ google_search: {} }];
@@ -378,6 +381,7 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify(requestBody),
     });
+    lastProviderStatus = upstream.status;
     if (upstream.ok) {
       const data = await upstream.json();
       const candidate = data?.candidates?.[0];
@@ -391,7 +395,8 @@ Do not request passport numbers, card/bank details, passwords, OTPs, or sensitiv
   } finally {
     clearTimeout(timer);
   }
-  return json({ ...fallback(language, message), language, mode: 'fallback' });
+  // Do not mistake an upstream outage or free-tier limit for an answered question.
+  return json({ reply: language === 'bn' ? 'এই মুহূর্তে AI থেকে আপনার নির্দিষ্ট প্রশ্নের উত্তর আসেনি। কিছুক্ষণ পর আবার চেষ্টা করুন, অথবা WhatsApp 01926400400-এ যোগাযোগ করুন।' : 'The AI service could not answer your question right now. Please retry shortly or contact WhatsApp 01926400400.', language, mode: 'ai_unavailable', reason: lastProviderStatus === 429 ? 'quota' : [401,403].includes(lastProviderStatus) ? 'credential' : lastProviderStatus ? 'provider_http_' + lastProviderStatus : 'provider_timeout' });
 }
 
 async function transcribe(request, env) {
@@ -576,6 +581,7 @@ export default {
         'access-control-allow-headers': 'Content-Type',
       },
     });
+    if (url.pathname === '/angela/health') return json({ app: 'Journey Expert Angela', routeMarker: 'jel-ltd-angela-health-20261010', status: 'advanced-worker-reachable', chatModel: 'gemini-3.5-flash-lite' });
     if (url.pathname === '/angela/chat') return chat(request, env);
     if (url.pathname === '/angela/transcribe') return transcribe(request, env);
     if (url.pathname === '/angela/speech') return speech(request, env);
@@ -595,7 +601,7 @@ export default {
       femaleVoiceConfigured: Boolean(env.GEMINI_TTS_API_KEY || env.GEMINI_API_KEY),
       femaleLiveFallbackConfigured: Boolean(env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY),
       liveFemaleVoiceConfigured: Boolean(env.GEMINI_API_KEY),
-      model: 'gemini-3.8-flash',
+      model: 'gemini-3.5-flash-lite',
       googleSearchGrounding: env.GOOGLE_SEARCH_GROUNDING === 'true',
     });
     return env.ASSETS.fetch(request);
