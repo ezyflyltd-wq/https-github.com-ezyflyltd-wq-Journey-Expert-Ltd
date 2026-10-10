@@ -1,0 +1,31 @@
+name: Angela Native Provider Diagnostics
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-native-provider-diagnostic.yml']
+  workflow_dispatch:
+jobs:
+  provider:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Inspect native Worker TTS quota status without exposing credentials
+        run: |
+          node <<'NODE'
+          (async()=>{
+            const controller=new AbortController(),t=setTimeout(()=>controller.abort(),26000);
+            try {
+              const r=await fetch('https://journeyexpertltd.com/api/angela/native-tts',{
+                method:'POST',headers:{'content-type':'application/json','origin':'https://journeyexpertltd.com'},
+                body:JSON.stringify({text:'Hello, how can I help you today?'}),signal:controller.signal
+              });
+              const bytes=Buffer.from(await r.arrayBuffer());
+              let error=null;try{error=JSON.parse(bytes.toString('utf8'))}catch{}
+              console.log('NATIVE_PROVIDER_CHECK',JSON.stringify({http:r.status,audioBytes:bytes.length,
+                voice:r.headers.get('x-angela-voice'),model:r.headers.get('x-angela-voice-model'),
+                providerStatus:error?.providerStatus||null,error:error?.error||null,reason:error?.reason||null
+              }));
+              process.exitCode=r.ok?0:1;
+            } finally{clearTimeout(t)}
+          })().catch(e=>{console.error('NATIVE_PROVIDER_ERROR',String(e));process.exitCode=1})
+          NODE
