@@ -1,0 +1,59 @@
+name: Angela Native Bengali and Brain Production QA
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-native-bengali-brain.yml']
+  workflow_dispatch:
+jobs:
+  production-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify two public sites bilingual answers and genuine native Bengali speech
+        run: |
+          node <<'NODE'
+          (async () => {
+            const sites = [
+              {name:'LTD',host:'https://journeyexpertltd.com',chat:'/angela/chat',speech:'/angela/speech',
+                chatBody:(text,lang)=>({message:text,language:lang,history:[]})},
+              {name:'BD',host:'https://journeyexpertbd.com',chat:'/api/gemini/chat',speech:'/api/angela/speech',
+                chatBody:(text,lang)=>({messages:[{sender:'user',text}],language:lang,source:'text'})},
+            ];
+            let chatFailures=0, nativeFailures=0;
+            const post=async(url,body)=>{
+              const c=new AbortController();const timer=setTimeout(()=>c.abort(),26000);
+              try{return await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:c.signal})}
+              finally{clearTimeout(timer)}
+            };
+            for(const s of sites){
+              for(const [language,question] of [
+                ['bn','বাংলাদেশ থেকে অস্ট্রেলিয়ায় স্টুডেন্ট ভিসা নিশ্চিত পাওয়া যায়? কীভাবে অফিসিয়াল শর্ত যাচাই করব?'],
+                ['en','Can Journey Expert Limited guarantee a student visa approval?'],
+              ]){
+                try{
+                  const r=await post(s.host+s.chat,s.chatBody(question,language));
+                  const data=await r.json();
+                  const answer=String(data.reply||'');
+                  const matching=language==='bn'?/[\u0980-\u09FF]/.test(answer):!/[\u0980-\u09FF]/.test(answer);
+                  const valid=r.ok&&data.mode==='ai'&&matching&&answer.length>=28;
+                  console.log('CHAT_QA',JSON.stringify({site:s.name,language,status:r.status,model:data.providerModel,mode:data.mode,valid,answer:answer.slice(0,380)}));
+                  if(!valid)chatFailures++;
+                }catch(e){console.log('CHAT_FAIL',s.name,language,String(e));chatFailures++}
+              }
+              for(const [language,sample] of [['en','Hello, I am Angela.'],['bn','আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা।']]){
+                try{
+                  const r=await post(s.host+s.speech,{text:sample});
+                  const bytes=Buffer.from(await r.arrayBuffer());
+                  const valid=r.ok&&bytes.length>1200&&bytes.subarray(0,4).toString()==='RIFF';
+                  const native=valid&&(language==='en'||r.headers.get('x-angela-voice-mode')==='native-bengali-female');
+                  console.log('VOICE_QA',JSON.stringify({site:s.name,language,status:r.status,bytes:bytes.length,
+                    model:r.headers.get('x-angela-voice-model'),mode:r.headers.get('x-angela-voice-mode'),
+                    native,reason:valid?'':bytes.toString('utf8').slice(0,175)}));
+                  if(!native)nativeFailures++;
+                }catch(e){console.log('VOICE_FAIL',s.name,language,String(e));nativeFailures++}
+              }
+            }
+            console.log('FINAL_QA',JSON.stringify({chatFailures,nativeFailures}));
+            if(chatFailures||nativeFailures)process.exitCode=1;
+          })().catch(e=>{console.error(e);process.exitCode=1})
+          NODE
