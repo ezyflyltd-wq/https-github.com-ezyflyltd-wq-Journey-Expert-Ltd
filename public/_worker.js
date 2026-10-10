@@ -457,6 +457,30 @@ async function transcribe(request, env) {
   if (!audio) return json({ error: 'audio_required' }, 400);
   if (!/^audio\/(webm|wav|mpeg|mp3|ogg|opus|aac|flac|m4a|mp4)$/i.test(mimeType)) return json({ error: 'audio_type_not_supported' }, 415);
 
+  // Free, multilingual transcription for browsers without SpeechRecognition.
+  // The account's Workers AI free neuron allocation applies automatically.
+  if (env.AI && typeof env.AI.run === 'function') {
+    try {
+      const result = await Promise.race([
+        env.AI.run('@cf/openai/whisper-large-v3-turbo', {
+          audio,
+          task: 'transcribe',
+          language: language === 'bn' ? 'bn' : 'en',
+          vad_filter: true,
+          initial_prompt: 'Journey Expert Limited. Angela. Travel, flight ticket, visa, Hajj, Umrah, Study Abroad.',
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('speech_recognition_timeout')), 16000)),
+      ]);
+      const transcript = String(result?.text || '').trim().slice(0, 1200);
+      const languageMatches = language === 'bn' ? /[\u0980-\u09FF]/.test(transcript) : !/[\u0980-\u09FF]/.test(transcript);
+      if (transcript.length > 2 && languageMatches) return json({
+        transcript, language, mode: 'ai', providerModel: 'cloudflare-whisper-large-v3-turbo',
+      });
+    } catch (error) {
+      console.warn('Angela Workers AI transcription unavailable', error instanceof Error ? error.message : 'unknown');
+    }
+  }
+
   const keys = [...new Set([env.GEMINI_API_KEY, env.GEMINI_TTS_API_KEY].map((value) => String(value || '').trim()).filter(Boolean))];
   if (!keys.length) return json({ error: 'transcription_not_configured' }, 503);
 
