@@ -518,9 +518,18 @@ export function FreeVoiceAngelaWidget() {
     const effectiveLanguage = /[\u0980-\u09FF]/.test(text) ? 'bn' : 'en';
     const voice = text === BANGLA_WELCOME ? null : getOpeningGreetingVoice(voices, effectiveLanguage);
     await playbackRef.current!.play(text, voice, fetchAngelaSpeech, setIsSpeaking,
-      () => setVoiceNotice(effectiveLanguage === 'bn'
-        ? 'এই মুহূর্তে অডিও চালানো যায়নি। উত্তরটি লেখা আছে—শুনতে আবার চেষ্টা করুন।'
-        : 'Audio could not play this time. The answer is visible—please retry playback.'));
+      (error) => {
+        const code = error instanceof Error ? error.message : '';
+        const blocked = error instanceof Error && error.name === 'NotAllowedError';
+        const detail = blocked ? 'browser-playback-blocked'
+          : /quota|429/i.test(code) ? 'provider-quota'
+          : /timeout/i.test(code) ? 'voice-timeout'
+          : /not.configured|unavailable|503/i.test(code) ? 'voice-provider-unavailable'
+          : 'audio-playback-failed';
+        setVoiceNotice(effectiveLanguage === 'bn'
+          ? `অডিও চালানো যায়নি (${detail})। Chrome-এর Site settings > Sound: Allow যাচাই করুন; প্রয়োজনে Listen আবার চাপুন।`
+          : `Audio failed (${detail}). Check Chrome Site settings > Sound: Allow, then press Listen again.`);
+      });
   }
 
   const speak = async (text: string) => {
