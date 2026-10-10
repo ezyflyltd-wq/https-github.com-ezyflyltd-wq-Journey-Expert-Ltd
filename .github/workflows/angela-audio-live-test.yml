@@ -1,0 +1,39 @@
+name: Angela Audio Live Test
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-audio-live-test.yml']
+  workflow_dispatch:
+jobs:
+  audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify actual WAV female audio from both production sites
+        run: |
+          node <<'NODE'
+          (async()=>{
+            const probes=[
+              {site:'LTD',url:'https://journeyexpertltd.com/angela/speech',text:'Hello! I am Angela.'},
+              {site:'BD',url:'https://journeyexpertbd.com/api/angela/speech',text:'Hello! I am Angela.'},
+              {site:'LTD Bengali',url:'https://journeyexpertltd.com/angela/speech',text:'আমি অ্যাঞ্জেলা, আপনাকে সাহায্য করতে পারি।'},
+              {site:'BD Bengali',url:'https://journeyexpertbd.com/api/angela/speech',text:'আমি অ্যাঞ্জেলা, আপনাকে সাহায্য করতে পারি।'},
+            ];
+            let fails=0;
+            for(const probe of probes){
+              const controller=new AbortController();
+              const timer=setTimeout(()=>controller.abort(),24000);
+              try{
+                const res=await fetch(probe.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:probe.text}),signal:controller.signal});
+                const data=Buffer.from(await res.arrayBuffer());
+                const pass=res.status===200&&data.subarray(0,4).toString()==='RIFF'&&data.subarray(8,12).toString()==='WAVE'&&data.length>1200;
+                const info={site:probe.site,http:res.status,bytes:data.length,voice:res.headers.get('x-angela-voice'),model:res.headers.get('x-angela-voice-model'),mode:res.headers.get('x-angela-voice-mode'),pass};
+                if(!pass){info.error=data.toString('utf8').slice(0,180);fails++}
+                console.log('AUDIO_PROBE',JSON.stringify(info));
+              }catch(e){console.log('AUDIO_PROBE_ERROR',probe.site,String(e));fails++}
+              finally{clearTimeout(timer)}
+            }
+            console.log('AUDIO_PROBES_RESULT',fails===0?'PASS':'FAIL',fails);
+            process.exitCode=fails?1:0;
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
