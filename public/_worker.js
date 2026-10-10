@@ -639,6 +639,37 @@ async function freeFemaleSpeech(text, env) {
   }
 }
 
+// Server-side proxy to the already configured, secret-bound JEL Worker.
+// The Gemini API key never enters the browser or GitHub. This restores
+// native Bengali female speech when Pages itself lacks that secret.
+async function getNativeAngelaSpeech(text) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 17000);
+  try {
+    const response = await fetch(
+      'https://journey-expert-ltd-main.journeyexpertltd.workers.dev/api/angela/native-tts', {
+      method: 'POST', signal: controller.signal,
+      headers: {'content-type': 'application/json','origin':'https://journeyexpertltd.com'},
+      body: JSON.stringify({text})
+    });
+    if (!response.ok || !response.headers.get('content-type')?.includes('audio/wav')) return null;
+    const wav = new Uint8Array(await response.arrayBuffer());
+    if (wav.length < 1200 || String.fromCharCode(...wav.subarray(0,4)) !== 'RIFF'
+      || String.fromCharCode(...wav.subarray(8,12)) !== 'WAVE') return null;
+    return new Response(wav,{status:200,headers:{
+      'content-type':'audio/wav','cache-control':'no-store',
+      'access-control-allow-origin':ALLOWED_ORIGIN,
+      'x-content-type-options':'nosniff',
+      'x-angela-voice':response.headers.get('x-angela-voice')||'Aoede',
+      'x-angela-voice-mode':response.headers.get('x-angela-voice-mode')||'native-bengali-female',
+      'x-angela-voice-model':response.headers.get('x-angela-voice-model')||'gemini-3.8-flash-lite-tts'
+    }});
+  } catch (error) {
+    console.warn('Angela native Bengali proxy unavailable',error instanceof Error?error.name:'unknown');
+    return null;
+  } finally {clearTimeout(timer);}
+}
+
 async function speech(request, env) {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   let body;
@@ -646,6 +677,11 @@ async function speech(request, env) {
 
   const text = typeof body?.text === 'string' ? body.text.replace(/\s+/g, ' ').trim().slice(0, 1200) : '';
   if (!text) return json({ error: 'text_required' }, 400);
+
+  if (env.ANGELA_SERVER_VOICE !== 'off') {
+    const native = await getNativeAngelaSpeech(text);
+    if (native) return native;
+  }
 
   const keys = [...new Set([
     String(env.GEMINI_TTS_API_KEY || '').trim(),
