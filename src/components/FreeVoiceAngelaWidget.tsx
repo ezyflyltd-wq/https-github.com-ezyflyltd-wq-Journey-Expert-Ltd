@@ -835,11 +835,11 @@ export function FreeVoiceAngelaWidget() {
       <>
         <button
           type="button"
-          className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[60] flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-gradient-to-tr from-[#0B5D3B] via-[#0D7A4D] to-[#D4AF37] text-white shadow-2xl ring-2 ring-white/50 transition-all hover:scale-105 active:scale-95 sm:bottom-6 sm:right-6"
+          className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[9999] pointer-events-auto flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-gradient-to-tr from-[#0B5D3B] via-[#0D7A4D] to-[#D4AF37] text-white shadow-2xl ring-2 ring-white/50 transition-all hover:scale-105 active:scale-95 sm:bottom-6 sm:right-6"
           aria-label="Open free Angela voice assistant"
           onClick={openFirstTimeAssistant}
         >
-          <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 opacity-50 blur-sm animate-pulse" aria-hidden="true"></span>
+          <span className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 opacity-50 blur-sm animate-pulse" aria-hidden="true"></span>
           <span className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white/90 bg-white p-1">
             <img src="/logo.svg" alt="" className="h-full w-full object-contain" />
           </span>
@@ -847,7 +847,7 @@ export function FreeVoiceAngelaWidget() {
         </button>
 
         {isOpen && (
-          <div className="fixed inset-0 z-[70] flex items-end justify-end bg-black/30 px-4 py-4 sm:px-6 sm:py-6" role="presentation">
+          <div className="fixed inset-0 z-[10000] flex items-end justify-end bg-black/30 px-4 py-4 sm:px-6 sm:py-6" role="presentation">
             <aside role="dialog" aria-modal="true" aria-labelledby="free-angela-disclosure-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto border border-[#C7A44D]/60 bg-[#FFFDF6] p-5 text-left shadow-2xl sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0B6B53]">Journey Expert Ltd. AI support</p>
               <h2 id="free-angela-disclosure-title" className="mt-1 text-xl font-bold text-[#093F31]">Before you talk with Angela</h2>
@@ -867,7 +867,7 @@ export function FreeVoiceAngelaWidget() {
   }
 
   return (
-    <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[60] flex max-w-[calc(100vw-1.5rem)] flex-col items-end gap-2 sm:bottom-6 sm:right-6" data-voice-contract="verified female device first; cloud fallback">
+    <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 z-[9999] pointer-events-auto flex max-w-[calc(100vw-1.5rem)] flex-col items-end gap-2 sm:bottom-6 sm:right-6" data-voice-contract="verified female device first; cloud fallback">
       {isOpen ? (
         <section role="dialog" aria-label="Angela AI voice assistant" className="flex h-[min(640px,85dvh)] w-[calc(100vw-24px)] max-w-[420px] flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-2xl">
           <header className="relative flex items-center justify-between overflow-hidden bg-gradient-to-r from-[#0B5D3B] via-[#0D6D45] to-[#074028] px-3 py-3 text-white shadow-md sm:px-4">
@@ -930,7 +930,7 @@ export function FreeVoiceAngelaWidget() {
         </section>
       ) : (
         <button type="button" onClick={openAssistant} className="group relative flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-gradient-to-tr from-[#0B5D3B] via-[#0D7A4D] to-[#D4AF37] text-white shadow-2xl ring-2 ring-white/50 transition-all hover:scale-105 active:scale-95" aria-label="Open Angela AI voice assistant">
-          <span className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 opacity-50 blur-sm transition group-hover:opacity-90 animate-pulse" aria-hidden="true"></span>
+          <span className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 opacity-50 blur-sm transition group-hover:opacity-90 animate-pulse" aria-hidden="true"></span>
           <span className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white/90 bg-white p-1"><img src="/logo.svg" alt="" className="h-full w-full object-contain" /></span>
           <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"><Mic className="h-2.5 w-2.5" /></span><span className="sr-only">Talk to Angela · কথা বলুন</span>
         </button>
