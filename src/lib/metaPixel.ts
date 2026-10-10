@@ -6,7 +6,7 @@ declare global {
 }
 
 // Reuse the site's existing public Pixel ID; loading is still gated on analytics consent below.
-const pixelId = '973366755816560';
+const pixelId = String((import.meta as any).env?.VITE_META_PIXEL_ID || '').trim();
 const CONSENT_KEY = 'jel_cookie_consent';
 
 function hasAnalyticsConsent() {
