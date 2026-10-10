@@ -1,0 +1,41 @@
+name: Angela Native Bengali Audio Probe
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-native-bn-audio-probe.yml','public/_worker.js']
+  workflow_dispatch:
+jobs:
+  native-tts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify native Bengali female TTS on live domains
+        run: |
+          node <<'NODE'
+          (async()=>{
+            let fail=0;
+            const cases=[
+              ['LTD Bangla','https://journeyexpertltd.com/angela/speech','আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা। আপনার যাত্রায় কীভাবে সাহায্য করতে পারি?',true],
+              ['LTD English','https://journeyexpertltd.com/angela/speech','Hello, I am Angela. How can I assist with your journey today?',false],
+              ['BD Bangla','https://journeyexpertbd.com/api/angela/speech','আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা। আপনার যাত্রায় কীভাবে সাহায্য করতে পারি?',true],
+              ['BD English','https://journeyexpertbd.com/api/angela/speech','Hello, I am Angela. How can I assist with your journey today?',false],
+            ];
+            for(const [site,url,input,bn] of cases){
+              const controller=new AbortController();
+              const timer=setTimeout(()=>controller.abort(),32000);
+              try {
+                const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text:input}),signal:controller.signal});
+                const b=Buffer.from(await r.arrayBuffer());
+                const isWav=r.ok&&b.length>1200&&b.subarray(0,4).toString()==='RIFF'&&b.subarray(8,12).toString()==='WAVE';
+                const mode=r.headers.get('x-angela-voice-mode')||'none';
+                const error=isWav?undefined:JSON.parse(b.toString('utf8').slice(0,3500));
+                const native=bn?isWav&&mode==='native-bengali-female':isWav&&mode.includes('english-female');
+                if(!native)fail++;
+                console.log('NATIVE_TTS',JSON.stringify({site,http:r.status,bytes:b.length,mode,model:r.headers.get('x-angela-voice-model'),providerStatus:error?.providerStatus||null,diagnostic:error?.diagnostic||null,error:error?.error||null,native}));
+              }catch(e){fail++;console.log('NATIVE_TTS_ERROR',JSON.stringify({site,error:String(e)}))}
+              finally{clearTimeout(timer)}
+            }
+            console.log('NATIVE_TTS_RESULT',fail===0?'PASS':'FAIL',fail);
+            process.exitCode=fail?1:0;
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
