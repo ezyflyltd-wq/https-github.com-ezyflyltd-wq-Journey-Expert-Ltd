@@ -82,7 +82,7 @@ export class AngelaPlayback {
         : voices.find(v => v.lang.toLowerCase().startsWith(wanted) && feminine.test(v.name))
         || voices.find(v => v.lang.toLowerCase().startsWith(wanted))
         || null;
-      if (synth && (preferredVoice || voices.length === 0)) {
+      if (synth) {
         const played = await new Promise<boolean>((resolve) => {
           const utterance = new SpeechSynthesisUtterance(clean);
           this.utterance = utterance;
@@ -107,9 +107,11 @@ export class AngelaPlayback {
           utterance.onend = () => finish(true);
           utterance.onerror = () => finish(false);
           // Some devices accept speak() without ever starting or firing an error.
-          timer = setTimeout(() => finish(false), 1800);
-          window.speechSynthesis.resume();
-          window.speechSynthesis.speak(utterance);
+          timer = setTimeout(() => finish(false), 5500);
+          try {
+            window.speechSynthesis.resume();
+            window.speechSynthesis.speak(utterance);
+          } catch { finish(false); }
         });
         if (!current()) return;
         if (played) { onState(false); return; }
