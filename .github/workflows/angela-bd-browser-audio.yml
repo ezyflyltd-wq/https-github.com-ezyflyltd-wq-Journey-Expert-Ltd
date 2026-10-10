@@ -47,7 +47,17 @@ jobs:
               console.log('BD_HOME',home.status());
               await page.waitForSelector('#btn-open-angela-assistant',{timeout:16000});
               await page.click('#btn-open-angela-assistant');
-              await page.waitForSelector('#input-angela-chat',{timeout:12000});
+              try {
+                await page.waitForSelector('#input-angela-chat',{timeout:6000});
+              } catch (e) {
+                const state=await page.evaluate(()=>({text:document.body.innerText.slice(-1300),
+                  buttons:[...document.querySelectorAll('button')].slice(-12).map(x=>({id:x.id,label:x.getAttribute('aria-label')}))}));
+                console.log('BD_OPEN_DIAGNOSTIC',JSON.stringify(state));
+                // An early click during React hydration may be lost.
+                const launcher=await page.$('#btn-open-angela-assistant');
+                if(launcher) await launcher.click();
+                await page.waitForSelector('#input-angela-chat',{timeout:10000});
+              }
               const questions=[
                 'বাংলাদেশ থেকে অস্ট্রেলিয়ায় পড়তে গেলে SOP কীভাবে লিখতে হয়?',
                 'What are the differences between undergraduate and postgraduate admission?'
