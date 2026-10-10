@@ -629,71 +629,73 @@ async function speech(request, env) {
       detail: bengali ? 'English-only phonetic Banglish TTS disabled due to incorrect pronunciation. Use a Bengali female device voice or native Bengali TTS.' : 'English female TTS unavailable' }, bengali ? 422 : 503);
   }
 
-  const models = [...new Set([
-    env.GEMINI_TTS_MODEL,
-    'gemini-3.8-flash-lite-tts',
-    'gemini-3.8-flash-tts',
-  ].filter(Boolean))];
-
+  // Both listed Gemini speech models have a documented free tier. The first
+  // uses the Interactions API; the second requires generateContent. Read the
+  // real output_audio/inlineData fields, rather than obsolete steps[].content.
+  const models = ['gemini-3.8-flash-lite-tts', 'gemini-2.5-flash-preview-tts'];
   let sawQuota = false;
   let lastProviderStatus = 0;
-  // Full replies take longer to render than a short greeting.
-  const deadline = Date.now() + 11000;
+  const deadline = Date.now() + 14500;
 
-  outer: for (const key of keys) {
+  nativeTts: for (const key of keys) {
     for (const model of models) {
       const remaining = deadline - Date.now();
-      if (remaining < 800) break outer;
+      if (remaining < 1600) break nativeTts;
+      const isLegacy = model.startsWith('gemini-2.5-');
+      const prompt = /[\u0980-\u09FF]/.test(text)
+        ? 'Read the following Bengali text EXACTLY as written in natural Bangladeshi Bengali, with clear native pronunciation, warm adult female voice and a conversational pace. Do not translate or add words.\n' + text
+        : 'Speak the following text verbatim with a clear warm adult female voice.\n' + text;
+      const payload = isLegacy ? {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseModalities: ['AUDIO'],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } },
+        },
+      } : {
+        model, input: prompt, response_format: { type: 'audio' },
+        generation_config: { speech_config: [{ voice: 'Aoede' }] },
+      };
+      const route = isLegacy
+        ? 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent'
+        : 'https://generativelanguage.googleapis.com/v1beta/interactions';
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), remaining);
-
+      const timer = setTimeout(() => controller.abort(), Math.min(12000, remaining));
       try {
-        const upstream = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+        const upstream = await fetch(route, {
           method: 'POST', signal: controller.signal,
-          headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-          body: JSON.stringify({
-            model,
-            input: [{ type: 'user_input', content: [{ type: 'text', text,
-              annotations: [{ type: 'speech_metadata', style: 'Warm, natural, professional adult female delivery. Speak the exact text in its original language.' }] }] }],
-            response_format: { type: 'audio' },
-            generation_config: { speech_config: [{ voice: 'Aoede' }] },
-          }),
+          headers: {'Content-Type':'application/json','x-goog-api-key':key},
+          body: JSON.stringify(payload),
         });
-
         lastProviderStatus = upstream.status;
         if (!upstream.ok) {
-          if (upstream.status === 429) {
-            sawQuota = true;
-            break;
-          }
+          if (upstream.status === 429) { sawQuota = true; break; }
           if (upstream.status === 401 || upstream.status === 403) break;
           continue;
         }
-
         const data = await upstream.json();
-        const audio = data?.steps?.flatMap(step => step.content || []).find(part => part.type === 'audio' && typeof part.data === 'string');
-
-        if (!audio?.data) continue;
-        const raw = Uint8Array.from(atob(audio.data), (character) => character.charCodeAt(0));
-        if (!raw.length) continue;
-
-        const isWav = raw.length >= 12
-          && String.fromCharCode(...raw.slice(0, 4)) === 'RIFF'
-          && String.fromCharCode(...raw.slice(8, 12)) === 'WAVE';
-        const output = isWav ? raw : new Uint8Array(pcmToWav(raw));
-
-        return new Response(output, {
-          headers: {
-            'content-type': 'audio/wav',
-            'cache-control': 'no-store',
-            'access-control-allow-origin': ALLOWED_ORIGIN,
-            'x-content-type-options': 'nosniff',
-            'x-angela-voice': 'Aoede',
-            'x-angela-voice-model': model,
-          },
-        });
-      } catch {
-        // Try the next key/model within the bounded deadline.
+        const direct = data?.output_audio?.data;
+        const other = data?.steps?.flatMap(step => step.content || [])
+          .find(part => part.type === 'audio' && typeof part.data === 'string')?.data;
+        const candidate = data?.candidates?.[0]?.content?.parts
+          ?.find(part => part?.inlineData?.mimeType?.startsWith('audio/') || part?.inline_data?.mime_type?.startsWith('audio/'));
+        const encoded = direct || other || candidate?.inlineData?.data || candidate?.inline_data?.data;
+        if (typeof encoded !== 'string' || !encoded.length) continue;
+        const pcm = Uint8Array.from(atob(encoded), letter => letter.charCodeAt(0));
+        if (pcm.length < 100) continue;
+        const isWav = pcm.length > 12 &&
+          String.fromCharCode(...pcm.slice(0,4)) === 'RIFF' &&
+          String.fromCharCode(...pcm.slice(8,12)) === 'WAVE';
+        const output = isWav ? pcm : new Uint8Array(pcmToWav(pcm));
+        return new Response(output, {headers: {
+          'content-type':'audio/wav', 'cache-control':'no-store',
+          'access-control-allow-origin':ALLOWED_ORIGIN,
+          'x-content-type-options':'nosniff',
+          'x-angela-voice':'Aoede',
+          'x-angela-voice-mode':/[\u0980-\u09FF]/.test(text) ? 'native-bengali-female' : 'english-female',
+          'x-angela-voice-model':model,
+        }});
+      } catch (error) {
+        console.warn('Native female TTS retry', model, controller.signal.aborted ? 'timeout' : (error instanceof Error ? error.name : 'unavailable'));
       } finally {
         clearTimeout(timer);
       }
