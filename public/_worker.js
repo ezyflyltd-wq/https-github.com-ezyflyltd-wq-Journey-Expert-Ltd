@@ -370,7 +370,7 @@ async function chat(request, env) {
         new Promise((_, reject) => setTimeout(() => reject(new Error('workers_ai_timeout')), 8500)),
       ]);
       const text = String(aiReply?.response || aiReply?.choices?.[0]?.message?.content || '').trim();
-      const matchesLanguage = language === 'bn' ? /[\\u0980-\\u09FF]/.test(text) : !/[\\u0980-\\u09FF]/.test(text);
+      const matchesLanguage = language === 'bn' ? /[\u0980-\u09FF]/.test(text) : !/[\u0980-\u09FF]/.test(text);
       if (text.length >= 12 && matchesLanguage) return json({
         reply: text.slice(0, 2000), language, mode: 'ai',
         providerModel: 'cloudflare-llama-3.1-8b-fast',
