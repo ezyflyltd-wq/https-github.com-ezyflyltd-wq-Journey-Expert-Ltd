@@ -514,12 +514,17 @@ export function FreeVoiceAngelaWidget() {
   async function speakWithBrowser(text: string) {
     if (!voiceEnabledRef.current) return;
     setVoiceNotice('');
-    const voices = window.speechSynthesis?.getVoices() || voiceCatalogRef.current;
+    const browserVoices = window.speechSynthesis?.getVoices() || [];
+    const voices = browserVoices.length ? browserVoices : voiceCatalogRef.current;
     const effectiveLanguage = /[\u0980-\u09FF]/.test(text) ? 'bn' : 'en';
     const voice = text === BANGLA_WELCOME ? null : getOpeningGreetingVoice(voices, effectiveLanguage);
     await playbackRef.current!.play(text, voice, fetchAngelaSpeech, setIsSpeaking,
       (error) => {
         const code = error instanceof Error ? error.message : '';
+        if (code === 'native_bengali_voice_required') {
+          setVoiceNotice('বাংলার ভুল Banglish উচ্চারণ বন্ধ করা হয়েছে। স্বাভাবিক নারী-কণ্ঠের জন্য আপনার ডিভাইসে Bengali (bn-BD বা bn-IN) female voice ইনস্টল ও চালু করুন; তারপর “উত্তর শুনুন” চাপুন।');
+          return;
+        }
         const blocked = error instanceof Error && error.name === 'NotAllowedError';
         const detail = blocked ? 'browser-playback-blocked'
           : /quota|429/i.test(code) ? 'provider-quota'
