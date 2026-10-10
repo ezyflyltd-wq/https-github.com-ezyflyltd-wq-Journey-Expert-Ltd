@@ -57,15 +57,15 @@ jobs:
             ];
             for(const prompt of prompts){
               await page.type('#free-angela-query',prompt,{delay:5});
+              const responsePromise = page.waitForResponse(res=>res.url().includes('/angela/chat')&&res.request().method()==='POST',{timeout:30000});
               await page.click('button[aria-label="Send question"]');
-              const responded=await page.waitForFunction((q)=>{
-                const you=Array.from(document.querySelectorAll('p')).some(p=>p.textContent.includes('You:')&&p.textContent.includes(q));
-                const reply=Array.from(document.querySelectorAll('p')).find(p=>p.textContent.startsWith('Angela:') && p.textContent.length>75);
-                return you&&reply?reply.textContent:null;
-              },{timeout:28000},prompt);
-              const answer=await responded.jsonValue();
-              console.log('UI_REPLY',JSON.stringify({language:/[\u0980-\u09ff]/.test(prompt)?'bn':'en',length:answer.length,preview:answer.slice(0,230)}));
-              await page.waitForFunction(()=>!document.querySelector('button[aria-label="Send question"]')?.disabled||!!document.querySelector('input#free-angela-query')?.value,{timeout:7000}).catch(()=>{});
+              const apiResponse = await responsePromise;
+              const payload = await apiResponse.json();
+              await page.waitForFunction(answer=>{
+                const p=Array.from(document.querySelectorAll('p')).find(el=>el.textContent.startsWith('Angela:')&&el.textContent.includes(answer.slice(0,35)));
+                return !!p;
+              },{timeout:12000},String(payload.reply||''));
+              console.log('UI_REPLY',JSON.stringify({language:/[\u0980-\u09ff]/.test(prompt)?'bn':'en',mode:payload.mode,model:payload.providerModel||null,preview:String(payload.reply||'').slice(0,160)}));
             }
             passed=api.length>=2&&api.every(a=>a.status===200&&a.mode==='ai');
             console.log('RESULT',JSON.stringify({passed,api,voice,errors,consoleErrors}));
