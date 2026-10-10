@@ -626,7 +626,7 @@ export function FreeVoiceAngelaWidget() {
     const audio = await blobToBase64(blob);
     const response = await fetch('/angela/transcribe', {
       method: 'POST',
-      signal: AbortSignal.timeout(7000),
+      signal: AbortSignal.timeout(23000),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         audio,
@@ -657,12 +657,16 @@ export function FreeVoiceAngelaWidget() {
     recognition.lang = language === 'bn' ? 'bn-BD' : 'en-US';
     recognition.interimResults = false;
     recognition.continuous = false;
+    let heardSpeech = false;
+    let browserError = false;
     recognition.onresult = (event) => {
+      heardSpeech = true;
       const transcript = Array.from({ length: event.results.length }, (_, index) => event.results[index][0].transcript).join(' ').trim();
       setIsListening(false);
       if (transcript) void askAssistant(transcript);
     };
     recognition.onerror = () => {
+      browserError = true;
       if (recognitionRef.current === recognition) recognitionRef.current = null;
       setIsListening(false);
       // Recover from unsupported/offline browser speech recognition by
@@ -674,8 +678,14 @@ export function FreeVoiceAngelaWidget() {
       }
     };
     recognition.onend = () => {
-      if (recognitionRef.current === recognition) recognitionRef.current = null;
+      const stillCurrent = recognitionRef.current === recognition;
+      if (stillCurrent) recognitionRef.current = null;
       setIsListening(false);
+      // Chrome frequently ends Bangla recognition without a result on Windows
+      // and Android. Try recorded Whisper instead of going silently idle.
+      if (stillCurrent && !heardSpeech && !browserError && recordingSupported) {
+        void startListening(true);
+      }
     };
     recognitionRef.current = recognition;
     setError('');
@@ -702,8 +712,8 @@ export function FreeVoiceAngelaWidget() {
     setError('');
     void unlockAudio();
 
-    // LOW_LATENCY_VOICE_INPUT: use browser speech recognition first when available.
-    // This avoids record-upload-transcribe latency and uses no Gemini transcription quota.
+    // Start with device recognition when available, with recording/Whisper
+    // recovery for Bengali on Windows, Android and Safari.
     if (!preferRecording && getSpeechRecognition()) {
       startBrowserRecognitionFallback();
       return;
@@ -750,7 +760,7 @@ export function FreeVoiceAngelaWidget() {
           if (generation !== inputGenerationRef.current) return;
           setIsLoading(false);
           setError(language === 'bn'
-            ? 'আপনার কথাটি লেখা হিসেবে ধরতে পারিনি। আবার বলুন বা লিখে প্রশ্ন করুন।'
+            ? 'কথা স্পষ্টভাবে শনাক্ত করা যায়নি। মাইক্রোফোন আবার চাপুন, ধীরে বলুন অথবা নিচে লিখুন।'
             : 'I could not transcribe that recording. Please try again or type your question.');
         }
       };
