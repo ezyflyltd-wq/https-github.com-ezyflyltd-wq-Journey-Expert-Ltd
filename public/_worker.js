@@ -351,26 +351,31 @@ async function chat(request, env) {
       : 'Answer ONLY in English. Give the answer directly.';
     const prior = Array.isArray(body?.history) ? body.history
       .filter(turn => turn && typeof turn.content === 'string')
-      .slice(-4).map(turn => ({ role: turn.role === 'assistant' ? 'assistant' : 'user', content: turn.content.slice(0, 650) })) : [];
+      .slice(-6).map(turn => ({ role: turn.role === 'assistant' ? 'assistant' : 'user', content: turn.content.slice(0, 650) })) : [];
     const modelChoices = [
+      '@cf/google/gemma-4-26b-a4b-it',
       '@cf/meta/llama-3.1-8b-instruct-fast',
-      '@cf/meta/llama-3.2-3b-instruct',
     ];
     for (const modelName of modelChoices) {
       try {
         const aiReply = await Promise.race([
           env.AI.run(modelName, {
             messages: [
-              { role: 'system', content: 'You are Angela, Journey Expert Limited assistant, Bangladesh. ' +
-                'Answer the exact customer question in 2-5 sentences, never repeat a generic script. ' +
-                'Services: flights, visa assistance, tours, hotels, Hajj/Umrah, medical tourism, Study Abroad, corporate travel. ' +
-                'WhatsApp +8801926400400. No guaranteed visa, admission, live fare or booking. ' +
-                'Do not invent JEL-specific details. ' + langInstruction +
-                '\nVerified context: ' + retrievedKnowledge.text.slice(0, 900) },
+              { role: 'system', content: 'You are Angela, the Journey Expert Limited customer assistant in Dhaka, Bangladesh. ' +
+                'Answer the exact question first, in 2 to 4 short, natural spoken sentences, without repetitive advertising. ' +
+                'Use polite Bangladeshi Bengali (আপনি) when requested. ' +
+                'Corporate facts must come ONLY from the supplied verified JEL context: never invent partners, licenses, university tie-ups, bookings, schedules or visa success rates. ' +
+                'JEL supports air tickets, visa document guidance, tours, hotels, Hajj & Umrah, halal/medical tourism, insurance, corporate travel and Study Abroad. ' +
+                'Office: 189/A Abdul Motin Complex, Nabisco Mor, Tejgaon, Dhaka. WhatsApp +8801926400400; Study Abroad: journeyexpertbd.com. ' +
+                'When asked about travel/immigration/admission law, explain only general categories and tell the user to confirm current conditions with the official embassy, immigration authority or institution. Do not invent requirements, fees or deadlines. ' +
+                'If you cannot verify a specific fact, say so rather than guessing. Never promise visas, admission, fares or inventory. ' +
+                langInstruction + '\nVerified JEL context: ' + retrievedKnowledge.text.slice(0, 1800) },
               ...prior,
               { role: 'user', content: message.slice(0, 1300) },
             ],
-            max_tokens: 320,
+            max_tokens: 360,
+            temperature: 0.2,
+            ...(modelName.includes('gemma-4') ? { chat_template_kwargs: { enable_thinking: false } } : {}),
           }),
           new Promise((_, reject) => setTimeout(() => reject(new Error('workers_ai_timeout')), 8500)),
         ]);
