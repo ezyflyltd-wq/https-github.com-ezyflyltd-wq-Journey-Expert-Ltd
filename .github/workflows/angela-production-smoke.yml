@@ -1,0 +1,66 @@
+name: Angela Production Smoke
+on:
+  push:
+    branches: [release]
+    paths:
+      - '.github/workflows/angela-production-smoke.yml'
+  workflow_dispatch:
+jobs:
+  verify-public-sites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Test production homepages and real Bengali-English chat endpoints
+        env:
+          NODE_OPTIONS: "--dns-result-order=ipv4first"
+        run: |
+          node <<'NODE'
+          const targets = [
+            { name: 'LTD', origin: 'https://journeyexpertltd.com', endpoint: '/angela/chat', body: (message, language) => ({ message, language, history: [] }) },
+            { name: 'BD', origin: 'https://journeyexpertbd.com', endpoint: '/api/gemini/chat', body: (message, language) => ({ messages: [{ sender: 'user', text: message }], language, source: 'text' }) },
+          ];
+          let failures = 0;
+          const probe = async (url, options = {}) => {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 25000);
+            try { return await fetch(url, { ...options, signal: controller.signal, redirect: 'follow' }); }
+            finally { clearTimeout(timer); }
+          };
+          for (const site of targets) {
+            try {
+              const home = await probe(site.origin);
+              console.log(site.name + ': homepage HTTP ' + home.status);
+              if (!home.ok) failures++;
+            } catch (error) {
+              failures++;
+              console.error(site.name + ': homepage failed:', String(error));
+            }
+            for (const [language, message] of [
+              ['bn', 'বাংলাদেশ থেকে অস্ট্রেলিয়ায় পড়তে গেলে সাধারণত কোন কাগজপত্র লাগে?'],
+              ['en', 'What is the difference between a tourist visa and a student visa?'],
+            ]) {
+              try {
+                const response = await probe(site.origin + site.endpoint, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(site.body(message, language)),
+                });
+                const data = await response.json().catch(() => ({}));
+                const answer = String(data.reply || '').trim();
+                const actualLanguage = /[\u0980-\u09ff]/.test(answer) ? 'bn' : 'en';
+                console.log(JSON.stringify({
+                  website: site.name, requestedLanguage: language, http: response.status,
+                  mode: data.mode || 'missing', model: data.providerModel || 'none',
+                  answerLength: answer.length, answerLanguage: actualLanguage,
+                }));
+                if (!response.ok || !answer || actualLanguage !== language ||
+                    ['fallback','ai_unavailable'].includes(data.mode)) failures++;
+              } catch (error) {
+                failures++;
+                console.error(site.name + ' ' + language + ':', String(error));
+              }
+            }
+          }
+          if (failures) console.error('Production check failed:', failures, 'issue(s). Inspect Gemini credential/quota/runtime responses; no customer secret was exposed.');
+          process.exitCode = failures ? 1 : 0;
+          NODE
