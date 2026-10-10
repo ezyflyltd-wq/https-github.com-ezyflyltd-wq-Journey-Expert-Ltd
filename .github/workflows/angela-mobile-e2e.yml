@@ -1,0 +1,67 @@
+name: Angela Mobile Chrome E2E
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-mobile-e2e.yml']
+  workflow_dispatch:
+jobs:
+  mobile-chat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Install headless Chrome controller
+        run: |
+          npm install --prefix /tmp/jel-browser puppeteer-core@24.15.0 --no-audit --no-fund
+          which google-chrome
+      - name: Verify mobile UI, repeated messages and speaker status
+        run: |
+          node <<'NODE'
+          const {execFileSync}=require('child_process');
+          const puppeteer=require('/tmp/jel-browser/node_modules/puppeteer-core');
+          (async()=>{
+            const browser=await puppeteer.launch({
+              executablePath:execFileSync('which',['google-chrome']).toString().trim(),
+              headless:true,
+              args:['--no-sandbox','--disable-dev-shm-usage','--use-fake-ui-for-media-stream'],
+            });
+            const page=await browser.newPage();
+            await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true,deviceScaleFactor:2});
+            await page.setUserAgent('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36');
+            const errors=[];
+            page.on('pageerror',e=>errors.push(String(e).slice(0,150)));
+            const home=await page.goto('https://journeyexpertltd.com/',{waitUntil:'domcontentloaded',timeout:30000});
+            console.log('MOBILE_HOME',home.status());
+            await page.waitForSelector('button[aria-label="Open free Angela voice assistant"],button[aria-label="Open Angela AI voice assistant"]',{timeout:15000});
+            await page.click('button[aria-label="Open free Angela voice assistant"],button[aria-label="Open Angela AI voice assistant"]');
+            if(!(await page.$('#free-angela-query'))){
+              await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(x=>x.textContent.includes('Agree and continue')),{timeout:8000});
+              await page.evaluate(()=>[...document.querySelectorAll('button')].find(x=>x.textContent.includes('Agree and continue'))?.click());
+            }
+            await page.waitForSelector('#free-angela-query',{timeout:12000});
+            const prompts=[
+              'বাংলাদেশ থেকে বিদেশে পড়তে গেলে কোথা থেকে শুরু করব?',
+              'How can your agency help with flights?',
+              'আমি কি ভিসা অনুমোদন গ্যারান্টি পাব?',
+            ];
+            let pass=0;
+            for(const prompt of prompts){
+              await page.type('#free-angela-query',prompt,{delay:5});
+              const responsePromise=page.waitForResponse(x=>x.url().includes('/angela/chat')&&x.request().method()==='POST',{timeout:28000});
+              await page.click('button[aria-label="Send question"]');
+              const response=await responsePromise;
+              const data=await response.json();
+              const reply=String(data.reply||'');
+              if(response.status()!==200||data.mode!=='ai'||reply.length<20){
+                console.log('MOBILE_FAIL',JSON.stringify({prompt,http:response.status(),mode:data.mode,reason:data.reason}));
+                throw Error('Mobile assistant failed to answer');
+              }
+              await page.waitForFunction(x=>[...document.querySelectorAll('p')].some(p=>p.textContent.startsWith('Angela:')&&p.textContent.includes(x)),{timeout:9000},reply.slice(0,35));
+              console.log('MOBILE_REPLY',JSON.stringify({language:/[\u0980-\u09ff]/.test(prompt)?'bn':'en',status:response.status(),mode:data.mode,chars:reply.length,model:data.providerModel}));
+              pass++;
+            }
+            const ui=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth,speaker:!!document.querySelector('button[aria-label="Mute spoken replies"]'),mic:!![...document.querySelectorAll('button')].find(x=>x.textContent.includes('Start speaking'))}));
+            console.log('MOBILE_UI',JSON.stringify(ui),'ERRORS',JSON.stringify(errors));
+            await browser.close();
+            if(pass!==prompts.length||ui.width>ui.viewport+8||!ui.mic||errors.length)process.exitCode=1;
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
