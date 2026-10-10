@@ -1,0 +1,85 @@
+name: Angela Real Browser E2E
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-browser-e2e.yml']
+  workflow_dispatch:
+jobs:
+  chrome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Install browser controller
+        run: |
+          npm install --prefix /tmp/jel-browser puppeteer-core@24.15.0 --no-audit --no-fund
+          which google-chrome || which chromium || which chromium-browser
+      - name: Open live LTD site and verify Angela text/UI and real API
+        run: |
+          node <<'NODE'
+          const puppeteer = require('/tmp/jel-browser/node_modules/puppeteer-core');
+          const fs = require('fs');
+          const {execFileSync}=require('child_process');
+          const chrome = ['google-chrome','chromium','chromium-browser'].map(x=>{
+            try{return execFileSync('which',[x]).toString().trim()}catch{return ''}
+          }).find(Boolean);
+          if(!chrome)throw new Error('Chrome binary missing');
+          const browser=await puppeteer.launch({executablePath:chrome,headless:true,
+            args:['--no-sandbox','--disable-dev-shm-usage','--use-fake-ui-for-media-stream']});
+          const page=await browser.newPage();
+          await page.setViewport({width:1280,height:800});
+          const api=[],errors=[],consoleErrors=[],voice=[];
+          page.on('pageerror',e=>consoleErrors.push('pageerror '+String(e).slice(0,230)));
+          page.on('console',e=>{if(e.type()==='error')consoleErrors.push('console '+e.text().slice(0,220))});
+          page.on('requestfailed',r=>{if(r.url().includes('/angela/'))errors.push({url:r.url().split('?')[0],error:r.failure()?.errorText})});
+          page.on('response',async res=>{if(res.url().includes('/angela/chat')){
+            try{const d=await res.json();api.push({status:res.status(),mode:d.mode,model:d.providerModel||null,answer:String(d.reply||'').slice(0,150),reason:d.reason||null})}
+            catch(e){api.push({status:res.status(),error:String(e)})}
+          } else if(res.url().includes('/angela/speech')||res.url().includes('/angela/live-token')){
+            voice.push({url:res.url().split('?')[0],status:res.status(),type:res.headers()['content-type']})
+          }});
+          let passed=false;
+          try{
+            const home=await page.goto('https://journeyexpertltd.com/',{waitUntil:'domcontentloaded',timeout:30000});
+            console.log('HOME',home.status(),await page.title());
+            await page.waitForSelector('button[aria-label="Open free Angela voice assistant"], button[aria-label="Open Angela AI voice assistant"]',{timeout:17000});
+            await page.click('button[aria-label="Open free Angela voice assistant"], button[aria-label="Open Angela AI voice assistant"]');
+            const agree='button';
+            const disclosure=await page.$('#free-angela-query');
+            if(!disclosure){
+              await page.waitForFunction(()=>Array.from(document.querySelectorAll('button')).some(x=>x.textContent.includes('Agree and continue')),{timeout:7000});
+              await page.evaluate(()=>{const b=Array.from(document.querySelectorAll('button')).find(x=>x.textContent.includes('Agree and continue'));b?.click()});
+            }
+            await page.waitForSelector('#free-angela-query',{timeout:10000});
+            const prompts=[
+              'বাংলাদেশ থেকে অস্ট্রেলিয়ায় পড়তে গেলে সাধারণত কী কী কাগজপত্র লাগে?',
+              'How can Journey Expert Limited help me with a tourist visa?'
+            ];
+            for(const prompt of prompts){
+              await page.type('#free-angela-query',prompt,{delay:5});
+              await page.click('button[aria-label="Send question"]');
+              const responded=await page.waitForFunction((q)=>{
+                const you=Array.from(document.querySelectorAll('p')).some(p=>p.textContent.includes('You:')&&p.textContent.includes(q));
+                const reply=Array.from(document.querySelectorAll('p')).find(p=>p.textContent.startsWith('Angela:') && p.textContent.length>75);
+                return you&&reply?reply.textContent:null;
+              },{timeout:28000},prompt);
+              const answer=await responded.jsonValue();
+              console.log('UI_REPLY',JSON.stringify({language:/[\u0980-\u09ff]/.test(prompt)?'bn':'en',length:answer.length,preview:answer.slice(0,230)}));
+              await page.waitForFunction(()=>!document.querySelector('button[aria-label="Send question"]')?.disabled||!!document.querySelector('input#free-angela-query')?.value,{timeout:7000}).catch(()=>{});
+            }
+            passed=api.length>=2&&api.every(a=>a.status===200&&a.mode==='ai');
+            console.log('RESULT',JSON.stringify({passed,api,voice,errors,consoleErrors}));
+          }catch(e){
+            console.log('UI_ERROR',String(e));
+            console.log('STATE',JSON.stringify({url:page.url(),api,voice,errors,consoleErrors,
+              body:(await page.evaluate(()=>document.body.innerText).catch(()=>'')).slice(-1900)}));
+            await page.screenshot({path:'/tmp/angela-e2e.png',fullPage:true}).catch(()=>{});
+          }finally{await browser.close()}
+          if(!passed)process.exitCode=1;
+          NODE
+      - name: Publish failure screenshot when available
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: angela-browser-failure
+          path: /tmp/angela-e2e.png
+          if-no-files-found: ignore
