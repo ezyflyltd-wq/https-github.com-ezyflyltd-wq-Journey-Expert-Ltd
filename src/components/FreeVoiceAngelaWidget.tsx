@@ -889,7 +889,7 @@ export function FreeVoiceAngelaWidget() {
               {isListening ? (
                 <button type="button" onClick={stopListening} className="inline-flex items-center gap-2 rounded-full bg-[#B42318] px-5 py-3 font-bold text-white shadow-md"><MicOff className="h-4 w-4" /> Stop listening</button>
               ) : (
-                <button type="button" onClick={startListening} disabled={isLoading} className="inline-flex items-center gap-2 rounded-full bg-[#0B6B53] px-5 py-3 font-bold text-white shadow-md disabled:opacity-50"><Mic className="h-4 w-4 text-[#E6CA65]" /> {isLoading ? 'Thinking…' : 'Start speaking'}</button>
+                <button type="button" onClick={() => void startListening()} disabled={isLoading} className="inline-flex items-center gap-2 rounded-full bg-[#0B6B53] px-5 py-3 font-bold text-white shadow-md disabled:opacity-50"><Mic className="h-4 w-4 text-[#E6CA65]" /> {isLoading ? 'Thinking…' : 'Start speaking'}</button>
               )}
             </div>
             {lastTranscript && <p className="border-l-2 border-[#C7A44D] pl-3 leading-5"><strong>You:</strong> {lastTranscript}</p>}
