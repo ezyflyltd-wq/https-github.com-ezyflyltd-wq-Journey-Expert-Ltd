@@ -16,8 +16,8 @@ jobs:
         run: |
           node <<'NODE'
           const targets = [
-            { name: 'LTD', origin: 'https://journeyexpertltd.com', endpoint: '/angela/chat', body: (message, language) => ({ message, language, history: [] }) },
-            { name: 'BD', origin: 'https://journeyexpertbd.com', endpoint: '/api/gemini/chat', body: (message, language) => ({ messages: [{ sender: 'user', text: message }], language, source: 'text' }) },
+            { name: 'LTD', origin: 'https://journeyexpertltd.com', pagesOrigin: 'https://journey-expert-ltd-main.pages.dev', health: '/angela/health', expectedMarker: 'jel-ltd-angela-health-20261010', endpoint: '/angela/chat', body: (message, language) => ({ message, language, history: [] }) },
+            { name: 'BD', origin: 'https://journeyexpertbd.com', pagesOrigin: 'https://jel-study-abroad.pages.dev', health: '/api/gemini/health', expectedMarker: 'jel-bd-angela-health-20261010', endpoint: '/api/gemini/chat', body: (message, language) => ({ messages: [{ sender: 'user', text: message }], language, source: 'text' }) },
           ];
           let failures = 0;
           const probe = async (url, options = {}) => {
@@ -34,6 +34,18 @@ jobs:
             } catch (error) {
               failures++;
               console.error(site.name + ': homepage failed:', String(error));
+            }
+            for (const [label, origin] of [['custom-domain',site.origin],['pages-dev',site.pagesOrigin]]) {
+              try {
+                const h = await probe(origin + site.health);
+                const ct = h.headers.get('content-type') || '';
+                const raw = await h.text();
+                let data = {};
+                try { data = JSON.parse(raw); } catch {}
+                const ok = h.ok && data.routeMarker === site.expectedMarker;
+                console.log(JSON.stringify({ website: site.name, via: label, healthHTTP: h.status, contentType: ct, marker: data.routeMarker || 'missing', pageStart: typeof data.routeMarker === 'string' ? '' : raw.slice(0, 130), pass: ok }));
+                if (!ok) failures++;
+              } catch (err) { failures++; console.error(site.name + ' ' + label + ' health failed:', String(err)); }
             }
             for (const [language, message] of [
               ['bn', 'বাংলাদেশ থেকে অস্ট্রেলিয়ায় পড়তে গেলে সাধারণত কোন কাগজপত্র লাগে?'],
@@ -52,6 +64,8 @@ jobs:
                   website: site.name, requestedLanguage: language, http: response.status,
                   mode: data.mode || 'missing', model: data.providerModel || 'none',
                   answerLength: answer.length, answerLanguage: actualLanguage,
+                  answerPreview: answer.slice(0, 170), replyKeys: Object.keys(data).slice(0, 12),
+                  backendHeader: response.headers.get('x-angela-backend') || 'missing',
                 }));
                 if (!response.ok || !answer || actualLanguage !== language ||
                     ['fallback','ai_unavailable'].includes(data.mode)) failures++;
