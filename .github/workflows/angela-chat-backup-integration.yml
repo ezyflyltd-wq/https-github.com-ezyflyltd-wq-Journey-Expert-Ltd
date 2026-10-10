@@ -1,0 +1,39 @@
+name: Angela Chat Backup Integration
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-chat-backup-integration.yml']
+  workflow_dispatch:
+jobs:
+  bilingual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Test LTD and BD preview real chat answers after Cloudflare quota
+        run: |
+          node <<'NODE'
+          (async()=>{
+            const cases=[
+              ['LTD English','https://journeyexpertltd.com/angela/chat','en','How do I connect my academic background to a strong statement of purpose?',false],
+              ['BD preview English','https://b06e2df0.jel-study-abroad.pages.dev/api/gemini/chat','en','How do I connect my academic background to a strong statement of purpose?',true],
+              ['LTD Bangla','https://journeyexpertltd.com/angela/chat','bn','স্টাডি অ্যাব্রডের জন্য SOP লেখার সময় কেন কোর্স বেছে নিয়েছি তা কীভাবে ব্যাখ্যা করব?',false],
+              ['BD preview Bangla','https://b06e2df0.jel-study-abroad.pages.dev/api/gemini/chat','bn','স্টাডি অ্যাব্রডের জন্য SOP লেখার সময় কেন কোর্স বেছে নিয়েছি তা কীভাবে ব্যাখ্যা করব?',true]
+            ];
+            let fail=0;
+            for(const [site,url,language,message,bd] of cases){
+              const c=new AbortController(),t=setTimeout(()=>c.abort(),26000);
+              try{
+                const body=bd?{messages:[{sender:'user',text:message}],language,source:'text'}:{message,language,history:[]};
+                const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:c.signal});
+                const data=await r.json().catch(()=>({}));
+                const reply=String(data.reply||''),isBn=/[\u0980-\u09FF]/.test(reply);
+                const pass=r.ok&&reply.length>80&&data.mode==='ai'&&(language==='bn'===isBn);
+                if(!pass)fail++;
+                console.log('CHAT_BACKUP',JSON.stringify({site,http:r.status,mode:data.mode||null,model:data.providerModel||null,lang:language,actualLanguage:isBn?'bn':'en',length:reply.length,preview:reply.slice(0,110),pass}));
+              }catch(e){fail++;console.log('CHAT_BACKUP_ERROR',site,String(e))}
+              finally{clearTimeout(t)}
+            }
+            console.log('CHAT_BACKUP_RESULT',fail===0?'PASS':'FAIL',fail);
+            process.exitCode=fail?1:0;
+          })().catch(e=>{console.error(e);process.exitCode=1})
+          NODE
