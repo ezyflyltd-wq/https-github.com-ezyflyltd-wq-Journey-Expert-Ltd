@@ -1,0 +1,32 @@
+name: Angela Long Bengali Voice Diagnostic
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-long-bn-voice-diagnostic.yml']
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Diagnose full-length Bangla TTS directly at credential-backed Worker
+        run: |
+          node <<'NODE'
+          (async()=>{
+            const phrase='স্টাডি অ্যাব্রডের জন্য একটি ভালো স্টেটমেন্ট অব পারপাস লিখতে হলে আপনার শিক্ষাগত পটভূমি, পছন্দের কোর্স, কাজের অভিজ্ঞতা এবং ভবিষ্যৎ পরিকল্পনার মধ্যে স্পষ্ট সম্পর্ক দেখান। কেন নির্দিষ্ট বিশ্ববিদ্যালয়টি বেছে নিয়েছেন এবং এই কোর্স আপনার পেশাগত লক্ষ্য পূরণে কীভাবে সহায়তা করবে তা নিজের ভাষায় ব্যাখ্যা করুন। অসত্য তথ্য ব্যবহার করবেন না। শিক্ষাপ্রতিষ্ঠানের প্রকাশিত নির্দেশনা যাচাই করুন।';
+            const c=new AbortController(),t=setTimeout(()=>c.abort(),32000);
+            try{
+              const r=await fetch('https://journeyexpertltd.com/api/angela/native-tts',{method:'POST',
+                headers:{'content-type':'application/json','origin':'https://journeyexpertltd.com'},
+                body:JSON.stringify({text:phrase}),signal:c.signal});
+              const buffer=Buffer.from(await r.arrayBuffer());
+              const wav=r.ok&&buffer.length>1500&&buffer.toString('ascii',0,4)==='RIFF';
+              let obj={};if(!wav)try{obj=JSON.parse(buffer.toString('utf8').slice(0,1800))}catch{}
+              console.log('LONG_BENGALI_DIRECT',JSON.stringify({length:phrase.length,http:r.status,wav,
+                bytes:buffer.length,voice:r.headers.get('x-angela-voice'),
+                error:obj.error||null,providerStatus:obj.providerStatus||null,reason:obj.reason||null,
+                nonJsonSnippet:!wav&&!obj.error?buffer.toString('utf8').slice(0,120):undefined}));
+              if(!wav)process.exitCode=1;
+            }finally{clearTimeout(t)}
+          })().catch(e=>{console.error('LONG_BENGALI_ERROR',String(e));process.exitCode=1});
+          NODE
