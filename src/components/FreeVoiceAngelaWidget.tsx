@@ -546,7 +546,7 @@ export function FreeVoiceAngelaWidget() {
     cancelActivity();
     const controller = new AbortController();
     requestRef.current = controller;
-    const timer = setTimeout(() => controller.abort(), 10000);
+    const timer = setTimeout(() => controller.abort(), 14500);
     setIsLoading(true);
     setError('');
     setLastTranscript(cleanPrompt);
