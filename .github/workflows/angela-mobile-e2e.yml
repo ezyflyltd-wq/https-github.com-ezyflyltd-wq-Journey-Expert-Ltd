@@ -63,5 +63,5 @@ jobs:
             console.log('MOBILE_UI',JSON.stringify(ui),'ERRORS',JSON.stringify(errors));
             await browser.close();
             if(pass!==prompts.length||ui.width>ui.viewport+8||!ui.mic||errors.length)process.exitCode=1;
-          })().catch(e=>{console.error(e);process.exitCode=1});
+          })().catch(e=>{console.error('MOBILE_TEST_ERROR',String(e));process.exit(1)});
           NODE
