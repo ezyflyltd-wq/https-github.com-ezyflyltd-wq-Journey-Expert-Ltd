@@ -1,0 +1,33 @@
+name: Legacy JEL Gemini Readiness
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/legacy-gemini-readiness.yml']
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Probe previously configured Cloudflare Worker Gemini binding
+        run: |
+          node <<'NODE'
+          (async()=>{
+            const h=await fetch('https://journeyexpertltd.com/api/health');
+            const health=await h.json().catch(()=>({}));
+            console.log('LEGACY_HEALTH',JSON.stringify({http:h.status,status:health.status,aiConfigured:health.aiConfigured,version:health.version}));
+            if(!h.ok||!health.aiConfigured){process.exitCode=1;return}
+            const c=new AbortController();const t=setTimeout(()=>c.abort(),25000);
+            try{
+              const r=await fetch('https://journeyexpertltd.com/api/ai-assistant',{
+                method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({message:'What is Journey Expert Limited?',language:'en'}),signal:c.signal
+              });
+              const data=await r.json().catch(()=>({}));
+              console.log('LEGACY_CHAT',JSON.stringify({http:r.status,answerLength:String(data.reply||'').length,
+                hasResponse:!!data.reply,handoffRequired:data.handoffRequired||false,
+                responsePreview:String(data.reply||'').slice(0,150)}));
+              if(!r.ok||!data.reply)process.exitCode=1;
+            }finally{clearTimeout(t)}
+          })().catch(e=>{console.log('LEGACY_CHECK_ERROR',String(e));process.exitCode=1});
+          NODE
