@@ -1,3 +1,28 @@
+// Spoken wording is separate from the visible answer. Normalise English
+// acronyms in Bengali sentences, rather than asking a Bengali voice to spell
+// Roman abbreviations as unrelated English words.
+function prepareAngelaSpeech(text: string): string {
+  let spoken = text.replace(/[*#_`]/g, '').replace(/https?:\/\/\S+/g, '').replace(/[•]/g, '। ').trim();
+  if (!/[\u0980-\u09FF]/.test(spoken)) return spoken;
+  const substitutions: Array<[RegExp, string]> = [
+    [/\bJourney Expert Limited\b/gi, 'জার্নি এক্সপার্ট লিমিটেড'],
+    [/\bJourney Expert Ltd\.?\b/gi, 'জার্নি এক্সপার্ট লিমিটেড'],
+    [/\bJEL\b/g, 'জার্নি এক্সপার্ট লিমিটেড'],
+    [/\bStudy Abroad\b/gi, 'স্টাডি অ্যাব্রড'],
+    [/\bWhatsApp\b/gi, 'হোয়াটসঅ্যাপ'],
+    [/\bIELTS\b/gi, 'আইইএলটিএস'],
+    [/\bPTE\b/g, 'পিটিই'],
+    [/\bSOP\b/g, 'এস ও পি'],
+    [/\bCAS\b/g, 'ক্যাস'],
+    [/\bCOE\b/g, 'সিওই'],
+    [/\bGDS\b/g, 'জিডিএস'],
+    [/\bB2B\b/gi, 'বি টু বি'],
+    [/\bvisa\b/gi, 'ভিসা'],
+  ];
+  for (const [pattern, replacement] of substitutions) spoken = spoken.replace(pattern, replacement);
+  return spoken.replace(/\s+/g, ' ').trim();
+}
+
 // One owner for every pending request, playback source and device utterance.
 // cancel() also settles pending playback, so a closed panel cannot resume later.
 export class AngelaPlayback {
@@ -49,7 +74,7 @@ export class AngelaPlayback {
     const controller = new AbortController();
     this.controller = controller;
     const current = () => this.controller === controller && !controller.signal.aborted;
-    const clean = text.replace(/[*#_`]/g, '').replace(/https?:\/\/\S+/g, '').trim();
+    const clean = prepareAngelaSpeech(text);
     if (!clean) return;
     try {
       // Prefer a free local browser voice even when the caller has not supplied
