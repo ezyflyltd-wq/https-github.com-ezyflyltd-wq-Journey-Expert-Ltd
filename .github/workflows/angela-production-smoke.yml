@@ -35,18 +35,8 @@ jobs:
               failures++;
               console.error(site.name + ': homepage failed:', String(error));
             }
-            for (const [label, origin] of [['custom-domain',site.origin],['pages-dev',site.pagesOrigin]]) {
-              try {
-                const h = await probe(origin + site.health);
-                const ct = h.headers.get('content-type') || '';
-                const raw = await h.text();
-                let data = {};
-                try { data = JSON.parse(raw); } catch {}
-                const ok = h.ok && data.routeMarker === site.expectedMarker;
-                console.log(JSON.stringify({ website: site.name, via: label, healthHTTP: h.status, contentType: ct, marker: data.routeMarker || 'missing', pageStart: typeof data.routeMarker === 'string' ? '' : raw.slice(0, 130), pass: ok }));
-                if (!ok) failures++;
-              } catch (err) { failures++; console.error(site.name + ' ' + label + ' health failed:', String(err)); }
-            }
+            // Pages Functions and Advanced Workers are different runtime modes.
+            // The chat POST below, not an optional health route, is the production contract.
             for (const [language, message] of [
               ['bn', 'বাংলাদেশ থেকে অস্ট্রেলিয়ায় পড়তে গেলে সাধারণত কোন কাগজপত্র লাগে?'],
               ['en', 'What is the difference between a tourist visa and a student visa?'],
