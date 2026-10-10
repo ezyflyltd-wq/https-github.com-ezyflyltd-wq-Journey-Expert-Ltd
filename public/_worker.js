@@ -466,32 +466,51 @@ async function transcribe(request, env) {
   if (!audio) return json({ error: 'audio_required' }, 400);
   if (!/^audio\/(webm|wav|mpeg|mp3|ogg|opus|aac|flac|m4a|mp4)$/i.test(mimeType)) return json({ error: 'audio_type_not_supported' }, 415);
 
-  // Free, multilingual transcription for browsers without SpeechRecognition.
-  // The account's Workers AI free neuron allocation applies automatically.
+  // Accept Bengali/Banglish transcripts: Whisper may romanize Bengali speech.
+  // The chat UI retains the selected language independently of transcription.
+  let speechFailure = 'speech_provider_unavailable';
   if (env.AI && typeof env.AI.run === 'function') {
     try {
-      const result = await Promise.race([
+      const detected = await Promise.race([
         env.AI.run('@cf/openai/whisper-large-v3-turbo', {
           audio,
           task: 'transcribe',
           language: language === 'bn' ? 'bn' : 'en',
-          vad_filter: true,
-          initial_prompt: 'Journey Expert Limited. Angela. Travel, flight ticket, visa, Hajj, Umrah, Study Abroad.',
+          initial_prompt: 'Journey Expert Limited, Angela, Bangla, visa, tickets and study abroad.',
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('speech_recognition_timeout')), 16000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('whisper_timeout')), 14000)),
       ]);
-      const transcript = String(result?.text || '').trim().slice(0, 1200);
-      const languageMatches = language === 'bn' ? /[\u0980-\u09FF]/.test(transcript) : !/[\u0980-\u09FF]/.test(transcript);
-      if (transcript.length > 2 && languageMatches) return json({
-        transcript, language, mode: 'ai', providerModel: 'cloudflare-whisper-large-v3-turbo',
-      });
+      const text = String(detected?.text || '').trim().replace(/^["'\s]+|["'\s]+$/g, '');
+      if (text.length > 2 && !/^\[?(?:music|silence|no speech|background noise)\]?$/i.test(text)) {
+        return json({transcript: text.slice(0, 1200), language, mode: 'ai', providerModel: 'cloudflare-whisper-large-v3-turbo'});
+      }
+      speechFailure = 'whisper_empty';
     } catch (error) {
-      console.warn('Angela Workers AI transcription unavailable', error instanceof Error ? error.message : 'unknown');
+      speechFailure = error instanceof Error && /timeout/i.test(error.message) ? 'whisper_timeout' : 'whisper_provider_error';
+      console.warn('Angela Whisper v3 transcription failed', speechFailure);
+    }
+
+    // An independently implemented speech model can recover from a format or
+    // language problem in Whisper v3. Constrain the array to small voice clips.
+    if (audio.length < 500000) {
+      try {
+        const bytes = Uint8Array.from(atob(audio), c => c.charCodeAt(0));
+        const backup = await Promise.race([
+          env.AI.run('@cf/openai/whisper', {audio: Array.from(bytes)}),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('whisper_backup_timeout')), 12000)),
+        ]);
+        const text = String(backup?.text || '').trim();
+        if (text.length > 2) return json({transcript: text.slice(0,1200), language, mode: 'ai', providerModel: 'cloudflare-whisper-backup'});
+        speechFailure = 'speech_empty';
+      } catch (error) {
+        console.warn('Angela backup Whisper unavailable', error instanceof Error ? error.message.slice(0,80) : 'unknown');
+        speechFailure = 'speech_provider_unavailable';
+      }
     }
   }
 
   const keys = [...new Set([env.GEMINI_API_KEY, env.GEMINI_TTS_API_KEY].map((value) => String(value || '').trim()).filter(Boolean))];
-  if (!keys.length) return json({ error: 'transcription_not_configured' }, 503);
+  if (!keys.length) return json({ error: 'transcription_unavailable', reason: speechFailure }, 503);
 
   const prompt = language === 'bn'
     ? 'Transcribe this customer speech accurately. The customer is using Bangla or Banglish. Return only the transcript in natural Bengali script, preserving proper names and brand names such as Journey Expert, JEL, visa, ticket, university and country names when appropriate. Do not answer the question and do not add commentary.'
