@@ -632,34 +632,36 @@ async function speech(request, env) {
   // Both listed Gemini speech models have a documented free tier. The first
   // uses the Interactions API; the second requires generateContent. Read the
   // real output_audio/inlineData fields, rather than obsolete steps[].content.
-  const models = ['gemini-3.8-flash-lite-tts', 'gemini-2.5-flash-preview-tts'];
+  const models = ['gemini-3.8-flash-lite-tts', 'gemini-3.8-flash-tts'];
   let sawQuota = false;
   let lastProviderStatus = 0;
-  const deadline = Date.now() + 14500;
+  const deadline = Date.now() + 17500;
 
   nativeTts: for (const key of keys) {
     for (const model of models) {
       const remaining = deadline - Date.now();
       if (remaining < 1600) break nativeTts;
-      const isLegacy = model.startsWith('gemini-2.5-');
-      const prompt = /[\u0980-\u09FF]/.test(text)
-        ? 'Read the following Bengali text EXACTLY as written in natural Bangladeshi Bengali, with clear native pronunciation, warm adult female voice and a conversational pace. Do not translate or add words.\n' + text
-        : 'Speak the following text verbatim with a clear warm adult female voice.\n' + text;
-      const payload = isLegacy ? {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ['AUDIO'],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } },
-        },
-      } : {
-        model, input: prompt, response_format: { type: 'audio' },
+      // Gemini 3.8 Interactions requires an array of user_input content
+      // blocks; raw input strings caused invalid-request failures. Put
+      // delivery notes in speech_metadata, never in the words to speak.
+      const nativeBangla = /[\u0980-\u09FF]/.test(text);
+      const deliveryStyle = nativeBangla
+        ? 'Speak the supplied Bangla exactly in natural Bangladeshi Bengali (bn-BD), with a warm adult female voice, accurate pronunciation, natural pauses and a moderate conversational pace. Do not translate, romanize, add, or omit words.'
+        : 'Read the supplied English text exactly, in a warm adult female voice with natural pacing, clear consonants and comfortable pauses. Do not add or omit words.';
+      const payload = {
+        model,
+        input: [{
+          type: 'user_input',
+          content: [{type: 'text', text, annotations: [{
+            type: 'speech_metadata', style: deliveryStyle
+          }]}],
+        }],
+        response_format: { type: 'audio' },
         generation_config: { speech_config: [{ voice: 'Aoede' }] },
       };
-      const route = isLegacy
-        ? 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent'
-        : 'https://generativelanguage.googleapis.com/v1beta/interactions';
+      const route = 'https://generativelanguage.googleapis.com/v1beta/interactions';
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), Math.min(12000, remaining));
+      const timer = setTimeout(() => controller.abort(), Math.min(model === models[0] ? 10500 : 6500, remaining));
       try {
         const upstream = await fetch(route, {
           method: 'POST', signal: controller.signal,
@@ -719,7 +721,13 @@ async function speech(request, env) {
   if (freeVoice) return freeVoice;
   const bengali = /[\u0980-\u09FF]/.test(text);
   return json({ error: bengali ? 'native_bengali_voice_required' : 'female_voice_unavailable',
-    providerStatus: lastProviderStatus || undefined }, bengali ? 422 : 503);
+    providerStatus: lastProviderStatus || undefined,
+    diagnostic: lastProviderStatus === 400 ? 'gemini_request_rejected' :
+      lastProviderStatus === 403 ? 'gemini_key_denied' :
+      lastProviderStatus === 404 ? 'gemini_model_unavailable' :
+      lastProviderStatus === 429 ? 'gemini_free_quota' :
+      lastProviderStatus ? 'gemini_provider_' + lastProviderStatus : 'gemini_transport_or_timeout',
+    }, bengali ? 422 : 503);
 }
 
 export default {
