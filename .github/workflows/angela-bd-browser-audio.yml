@@ -1,0 +1,80 @@
+name: Angela BD Real Browser Audio
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-bd-browser-audio.yml']
+  workflow_dispatch:
+jobs:
+  bd-browser-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Install Chrome controller
+        run: |
+          npm install --prefix /tmp/jel-browser puppeteer-core@24.15.0 --no-audit --no-fund
+          which google-chrome
+      - name: Confirm BD Angela answers and provides female WAV in real Chrome
+        run: |
+          node <<'NODE'
+          const {execFileSync}=require('child_process');
+          const puppeteer=require('/tmp/jel-browser/node_modules/puppeteer-core');
+          (async()=>{
+            const browser=await puppeteer.launch({
+              executablePath:execFileSync('which',['google-chrome']).toString().trim(),
+              headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--use-fake-ui-for-media-stream']
+            });
+            const page=await browser.newPage();
+            await page.evaluateOnNewDocument(()=>{
+              window.__jelAudioChecks=[];
+              const original=window.fetch.bind(window);
+              window.fetch=async(...args)=>{
+                const res=await original(...args);
+                const url=String(args[0]?.url||args[0]||'');
+                if(url.includes('/api/angela/speech')){
+                  res.clone().arrayBuffer().then(b=>window.__jelAudioChecks.push({
+                    http:res.status,bytes:b.byteLength,voice:res.headers.get('x-angela-voice'),
+                    model:res.headers.get('x-angela-voice-model'),mode:res.headers.get('x-angela-voice-mode')
+                  })).catch(e=>window.__jelAudioChecks.push({error:String(e)}));
+                }
+                return res;
+              };
+            });
+            const issues=[],messages=[];
+            page.on('pageerror',e=>issues.push(String(e)));
+            page.on('console',m=>{if(m.type()==='error')issues.push(m.text().slice(0,130))});
+            try{
+              const home=await page.goto('https://journeyexpertbd.com/',{waitUntil:'domcontentloaded',timeout:30000});
+              console.log('BD_HOME',home.status());
+              await page.waitForSelector('#btn-open-angela-assistant',{timeout:16000});
+              await page.click('#btn-open-angela-assistant');
+              await page.waitForSelector('#input-angela-chat',{timeout:12000});
+              const questions=[
+                'বাংলাদেশ থেকে অস্ট্রেলিয়ায় পড়তে গেলে SOP কীভাবে লিখতে হয়?',
+                'What are the differences between undergraduate and postgraduate admission?'
+              ];
+              let audioSeen=0;
+              for(const q of questions){
+                await page.type('#input-angela-chat',q,{delay:4});
+                const replyPromise=page.waitForResponse(r=>r.url().includes('/api/gemini/chat')&&r.request().method()==='POST',{timeout:28000});
+                const audioPromise=page.waitForResponse(r=>r.url().includes('/api/angela/speech')&&r.request().method()==='POST',{timeout:24000});
+                await page.click('#btn-send-angela-message');
+                const response=await replyPromise;
+                const payload=await response.json();
+                const answer=String(payload.reply||'');
+                if(!response.ok()||!answer||payload.mode!=='ai')throw Error('BD chatbot not responding: '+JSON.stringify({status:response.status(),mode:payload.mode}));
+                await page.waitForFunction(t=>[...document.querySelectorAll('p')].some(p=>p.textContent.includes(t)),{timeout:11000},answer.slice(0,32));
+                const audio=await audioPromise;
+                await page.waitForFunction(n=>window.__jelAudioChecks?.length>n,{timeout:15000},audioSeen);
+                const events=await page.evaluate(()=>window.__jelAudioChecks);
+                const check=events[audioSeen];audioSeen=events.length;
+                const ok=audio.status()===200&&check.bytes>1200&&!!check.voice;
+                messages.push({language:/[\u0980-\u09ff]/.test(q)?'bn':'en',replyLength:answer.length,
+                  answerModel:payload.providerModel||'none',audio:check,pass:ok});
+                console.log('BD_CHAT_AND_AUDIO',JSON.stringify(messages[messages.length-1]));
+                if(!ok)throw Error('BD female audio missing');
+              }
+              console.log('BD_CHROME_RESULT',JSON.stringify({pass:true,messages,issues}));
+              if(issues.length)throw Error('Browser reported errors: '+JSON.stringify(issues));
+            }finally{await browser.close()}
+          })().catch(e=>{console.error('BD_CHROME_ERROR',String(e));process.exitCode=1});
+          NODE
