@@ -390,14 +390,31 @@ async function chat(request, env) {
         });
         workerFailure = 'wrong_language_or_empty_response';
       } catch (error) {
-        workerFailure = error instanceof Error && /timeout/i.test(error.message) ? 'ai_timeout' : 'ai_provider_error';
+        const providerMessage = error instanceof Error ? error.message : String(error);
+        workerFailure = /daily free|10,000 neurons|used up|quota|4006|3036/i.test(providerMessage)
+          ? 'daily_free_quota_exceeded'
+          : /timeout/i.test(providerMessage) ? 'ai_timeout' : 'ai_provider_error';
         console.warn('Angela Workers AI attempt failed', modelName, workerFailure);
+        if (workerFailure === 'daily_free_quota_exceeded') break;
       }
     }
   }
 
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
-  if (!key) return json({ reply: language === 'bn' ? 'Angela-র AI সংযোগটি এখন কনফিগার করা নেই। নির্দিষ্ট প্রশ্নের জন্য WhatsApp 01926400400-এ যোগাযোগ করুন।' : 'Angela AI is not configured right now. For detailed assistance contact WhatsApp 01926400400.', language, mode: 'ai_unavailable', reason: workerFailure });
+  if (!key) {
+    const verified = retrievedKnowledge.primary ? fallback(language, message) : null;
+    const quota = workerFailure === 'daily_free_quota_exceeded';
+    const reply = verified ? verified.reply : quota
+      ? (language === 'bn'
+          ? 'আজ Cloudflare-এর ফ্রি AI ব্যবহারের সীমা পূর্ণ হয়েছে। এই মুহূর্তে নতুন তথ্য যাচাই না করে অনুমানভিত্তিক উত্তর দেব না। আপনার প্রশ্নটি আগামী দৈনিক বরাদ্দ নবায়নের পর আবার করুন, অথবা WhatsApp 01926400400-এ যোগাযোগ করুন।'
+          : 'The daily free AI allowance has been exhausted. I will not guess at unverified facts. Please retry after the daily reset or contact WhatsApp 01926400400.')
+      : (language === 'bn'
+          ? 'AI সংযোগটি সাময়িকভাবে পাওয়া যাচ্ছে না। যাচাইকৃত কোম্পানির সেবা সম্পর্কে প্রশ্ন করুন অথবা WhatsApp 01926400400-এ যোগাযোগ করুন।'
+          : 'The AI service is temporarily unavailable. Ask about verified JEL services or contact WhatsApp 01926400400.');
+    return json({ reply, language, mode: verified ? 'verified' : 'ai_unavailable',
+      reason: workerFailure, primaryIntent: verified?.primaryIntent || 'unverified',
+      groundingIds: verified?.groundingIds || [], freeQuotaReset: quota ? '00:00_UTC' : undefined });
+  }
 
   const system = `You are Angela, the official female AI Assistant of Journey Expert Ltd. (JEL), Bangladesh, on journeyexpertltd.com.
 JEL verified knowledge has priority. Slogan: "Your Journey, Our Expertise." Office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215, Bangladesh. WhatsApp/hotline: +8801926400400. Email: journeyexpertbd@gmail.com.
