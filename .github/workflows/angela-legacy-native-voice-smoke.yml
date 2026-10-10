@@ -1,0 +1,41 @@
+name: Angela Legacy Native Gemini Voice
+on:
+  push:
+    branches: [release]
+    paths: ['.github/workflows/angela-legacy-native-voice-smoke.yml']
+  workflow_dispatch:
+jobs:
+  native-bangla:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check the existing Worker secret-bound Bengali TTS route
+        run: |
+          node <<'NODE'
+          (async()=>{
+            const cases=[
+              ['Bengali','আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা।'],
+              ['English','Hello, I am Angela.']
+            ];
+            let failures=0;
+            for(const [language,text] of cases){
+              const c=new AbortController(),timer=setTimeout(()=>c.abort(),26000);
+              try{
+                const r=await fetch('https://journeyexpertltd.com/api/angela/native-tts',{method:'POST',
+                  headers:{'content-type':'application/json',origin:'https://journeyexpertltd.com'},
+                  body:JSON.stringify({text}),signal:c.signal});
+                const buff=Buffer.from(await r.arrayBuffer());
+                const wav=r.ok&&buff.length>1000&&buff.subarray(0,4).toString()==='RIFF'&&buff.subarray(8,12).toString()==='WAVE';
+                let data={};if(!wav)try{data=JSON.parse(buff.toString('utf8').slice(0,1200))}catch{}
+                console.log('LEGACY_NATIVE_TTS',JSON.stringify({language,http:r.status,bytes:buff.length,
+                  wav,voice:r.headers.get('x-angela-voice'),mode:r.headers.get('x-angela-voice-mode'),
+                  providerModel:r.headers.get('x-angela-voice-model'),
+                  error:data.error||null,providerStatus:data.providerStatus||null,reason:data.reason||null}));
+                if(!wav)failures++;
+              }catch(e){failures++;console.log('LEGACY_NATIVE_TTS_ERROR',language,String(e))}
+              finally{clearTimeout(timer)}
+            }
+            console.log('LEGACY_NATIVE_TTS_RESULT',failures===0?'PASS':'FAIL',failures);
+            process.exitCode=failures?1:0;
+          })().catch(e=>{console.error(e);process.exitCode=1})
+          NODE
