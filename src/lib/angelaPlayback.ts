@@ -134,7 +134,7 @@ export class AngelaPlayback {
       if (!current()) return;
       // Recover from an unavailable cloud voice using a locally installed female voice.
       const synth = window.speechSynthesis;
-      const bn = /[\\u0980-\\u09FF]/.test(clean);
+      const bn = /[\u0980-\u09FF]/.test(clean);
       const femaleNames = /female|zira|samantha|victoria|aria|jenny|heera|tania|priya|kalpana/i;
       const localVoice = synth?.getVoices().find(v =>
         v.lang.toLowerCase().startsWith(bn ? 'bn' : 'en') && femaleNames.test(v.name));
