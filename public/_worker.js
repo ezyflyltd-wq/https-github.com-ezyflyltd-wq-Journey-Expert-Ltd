@@ -341,6 +341,47 @@ async function chat(request, env) {
     return json({ reply: services[language], language, mode: 'verified', primaryIntent: 'services_overview', groundingIds: ['services_overview'] });
   }
   if (['company_directory', 'services_overview', 'brands'].includes(retrievedKnowledge.primary?.id)) return json({ ...fallback(language, message), language, mode: 'verified' });
+  // Free Cloudflare Workers AI fallback: avoids dependence on an unavailable
+  // Gemini secret. Cloudflare Free allocation is enforced by the platform.
+  if (env.AI && typeof env.AI.run === 'function') {
+    try {
+      const langInstruction = language === 'bn'
+        ? 'Respond in clear, natural Bengali script; address the question directly.'
+        : 'Respond in clear, natural English; address the question directly.';
+      const prior = Array.isArray(body?.history)
+        ? body.history.filter(turn => turn && typeof turn.content === 'string')
+            .slice(-6).map(turn => ({ role: turn.role === 'assistant' ? 'assistant' : 'user', content: turn.content.slice(0, 900) }))
+        : [];
+      const aiReply = await Promise.race([
+        env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', {
+          messages: [
+            { role: 'system', content:
+              'You are Angela, the official Journey Expert Limited assistant in Bangladesh. ' +
+              'Answer the actual question first, not a generic services script. Be accurate, friendly and concise, normally 2-5 sentences. ' +
+              'Journey Expert verified services: flights, reissue/refund, visa assistance, hotels/tours, Hajj/Umrah, Study Abroad, medical tourism, insurance and corporate travel. ' +
+              'Hotline/WhatsApp: +8801926400400. Study portal: journeyexpertbd.com. ' +
+              'Do not guarantee visas, admissions, prices or inventory. If JEL-specific facts are unknown, admit uncertainty. ' +
+              langInstruction + '\\nRelevant verified facts: ' + retrievedKnowledge.text.slice(0, 2200) },
+            ...prior,
+            { role: 'user', content: message.slice(0, 1500) },
+          ],
+          max_tokens: 230,
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('workers_ai_timeout')), 8500)),
+      ]);
+      const text = String(aiReply?.response || aiReply?.choices?.[0]?.message?.content || '').trim();
+      const matchesLanguage = language === 'bn' ? /[\\u0980-\\u09FF]/.test(text) : !/[\\u0980-\\u09FF]/.test(text);
+      if (text.length >= 12 && matchesLanguage) return json({
+        reply: text.slice(0, 2000), language, mode: 'ai',
+        providerModel: 'cloudflare-llama-3.1-8b-fast',
+        primaryIntent: retrievedKnowledge.primary?.id || 'general',
+        groundingIds: retrievedKnowledge.ids,
+      });
+    } catch (error) {
+      console.warn('Angela free Workers AI unavailable', error instanceof Error ? error.message : 'unknown');
+    }
+  }
+
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
   if (!key) return json({ reply: language === 'bn' ? 'Angela-র AI সংযোগটি এখন কনফিগার করা নেই। নির্দিষ্ট প্রশ্নের জন্য WhatsApp 01926400400-এ যোগাযোগ করুন।' : 'Angela AI is not configured right now. For detailed assistance contact WhatsApp 01926400400.', language, mode: 'ai_unavailable', reason: 'missing_key' });
 
