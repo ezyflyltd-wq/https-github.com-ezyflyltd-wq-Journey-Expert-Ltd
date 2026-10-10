@@ -77,7 +77,7 @@ export class AngelaPlayback {
       }
       if (!current()) return;
       const voices = synth?.getVoices() || [];
-      const feminine = /female|zira|samantha|victoria|aria|jenny|heera|tania|priya|kalpana/i;
+      const feminine = /female|woman|zira|samantha|victoria|aria|jenny|sonia|ava|allison|karen|susan|hazel|libby|natasha|serena|moira|fiona|tessa|veena|heera|tania|priya|kalpana|nabanita|tanishaa|lekha|sangeeta/i;
       const preferredVoice = voice && voice.lang.toLowerCase().startsWith(wanted) && feminine.test(voice.name) ? voice
         : voices.find(v => v.lang.toLowerCase().startsWith(wanted) && feminine.test(v.name))
         || null;
@@ -166,7 +166,7 @@ export class AngelaPlayback {
       // Recover from an unavailable cloud voice using a locally installed female voice.
       const synth = window.speechSynthesis;
       const bn = /[\u0980-\u09FF]/.test(clean);
-      const femaleNames = /female|zira|samantha|victoria|aria|jenny|heera|tania|priya|kalpana/i;
+      const femaleNames = /female|woman|zira|samantha|victoria|aria|jenny|sonia|ava|allison|karen|susan|hazel|libby|natasha|serena|moira|fiona|tessa|veena|heera|tania|priya|kalpana|nabanita|tanishaa|lekha|sangeeta/i;
       const localVoice = synth?.getVoices().find(v =>
         v.lang.toLowerCase().startsWith(bn ? 'bn' : 'en') && femaleNames.test(v.name));
       if (synth && localVoice) {
