@@ -90,13 +90,12 @@ jobs:
               const event=audioEvents[audioChecked];
               audioChecked=audioEvents.length;
               const bengali=/[\u0980-\u09ff]/.test(prompt);
-              const validSpeech=bengali
-                ? (audioResponse.status()===422 && event.bytes<1200) ||
-                  (audioResponse.status()===200 && event.bytes>1200 && event.voice!=='Athena')
-                : audioResponse.status()===200&&event.bytes>1200&&event.mode==='english-female-full-reply';
+              const validSpeech=audioResponse.status()===200 && event.bytes>1200
+                && event.voice==='Aoede'
+                && event.mode===(bengali?'native-bengali-female':'english-female');
               const notice=await page.evaluate(()=>[...document.querySelectorAll('p')].filter(x=>/বাংলার ভুল|native Bengali|অডিও চালানো যায়নি|Audio failed/i.test(x.textContent||'')).map(x=>x.textContent).join(''));
               console.log('UI_AUDIO',JSON.stringify({language:bengali?'bn':'en',status:audioResponse.status(),event,notice,pass:validSpeech}));
-              if (!validSpeech) throw Error('Incorrect pronunciation fallback or incomplete English female audio');
+              if (!validSpeech) throw Error('Expected full native Gemini Aoede WAV after each actual chat reply');
             }
             passed=api.length>=2&&api.every(a=>a.status===200&&a.mode==='ai');
             console.log('RESULT',JSON.stringify({passed,api,voice,errors,consoleErrors}));
