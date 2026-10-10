@@ -341,49 +341,58 @@ async function chat(request, env) {
     return json({ reply: services[language], language, mode: 'verified', primaryIntent: 'services_overview', groundingIds: ['services_overview'] });
   }
   if (['company_directory', 'services_overview', 'brands'].includes(retrievedKnowledge.primary?.id)) return json({ ...fallback(language, message), language, mode: 'verified' });
-  // Free Cloudflare Workers AI fallback: avoids dependence on an unavailable
-  // Gemini secret. Cloudflare Free allocation is enforced by the platform.
+  // The actual Pages Advanced Worker is the production chat service.
+  // Use two free Workers AI models; one request may fail or produce the wrong
+  // script even when the account binding is healthy.
+  let workerFailure = 'ai_binding_not_configured';
   if (env.AI && typeof env.AI.run === 'function') {
-    try {
-      const langInstruction = language === 'bn'
-        ? 'Respond in clear, natural Bengali script; address the question directly.'
-        : 'Respond in clear, natural English; address the question directly.';
-      const prior = Array.isArray(body?.history)
-        ? body.history.filter(turn => turn && typeof turn.content === 'string')
-            .slice(-6).map(turn => ({ role: turn.role === 'assistant' ? 'assistant' : 'user', content: turn.content.slice(0, 900) }))
-        : [];
-      const aiReply = await Promise.race([
-        env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', {
-          messages: [
-            { role: 'system', content:
-              'You are Angela, the official Journey Expert Limited assistant in Bangladesh. ' +
-              'Answer the actual question first, not a generic services script. Be accurate, friendly and concise, normally 2-5 sentences. ' +
-              'Journey Expert verified services: flights, reissue/refund, visa assistance, hotels/tours, Hajj/Umrah, Study Abroad, medical tourism, insurance and corporate travel. ' +
-              'Hotline/WhatsApp: +8801926400400. Study portal: journeyexpertbd.com. ' +
-              'Do not guarantee visas, admissions, prices or inventory. If JEL-specific facts are unknown, admit uncertainty. ' +
-              langInstruction + '\\nRelevant verified facts: ' + retrievedKnowledge.text.slice(0, 2200) },
-            ...prior,
-            { role: 'user', content: message.slice(0, 1500) },
-          ],
-          max_tokens: 230,
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('workers_ai_timeout')), 8500)),
-      ]);
-      const text = String(aiReply?.response || aiReply?.choices?.[0]?.message?.content || '').trim();
-      const matchesLanguage = language === 'bn' ? /[\u0980-\u09FF]/.test(text) : !/[\u0980-\u09FF]/.test(text);
-      if (text.length >= 12 && matchesLanguage) return json({
-        reply: text.slice(0, 2000), language, mode: 'ai',
-        providerModel: 'cloudflare-llama-3.1-8b-fast',
-        primaryIntent: retrievedKnowledge.primary?.id || 'general',
-        groundingIds: retrievedKnowledge.ids,
-      });
-    } catch (error) {
-      console.warn('Angela free Workers AI unavailable', error instanceof Error ? error.message : 'unknown');
+    const langInstruction = language === 'bn'
+      ? 'Answer ONLY in Bengali script (বাংলা). Give the answer directly.'
+      : 'Answer ONLY in English. Give the answer directly.';
+    const prior = Array.isArray(body?.history) ? body.history
+      .filter(turn => turn && typeof turn.content === 'string')
+      .slice(-4).map(turn => ({ role: turn.role === 'assistant' ? 'assistant' : 'user', content: turn.content.slice(0, 650) })) : [];
+    const modelChoices = [
+      '@cf/meta/llama-3.1-8b-instruct-fast',
+      '@cf/meta/llama-3.2-3b-instruct',
+    ];
+    for (const modelName of modelChoices) {
+      try {
+        const aiReply = await Promise.race([
+          env.AI.run(modelName, {
+            messages: [
+              { role: 'system', content: 'You are Angela, Journey Expert Limited assistant, Bangladesh. ' +
+                'Answer the exact customer question in 2-5 sentences, never repeat a generic script. ' +
+                'Services: flights, visa assistance, tours, hotels, Hajj/Umrah, medical tourism, Study Abroad, corporate travel. ' +
+                'WhatsApp +8801926400400. No guaranteed visa, admission, live fare or booking. ' +
+                'Do not invent JEL-specific details. ' + langInstruction +
+                '\nVerified context: ' + retrievedKnowledge.text.slice(0, 900) },
+              ...prior,
+              { role: 'user', content: message.slice(0, 1300) },
+            ],
+            max_tokens: 320,
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('workers_ai_timeout')), 8500)),
+        ]);
+        const text = String(aiReply?.response || aiReply?.choices?.[0]?.message?.content || '').trim();
+        const matchesLanguage = language === 'bn'
+          ? /[\u0980-\u09FF]/.test(text)
+          : !/[\u0980-\u09FF]/.test(text);
+        if (text.length >= 12 && matchesLanguage) return json({
+          reply: text.slice(0, 2000), language, mode: 'ai',
+          providerModel: modelName, primaryIntent: retrievedKnowledge.primary?.id || 'general',
+          groundingIds: retrievedKnowledge.ids,
+        });
+        workerFailure = 'wrong_language_or_empty_response';
+      } catch (error) {
+        workerFailure = error instanceof Error && /timeout/i.test(error.message) ? 'ai_timeout' : 'ai_provider_error';
+        console.warn('Angela Workers AI attempt failed', modelName, workerFailure);
+      }
     }
   }
 
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
-  if (!key) return json({ reply: language === 'bn' ? 'Angela-র AI সংযোগটি এখন কনফিগার করা নেই। নির্দিষ্ট প্রশ্নের জন্য WhatsApp 01926400400-এ যোগাযোগ করুন।' : 'Angela AI is not configured right now. For detailed assistance contact WhatsApp 01926400400.', language, mode: 'ai_unavailable', reason: 'missing_key' });
+  if (!key) return json({ reply: language === 'bn' ? 'Angela-র AI সংযোগটি এখন কনফিগার করা নেই। নির্দিষ্ট প্রশ্নের জন্য WhatsApp 01926400400-এ যোগাযোগ করুন।' : 'Angela AI is not configured right now. For detailed assistance contact WhatsApp 01926400400.', language, mode: 'ai_unavailable', reason: workerFailure });
 
   const system = `You are Angela, the official female AI Assistant of Journey Expert Ltd. (JEL), Bangladesh, on journeyexpertltd.com.
 JEL verified knowledge has priority. Slogan: "Your Journey, Our Expertise." Office: 189/A (2nd Floor), Abdul Motin Complex, Hazi Moron Ali Road, Nabisco Mor, Tejgaon, Dhaka-1215, Bangladesh. WhatsApp/hotline: +8801926400400. Email: journeyexpertbd@gmail.com.
