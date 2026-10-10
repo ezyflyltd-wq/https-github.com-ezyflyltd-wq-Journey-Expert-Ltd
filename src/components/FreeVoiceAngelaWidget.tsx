@@ -912,7 +912,12 @@ export function FreeVoiceAngelaWidget() {
               )}
             </div>
             {lastTranscript && <p className="border-l-2 border-[#C7A44D] pl-3 leading-5"><strong>You:</strong> {lastTranscript}</p>}
-            {lastReply && <p className="border-l-2 border-[#0B6B53] pl-3 leading-5"><strong>Angela:</strong> {lastReply}</p>}
+            {lastReply && <div className="rounded-lg border-l-2 border-[#0B6B53] bg-emerald-50/40 p-3">
+              <p className="whitespace-pre-wrap leading-5"><strong>Angela:</strong> {lastReply}</p>
+              <button type="button" aria-label="Listen to Angela's last reply" onClick={() => { void unlockAudio(); void speakWithBrowser(lastReply); }} className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#0B6B53] px-3 py-2 text-xs font-semibold text-white">
+                <Volume2 className="h-4 w-4" /> {language === 'bn' ? 'উত্তর শুনুন' : 'Listen to reply'}
+              </button>
+            </div>}
             {error && <p className="rounded-lg bg-[#FFF1F0] p-2 text-[#B42318]">{error}</p>}
             {voiceNotice && <p className="rounded-lg bg-amber-50 p-2 text-amber-800">{voiceNotice}</p>}
             <form onSubmit={(event) => { event.preventDefault(); void askAssistant(input); }} className="flex gap-2 border-t border-[#E8E1CF] pt-3">
