@@ -1,11 +1,11 @@
-import { lazy, StrictMode, Suspense, useEffect } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { BrowserRouter, useLocation } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
 import { AppRouter } from './routing/AppRouter';
 import { AuthProvider } from './firebase/authContext.tsx';
 import './index.css';
 
-const CookieConsent = lazy(() => import('./components/CookieConsent').then(({ CookieConsent }) => ({ default: CookieConsent })));
+import { CookieConsent } from './components/CookieConsent';
 
 function MetaPageViewTracker() {
   const location = useLocation();
@@ -37,7 +37,7 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <MetaPageViewTracker />
       <AuthProvider>
-        <Suspense fallback={null}><CookieConsent /></Suspense>
+        <CookieConsent />
         <AppRouter />
       </AuthProvider>
     </BrowserRouter>

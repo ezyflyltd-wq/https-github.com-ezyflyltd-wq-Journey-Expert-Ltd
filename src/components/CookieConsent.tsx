@@ -60,14 +60,14 @@ export function CookieConsent() {
               {choice && <p className="mt-1 text-xs" aria-live="polite">Analytics consent is currently {choice === 'accepted' ? 'on' : 'off'}. You can change it here at any time.</p>}
               {storageUnavailable && <p className="mt-1 text-xs text-amber-800" role="status">Your browser blocked preference storage. Optional analytics remains off unless your choice can be saved.</p>}
             </div>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex flex-wrap shrink-0 gap-2">
               <button type="button" onClick={() => save('declined')} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">Decline analytics</button>
               <button type="button" onClick={() => save('accepted')} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-bold text-white">Accept analytics</button>
             </div>
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setPreferencesOpen(true)} aria-label="Open privacy settings" className="fixed bottom-4 right-4 z-[90] rounded-full border border-emerald-800/30 bg-white px-4 py-2 text-xs font-bold text-emerald-800 shadow-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-700">
+        <button type="button" onClick={() => setPreferencesOpen(true)} aria-label="Open privacy settings" className="fixed bottom-4 left-4 z-[90] rounded-full border border-emerald-800/30 bg-white px-4 py-2 text-xs font-bold text-emerald-800 shadow-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-700">
           Privacy settings
         </button>
       )}
