@@ -15,9 +15,9 @@ jobs:
           (async()=>{
             const cases=[
               ['LTD Bangla','https://journeyexpertltd.com/angela/speech','bn','আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা। জার্নি এক্সপার্ট লিমিটেড থেকে আপনাকে স্বাগতম।'],
-              ['BD preview Bangla','https://df562575.jel-study-abroad.pages.dev/api/angela/speech','bn','আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা। আপনি কোন দেশে পড়তে যেতে চান?'],
+              ['BD Bangla','https://journeyexpertbd.com/api/angela/speech','bn','আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা। আপনি কোন দেশে পড়তে যেতে চান?'],
               ['LTD English','https://journeyexpertltd.com/angela/speech','en','Hello, I am Angela, your female travel assistant. How can I help you today?'],
-              ['BD preview English','https://df562575.jel-study-abroad.pages.dev/api/angela/speech','en','Hello, I am Angela. Let me explain your university admission options.'],
+              ['BD English','https://journeyexpertbd.com/api/angela/speech','en','Hello, I am Angela. Let me explain your university admission options.'],
             ];
             let errors=0;
             for(const [site,url,lang,text] of cases){
