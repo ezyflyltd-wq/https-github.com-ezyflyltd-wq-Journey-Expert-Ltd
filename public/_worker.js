@@ -414,6 +414,32 @@ async function chat(request, env) {
     }
   }
 
+  // When Workers AI exhausts its free daily neuron allocation, use JEL's
+  // existing secret-bound Gemini Worker instead of repeating canned fallback.
+  // The underlying Worker only returns mode 'ai' for actual model responses.
+  try {
+    const legacyController=new AbortController();
+    const legacyTimer=setTimeout(()=>legacyController.abort(),13000);
+    try {
+      const upstream=await fetch('https://journey-expert-ltd-main.journeyexpertltd.workers.dev/api/ai-assistant',{
+        method:'POST',signal:legacyController.signal,
+        headers:{'content-type':'application/json','origin':'https://journeyexpertltd.com'},
+        body:JSON.stringify({message,language,
+          history:Array.isArray(body?.history)?body.history.slice(-8):[]})
+      });
+      if(upstream.ok){
+        const answer=await upstream.json();
+        const reply=typeof answer?.reply==='string'?answer.reply.trim().slice(0,2000):'';
+        const matches=language==='bn'?/[\u0980-\u09FF]/.test(reply):!/[\u0980-\u09FF]/.test(reply);
+        if(reply.length>12&&matches&&answer.mode==='ai')
+          return json({reply,language,mode:'ai',
+            providerModel:answer.providerModel||'gemini-3.5-flash-lite',
+            primaryIntent:retrievedKnowledge.primary?.id||'general',
+            groundingIds:retrievedKnowledge.ids});
+      }
+    }finally{clearTimeout(legacyTimer)}
+  }catch(error){console.warn('Angela legacy Gemini chat unavailable',error instanceof Error?error.name:'unknown')}
+
   const key = (env.GEMINI_API_KEY || env.GEMINI_TTS_API_KEY || '').trim();
   if (!key) {
     const verified = retrievedKnowledge.primary ? fallback(language, message) : null;
