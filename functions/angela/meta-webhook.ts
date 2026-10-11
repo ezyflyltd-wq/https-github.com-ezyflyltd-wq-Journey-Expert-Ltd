@@ -1,5 +1,5 @@
-import { onRequest as angela } from '../../angela/chat';
-import { eventKey, messagesFrom, result, sendConfiguration, validSignature, type MetaEnv } from '../../_meta';
+import { onRequest as angela } from './chat';
+import { eventKey, messagesFrom, result, sendConfiguration, validSignature, type MetaEnv } from '../_meta';
 
 type Context = { request: Request; env: MetaEnv };
 

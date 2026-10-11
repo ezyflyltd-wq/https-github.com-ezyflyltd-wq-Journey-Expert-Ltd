@@ -2,7 +2,7 @@
 
 App: JEL Angela Customer Assistant, 2390658631341269.
 Business portfolio: 843551278154167.
-Callback: https://journeyexpertltd.com/api/meta/webhook
+Callback: https://journeyexpertltd.com/angela/meta-webhook
 
 ## Implemented
 

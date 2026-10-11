@@ -4,7 +4,7 @@ import { createHmac, webcrypto } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { messagesFrom, sendConfiguration, validSignature, eventKey } from '../functions/_meta';
-import { onRequest } from '../functions/api/meta/webhook';
+import { onRequest } from '../functions/angela/meta-webhook';
 if (!globalThis.crypto) Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 const secret = 'local-test-secret';
 const event = (extras = {}) => ({ object: 'page', entry: [{ id: 'page', messaging: [{ timestamp: Date.now(), sender: { id: 'customer' }, recipient: { id: 'page' }, message: { mid: 'message-1', text: 'Hello', ...extras } }] }] });
