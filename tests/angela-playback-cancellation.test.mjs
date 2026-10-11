@@ -5,7 +5,7 @@ import { AngelaPlayback } from '../src/lib/angelaPlayback.ts';
 function deferred() { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; }
 function setup(t, decode) {
   const sources = [];
-  const synthesis = { cancel() {}, resume() {}, speak() {} };
+  const synthesis = { cancel() {}, resume() {}, speak() {}, getVoices() { return [{ name: 'Microsoft David', lang: 'en-US' }]; } };
   class Context {
     state = 'running'; destination = {};
     decodeAudioData() { return decode ? decode.promise : Promise.resolve({}); }
@@ -54,8 +54,17 @@ test('a newer turn supersedes an older delayed response', async t => {
 test('a silent device voice falls through to cloud after the startup watchdog', async t => {
   const {sources}=setup(t); t.mock.timers.enable({apis:['setTimeout']});
   const player=new AngelaPlayback(); let fetched=0;
-  const play=player.play('hello',{lang:'en-US'},()=>{fetched++;return audio();},()=>{},assert.fail);
-  t.mock.timers.tick(1800); await flush();
+  const play=player.play('hello',{name:'Samantha',lang:'en-US'},()=>{fetched++;return audio();},()=>{},assert.fail);
+  t.mock.timers.tick(5500); await flush();
   assert.equal(fetched,1); assert.equal(sources[0].started,true);
+  sources[0].onended(); await play;
+});
+
+test('a supplied male voice is rejected in favour of cloud female audio', async t => {
+  const {sources,synthesis}=setup(t); let spoke=false;
+  synthesis.speak=()=>{spoke=true;};
+  const player=new AngelaPlayback();
+  const play=player.play('hello',{name:'Microsoft David',lang:'en-US'},audio,()=>{},assert.fail);
+  await flush(); assert.equal(spoke,false); assert.equal(sources[0].started,true);
   sources[0].onended(); await play;
 });

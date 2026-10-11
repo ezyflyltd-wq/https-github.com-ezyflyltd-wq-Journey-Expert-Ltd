@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, RefreshCw, Send, Volume2, VolumeX, X } from 'lucide-react';
 import { normalizePath } from '../routing/routes';
 import { fetchAngelaSpeech } from '../lib/angelaAudio';
+import { getAngelaContactReply } from '../lib/angelaContact';
 import { AngelaPlayback } from '../lib/angelaPlayback';
 
 type SpeechRecognitionEventLike = {
@@ -562,8 +563,9 @@ export function FreeVoiceAngelaWidget() {
       && /(কথা|বলতে|বুঝতে|পারো|পারেন|পারবে|পারবেন|speak|talk|understand)/i.test(normalizedPrompt)
       && normalizedPrompt.length < 180;
     const greetingOnly = /^(?:hi|hello|hey|হ্যালো|হাই|সালাম|আসসালামু আলাইকুম)(?:\s+(?:angela|অ্যাঞ্জেলা))?[!?.,\s]*$/i.test(normalizedPrompt);
-    if (asksBangla || greetingOnly) {
-      const reply = getFallbackReply(cleanPrompt, requestedLanguage);
+    const contactReply = getAngelaContactReply(cleanPrompt, requestedLanguage);
+    if (contactReply || asksBangla || greetingOnly) {
+      const reply = contactReply || getFallbackReply(cleanPrompt, requestedLanguage);
       setHistory((turns) => [
         ...turns,
         { role: 'user', content: cleanPrompt },
