@@ -45,3 +45,7 @@ Do not assume the existing WhatsApp Business mobile app account is a Cloud API p
 ## Limitations
 
 No live credentials or Graph version are configured by this change. No production customer messages have been sent. Transport currently has no conversation memory, attachment handling, inbox pause toggle, operator alerting or confirmed agent handover. AI quota limits still apply. Sending synchronously can exceed Meta's delivery timeout; D1 claims protect concurrent retries, but a durable queue is preferable before large-scale traffic.
+
+## Advanced Pages worker
+
+This project ships public/_worker.js, which overrides Pages Functions routing. The build embeds the webhook in that worker and routes /angela/meta-webhook before asset handling, using the same live chat function as the website. Regenerate with node scripts/build-meta-webhook.mjs after source changes.

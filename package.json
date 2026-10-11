@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && node scripts/generate-route-html.mjs",
-    "build:pages": "vite build && node scripts/generate-route-html.mjs",
+    "build:pages": "node scripts/build-meta-webhook.mjs && vite build && node scripts/generate-route-html.mjs",
     "check:entry-performance": "node scripts/check-entry-performance.mjs dist/assets",
     "build:pages:guarded": "pnpm run build:pages && pnpm run check:entry-performance",
     "start": "node dist/server.cjs",

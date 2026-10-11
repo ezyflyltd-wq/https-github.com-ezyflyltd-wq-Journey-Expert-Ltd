@@ -5,10 +5,17 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { messagesFrom, sendConfiguration, validSignature, eventKey } from '../functions/_meta';
 import { onRequest } from '../functions/angela/meta-webhook';
+import advancedWorker from '../public/_worker.js';
 if (!globalThis.crypto) Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 const secret = 'local-test-secret';
 const event = (extras = {}) => ({ object: 'page', entry: [{ id: 'page', messaging: [{ timestamp: Date.now(), sender: { id: 'customer' }, recipient: { id: 'page' }, message: { mid: 'message-1', text: 'Hello', ...extras } }] }] });
 const sign = (text: string) => `sha256=${createHmac('sha256', secret).update(text).digest('hex')}`;
+test('deployed advanced worker reaches the gated webhook rather than serving HTML', async () => {
+  const response = await advancedWorker.fetch(new Request('https://journeyexpertltd.com/angela/meta-webhook'), {});
+  assert.equal(response.status, 503); assert.equal(await response.text(), 'Webhook setup incomplete');
+  const health = await advancedWorker.fetch(new Request('https://journeyexpertltd.com/angela/health'), {});
+  assert.equal(health.status, 200);
+});
 test('GET verifies token and echoes only the exact challenge', async () => {
   const response = await onRequest({ request: new Request('https://example.test/api/meta/webhook?hub.mode=subscribe&hub.verify_token=test&hub.challenge=12345'), env: { META_VERIFY_TOKEN: 'test' } });
   assert.equal(response.status, 200); assert.equal(await response.text(), '12345');

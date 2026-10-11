@@ -1,9 +1,9 @@
 import { onRequest as angela } from './chat';
 import { eventKey, messagesFrom, result, sendConfiguration, validSignature, type MetaEnv } from '../_meta';
 
-type Context = { request: Request; env: MetaEnv };
+type Context = { request: Request; env: MetaEnv; chatHandler?: typeof angela };
 
-export async function onRequest({ request, env }: Context): Promise<Response> {
+export async function onRequest({ request, env, chatHandler = angela }: Context): Promise<Response> {
   if (request.method === 'GET') {
     const params = new URL(request.url).searchParams;
     if (!env.META_VERIFY_TOKEN) return result(503, 'Webhook setup incomplete');
@@ -49,7 +49,7 @@ export async function onRequest({ request, env }: Context): Promise<Response> {
       }
       let reply: string;
       try {
-        const response = await angela({ request: new Request('https://journeyexpertltd.com/angela/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: message.text }) }), env });
+        const response = await chatHandler({ request: new Request('https://journeyexpertltd.com/angela/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: message.text }) }), env });
         const answer = await response.json() as { reply?: string };
         if (!response.ok || !answer.reply?.trim()) throw new Error('No answer');
         reply = answer.reply;
