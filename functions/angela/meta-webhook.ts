@@ -61,13 +61,19 @@ export async function onRequest({ request, env, chatHandler = angela }: Context)
       if (!changed) return result(503, 'Delivery claim expired');
       // Never retry ambiguous network results: Meta may have accepted the first send.
       let state = 'uncertain';
+      let httpStatus: number | null = null;
+      let errorCode: number | null = null;
+      let errorSubcode: number | null = null;
       try {
         const outbound = sendConfiguration(message, env, reply);
         const sent = await fetch(outbound.url, { ...outbound.options, signal: AbortSignal.timeout(8000) });
-        const response = await sent.json() as { message_id?: string; messages?: { id?: string }[] };
+        httpStatus = sent.status;
+        const response = await sent.json() as { message_id?: string; messages?: { id?: string }[]; error?: { code?: number; error_subcode?: number } };
+        errorCode = Number.isInteger(response.error?.code) ? response.error!.code! : null;
+        errorSubcode = Number.isInteger(response.error?.error_subcode) ? response.error!.error_subcode! : null;
         if (sent.ok && (response.message_id || response.messages?.[0]?.id)) state = 'sent';
       } catch { /* No secrets, customer content, or Graph errors are logged. */ }
-      await env.META_EVENTS.prepare('UPDATE meta_events SET state=?, updated_at=? WHERE event_key=? AND claim=?').bind(state, Date.now(), key, claim).run();
+      await env.META_EVENTS.prepare('UPDATE meta_events SET state=?, updated_at=?, http_status=?, error_code=?, error_subcode=? WHERE event_key=? AND claim=?').bind(state, Date.now(), httpStatus, errorCode, errorSubcode, key, claim).run();
     }
     await env.META_EVENTS.prepare('DELETE FROM meta_events WHERE updated_at < ?').bind(Date.now() - 30 * 86400_000).run();
     return result(200, 'EVENT_RECEIVED');

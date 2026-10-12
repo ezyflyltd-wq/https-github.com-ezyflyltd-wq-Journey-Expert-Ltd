@@ -84,11 +84,13 @@ test('uncertain network sends are recorded and are not automatically repeated', 
   db.exec(readFileSync(new URL('../migrations/meta-events.sql', import.meta.url), 'utf8'));
   const binding = { prepare(sql: string) { return { bind(...params: any[]) { return { async first() { return db.prepare(sql).get(...params); }, async run() { return db.prepare(sql).run(...params); } }; } }; } };
   let sends = 0;
-  t.mock.method(globalThis, 'fetch', async () => { sends++; throw new Error('Network timeout'); });
+  t.mock.method(globalThis, 'fetch', async () => { sends++; return Response.json({error:{code:190,error_subcode:463,message:'must never be stored'}},{status:400}); });
   const env = { META_APP_SECRET: secret, META_PAGE_ID: 'page', META_PAGE_ACCESS_TOKEN: 'test', META_GRAPH_VERSION: 'v26.0', META_AUTO_REPLY_ENABLED: 'true', META_EVENTS: binding };
   const body = JSON.stringify(event());
   const deliver = () => onRequest({ request: new Request('https://example.test/', { method: 'POST', headers: { 'X-Hub-Signature-256': sign(body) }, body }), env });
   assert.equal((await deliver()).status, 200); assert.equal((await deliver()).status, 200);
   assert.equal(sends, 1); assert.equal(db.prepare('SELECT state FROM meta_events').get()?.state, 'uncertain');
+  const diagnostics = db.prepare('SELECT http_status,error_code,error_subcode FROM meta_events').get();
+  assert.equal(diagnostics?.http_status, 400); assert.equal(diagnostics?.error_code, 190); assert.equal(diagnostics?.error_subcode, 463);
   db.close();
 });
