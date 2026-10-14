@@ -150,15 +150,15 @@ export const HeroSection3D: React.FC<HeroSection3DProps> = ({
             <div className="grid grid-cols-3 gap-2 sm:gap-2.5 pt-2 max-w-lg min-w-0">
               <div className="bg-[#051A13]/90 border border-[#0B5D3B]/50 rounded-xl p-2 sm:p-2.5 min-w-0">
                 <span className="text-[9px] sm:text-[10px] text-emerald-400 font-mono block uppercase truncate">Global Routes</span>
-                <span className="text-xs sm:text-sm font-black text-white font-mono truncate block">900+ Airlines</span>
+                <span className="text-xs sm:text-sm font-black text-white font-mono truncate block">Flight Support</span>
               </div>
               <div className="bg-[#051A13]/90 border border-[#0B5D3B]/50 rounded-xl p-2 sm:p-2.5 min-w-0">
                 <span className="text-[9px] sm:text-[10px] text-emerald-400 font-mono block uppercase truncate">Visa Pathways</span>
-                <span className="text-xs sm:text-sm font-black text-[#C8A14A] font-mono truncate block">40+ Countries</span>
+                <span className="text-xs sm:text-sm font-black text-[#C8A14A] font-mono truncate block">Visa Guidance</span>
               </div>
               <div className="bg-[#051A13]/90 border border-[#0B5D3B]/50 rounded-xl p-2 sm:p-2.5 min-w-0">
                 <span className="text-[9px] sm:text-[10px] text-emerald-400 font-mono block uppercase truncate">Universities</span>
-                <span className="text-xs sm:text-sm font-black text-white font-mono truncate block">500+ Partners</span>
+                <span className="text-xs sm:text-sm font-black text-white font-mono truncate block">Study Options</span>
               </div>
             </div>
           </div>

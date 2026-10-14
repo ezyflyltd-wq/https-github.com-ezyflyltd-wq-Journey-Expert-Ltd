@@ -23,7 +23,7 @@ export const TrustMetricsSection: React.FC = () => {
     {
       value: 'Global',
       label: 'Destination Network',
-      sublabel: 'Direct Sabre & Amadeus GDS Hubs',
+      sublabel: 'Supplier-Based Travel Support',
       icon: Globe2,
     },
     {
@@ -41,10 +41,10 @@ export const TrustMetricsSection: React.FC = () => {
   ];
 
   const trustBadges = [
-    'Direct Multi-GDS Sabre & Amadeus API Gateway',
-    '500+ Official University Representative Network',
-    'Nusuk Authorized Umrah & Hajj Service Partner',
-    'PCI-DSS Compliant Secure Payment Processing',
+    'Flight Enquiry & Ticketing Assistance',
+    'University Application & Study Guidance',
+    'Hajj & Umrah Planning Support',
+    'Payment Options Confirmed Before Booking',
     'Ministry & Government Registered Travel Corporation',
   ];
 

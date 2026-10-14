@@ -40,12 +40,12 @@ export const AITravelAssistantSection: React.FC<AITravelAssistantSectionProps> =
     title: 'Multi-Destination AI Travel & Visa Pathways',
     category: 'JEL Intelligence Suite',
     summary:
-      'Our intelligent neural engine cross-references Sabre/Amadeus GDS schedules, 40+ embassy visa requirement databases, and 500+ university partner portals to structure bespoke journeys.',
+      'Explore travel and study planning with JEL. Ask Angela for guidance; current fares, official requirements and availability need supplier or authority confirmation.',
     highlights: [
-      'Live airfare optimization across 900+ global carriers with zero hidden agency fees',
+      'Flight enquiries and fare quotations with supplier confirmation',
       'Embassy document readiness scoring and appointment tracking for UK, Canada & Schengen',
       'CAS/I-20 related admissions guidance and scholarship-opportunity review where applicable',
-      'Exclusive VIP 5-Star clock tower hotel packages for Umrah with guided Ziyarat tours',
+      'Umrah accommodation, transport and Ziyarat planning subject to package confirmation',
     ],
     suggestedAction: {
       label: 'Explore Flight Booking Engine',
@@ -74,11 +74,11 @@ export const AITravelAssistantSection: React.FC<AITravelAssistantSectionProps> =
           title: 'Dhaka (DAC) ➔ Toronto (YYZ) Flight Intelligence',
           category: 'Aviation & Global Mobility',
           summary:
-            'Optimal routes identified via Emirates (via DXB), Qatar Airways (via DOH), and Turkish Airlines (via IST). Total transit time approx 17h–20h.',
+            'Share your dates, route and passenger count with JEL for a supplier-verified flight quotation.',
           highlights: [
-            'Economy baggage allowance: 2 pieces (23 kg each) standard on most long-haul carriers',
-            'Transit visa: No transit visa required for airside layovers under 24 hours in DXB/DOH',
-            'Study Permit Holder support: JEL immigration desk provides airport pickup and orientation',
+            'Baggage allowance depends on the airline, fare and ticket rules',
+            'Transit requirements depend on nationality, itinerary and current official rules',
+            'Arrival guidance and transfer options can be discussed with the JEL team',
           ],
           suggestedAction: {
             label: 'Search Toronto Flights in GDS',
@@ -90,10 +90,10 @@ export const AITravelAssistantSection: React.FC<AITravelAssistantSectionProps> =
           title: 'Global Education & Student Visa Pathway',
           category: 'JEL Study Abroad Intelligence',
           summary:
-            'Direct access to 500+ universities across Australia (Go8), UK (Russell Group), Canada (U15), and USA.',
+            'Compare study destinations and courses with JEL Study Abroad. University requirements and available application routes are confirmed case by case.',
           highlights: [
-            'Eligibility assessment: IELTS waiver available for selected English-medium graduates',
-            'Scholarships: Up to 50% tuition merit grants assessed directly during pre-screening',
+            'English-language requirements and possible waivers depend on the institution',
+            'Scholarship eligibility, amounts and awards are determined by institutions',
             'Visa processing: Complete Genuine Student (GS) statement drafting and financial audit',
           ],
           suggestedAction: {
@@ -106,11 +106,11 @@ export const AITravelAssistantSection: React.FC<AITravelAssistantSectionProps> =
           title: 'Executive Hajj & Umrah Pilgrimage Solutions',
           category: 'Faith-Centered Travel',
           summary:
-            'Tailored VIP 5-star packages directly facing the Holy Haram in Makkah (Clock Tower) and Madinah.',
+            'Discuss pilgrimage dates, accommodation preferences and group needs with JEL. Final inclusions and availability require confirmation.',
           highlights: [
-            'Nusuk platform direct visa processing with 24-hour turnaround',
-            'Private GMC / bus transportation for airport transfers and historical Ziyarat',
-            'Experienced Islamic scholar guides accompanying group and bespoke travelers',
+            'Visa and permit requirements and processing times require current official verification',
+            'Ground transport and Ziyarat options depend on the confirmed package',
+            'Guide arrangements are confirmed for the selected package',
           ],
           suggestedAction: {
             label: 'View Umrah & Hajj Packages',
@@ -122,7 +122,7 @@ export const AITravelAssistantSection: React.FC<AITravelAssistantSectionProps> =
           title: 'Comprehensive Global Travel Pathway',
           category: 'Custom Travel Intelligence',
           summary:
-            'JEL AI has mapped your query against our travel infrastructure and expert team advisory.',
+            'Use these planning topics to discuss your journey with JEL, or open Angela for a conversational answer.',
           highlights: [
             'Customized day-by-day travel itinerary with verified local DMC tour guides',
             'Accurate embassy checklist and visa file organization support',

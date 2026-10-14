@@ -29,7 +29,7 @@ export const WhyJourneyExpertSection: React.FC<WhyJourneyExpertSectionProps> = (
       title: 'AI INTELLIGENCE',
       tagline: 'Predictive Routing & Document Auditing',
       description:
-        'Our custom AI engine continuously evaluates multi-GDS fare changes, visa policy updates, and university intake requirements in real time.',
+        'Angela provides AI-assisted travel and study guidance. Current fares, visa policies and intake requirements are verified with the relevant supplier, authority or institution.',
       icon: Bot,
       badge: 'Neural Engine',
       highlight: 'Instant eligibility matching and AI-assisted SOP structuring.',

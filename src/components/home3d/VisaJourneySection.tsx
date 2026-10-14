@@ -85,7 +85,7 @@ export const VisaJourneySection: React.FC<VisaJourneySectionProps> = ({ onCheckV
           </h2>
 
           <p className="text-sm sm:text-base text-emerald-100/80 leading-relaxed font-normal">
-            A structured, 5-step transparent workflow eliminating documentation errors, embassy rejections, and bureaucratic delays.
+            A structured, 5-step workflow for document preparation and application support. Processing times and visa decisions remain with the relevant authorities.
           </p>
         </div>
 
