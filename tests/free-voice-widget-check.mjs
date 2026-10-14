@@ -54,14 +54,14 @@ assert.equal(widget.includes("jel:open-angela"), true, 'site AI triggers must op
 assert.equal(widget.includes("recognitionRef.current = null"), true, 'speech recognition sessions must be released between turns');
 assert.equal(app.includes('AIAssistantModal'), false, 'the site must not mount a second competing AI assistant modal');
 
-assert.equal(pagesWorker.includes("const model = 'gemini-3.8-flash'"), true, 'Pages Angela brain must be locked to Gemini 3.8 Flash');
+assert.equal(pagesWorker.includes("const model = 'gemini-3.5-flash-lite'"), true, 'Pages Angela must retain the bounded Lite provider fallback');
 assert.equal(pagesWorker.includes("GOOGLE_SEARCH_GROUNDING === 'true'"), true, 'Pages Angela must support opt-in Google Search grounding');
 assert.equal(widget.includes('DEVICE_FIRST_ANGELA_VOICE'), true, 'verified device speech must remain available independently of cloud quota');
 assert.equal(widget.includes('FEMALE_VOICE_HINTS'), true, 'Angela must rank localized female voices across device families');
 assert.equal(widget.includes('MALE_VOICE_HINTS'), true, 'Angela must penalize known male voice names');
 assert.equal(widget.includes('voiceCatalogRef'), true, 'Angela must warm the browser/OS voice catalogue before use');
 assert.equal(widget.includes('আসসালামু আলাইকুম। আমি অ্যাঞ্জেলা'), true, 'Bangla greeting must introduce Angela consistently');
-assert.equal(widget.includes('আমি আপনাকে কীভাবে সাহায্য করতে পারি?'), true, 'Bangla greeting must ask how Angela can help');
+assert.equal(widget.includes('Before you talk with Angela'), true, 'Angela must show the disclosure before conversation');
 
 const liveVoice = fs.readFileSync(path.join(root, 'src/lib/angelaLiveVoice.ts'), 'utf8');
 assert.equal(liveVoice.includes('fetchAngelaLiveFemaleSpeech'), true, 'optional Gemini Live female capability must remain available for future provider recovery');
@@ -106,6 +106,9 @@ assert.equal(pagesWorker.includes('JEL_SEMANTIC_KNOWLEDGE'), true, 'Advanced Wor
 assert.equal(pagesWorker.includes('STRICT SEMANTIC ACCURACY CONTRACT'), true, 'Advanced Worker must enforce semantic accuracy');
 assert.equal(widget.includes('current verified JEL knowledge'), true, 'Browser fallback must refuse unverified facts instead of guessing');
 
+// Keep regression tests independent of production quota and network availability.
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async () => Response.json({ mode: 'ai_unavailable' }, { status: 503 });
 const workerModule = await import('../public/_worker.js');
 const workerFetch = workerModule.default.fetch;
 const askWorker = async (message, language = 'en') => {
@@ -138,6 +141,7 @@ const unknownSemantic = await askWorker('Who is the current chairman and what is
 assert.equal(unknownSemantic.primaryIntent, 'unverified', 'unknown company detail must remain unverified');
 assert.match(unknownSemantic.reply, /not present|verified/i, 'unknown company detail must not be invented');
 
+globalThis.fetch = originalFetch;
 console.log('Angela semantic fallback checks passed.');
 
 assert.equal(widget.includes('STRICT_FEMALE_ONLY'), true, 'browser fallback must never use an unverified male/default voice');
@@ -157,4 +161,4 @@ assert.equal(liveVoice.includes("deadlineTimer = window.setTimeout(() => fail(ne
 assert.equal(liveVoice.includes("live_voice_timeout')), 5000"), true, 'Live female renderer must keep a bounded 5s inactivity window');
 
 assert.equal(widget.includes('DEVICE_FIRST_ANGELA_VOICE'), true, 'verified female device voice should start without cloud delay when available');
-assert.equal(widget.includes('LOW_LATENCY_VOICE_INPUT'), true, 'browser speech recognition should be the low-latency input path when available');
+assert.equal(widget.includes('browser speech recognition is used only as a compatibility fallback'), true, 'the disclosure must explain the current recorder-first input policy');

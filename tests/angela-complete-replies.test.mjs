@@ -23,15 +23,20 @@ test('service and contact answers stay complete without using model quota', asyn
   }
 });
 
-test('token-truncated model output falls back to a complete grounded answer', async () => {
-  globalThis.fetch = async (_url, options) => {
+test('token-truncated model output is never presented as a complete answer', async () => {
+  let providerCalls = 0;
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).includes('generativelanguage.googleapis.com')) {
+      return Response.json({ mode: 'ai_unavailable' }, { status: 503 });
+    }
+    providerCalls++;
     const config = JSON.parse(options.body).generationConfig;
-    assert.equal(config.thinkingConfig.thinkingLevel, 'low');
     assert.ok(config.maxOutputTokens >= 768);
     return Response.json({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'মালয়েশিয়া ট্যুরিস্ট ভিসার জন্য' }] } }] });
   };
   const data = await ask('ami Malaysia tourist visa niye jante chai', 'bn');
-  assert.equal(data.mode, 'fallback');
-  assert.match(data.reply, /গ্যারান্টি দেয় না/);
+  assert.equal(providerCalls, 1);
+  assert.equal(data.mode, 'ai_unavailable');
+  assert.match(data.reply, /01926400400/);
   assert.notEqual(data.reply, 'মালয়েশিয়া ট্যুরিস্ট ভিসার জন্য');
 });
