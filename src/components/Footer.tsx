@@ -122,6 +122,7 @@ export const Footer: React.FC<FooterProps> = ({ onPortalChange, onModuleChange }
           <nav aria-label="Follow Journey Expert" className="flex flex-wrap gap-3 pt-3">
             {[
               ['Facebook', 'https://www.facebook.com/journeyexpertltd'],
+              ['Messenger', 'https://m.me/1183671364826520'],
               ['Instagram', 'https://www.instagram.com/journeyexpertltd/'],
               ['YouTube', 'https://www.youtube.com/@JELSTUDYABROAD'],
               ['WhatsApp', 'https://wa.me/8801926400400?text=Assalamu%20Alaikum%20Journey%20Expert%20Limited.%20I%20visited%20journeyexpertltd.com%20and%20would%20like%20assistance.'],
