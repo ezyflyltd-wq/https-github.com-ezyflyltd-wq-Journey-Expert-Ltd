@@ -87,3 +87,4 @@ jobs:
           node tests/angela-public-widget-check.mjs
           node tests/angela-responsive-brain-check.mjs
           node --experimental-strip-types --test tests/angela-pages-chat-safety.test.mjs
+          node --experimental-strip-types --test tests/angela-api-voice-safety.test.mjs
