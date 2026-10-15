@@ -1,7 +1,7 @@
 // Verified public company details do not depend on a generative provider.
 export function getAngelaContactReply(prompt: string, language: 'bn' | 'en'): string | null {
   const question = prompt.toLowerCase().replace(/\s+/g, ' ').trim();
-  const contact = /whatsapp|phone|hotline|contact|office|address|email|হোয়াটসঅ্যাপ|হোয়াটসঅ্যাপ|ফোন|হটলাইন|যোগাযোগ|অফিস|ঠিকানা|ইমেইল|নম্বর|নাম্বার/.test(question);
+  const contact = /whatsapp|phone|hotline|contact|\boffice\b|address|email|হোয়াটসঅ্যাপ|হোয়াটসঅ্যাপ|ফোন|হটলাইন|যোগাযোগ|অফিস|ঠিকানা|ইমেইল|নম্বর|নাম্বার/.test(question);
   const company = /\bjel\b|journey expert|your|you|আপনাদের|তোমাদের|আপনার|জার্নি|কোম্পানি/.test(question);
   const unrelated = /embassy|consulate|university|hospital|hotel|এম্বাসি|দূতাবাস|কনস্যুলেট|বিশ্ববিদ্যালয়|বিশ্ববিদ্যালয়|হাসপাতাল|হোটেল/.test(question);
   if (!contact || !company || unrelated) return null;
