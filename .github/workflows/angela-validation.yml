@@ -87,4 +87,5 @@ jobs:
           node tests/angela-public-widget-check.mjs
           node tests/angela-responsive-brain-check.mjs
           node --experimental-strip-types --test tests/angela-pages-chat-safety.test.mjs
+          # [approved-production-change] validate the active voice API route before release
           node --experimental-strip-types --test tests/angela-api-voice-safety.test.mjs
