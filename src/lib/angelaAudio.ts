@@ -65,7 +65,7 @@ function pcmChunksToWav(chunks: Uint8Array[]): Blob {
 }
 
 async function fetchAngelaLiveSpeech(text: string, signal: AbortSignal): Promise<Blob> {
-  const tokenResponse = await fetch('/angela/live-token', {
+  const tokenResponse = await fetch('/api/ai/voice-agent?action=live-token', {
     method: 'POST',
     signal,
     headers: { 'Content-Type': 'application/json' },
@@ -224,7 +224,7 @@ export async function fetchAngelaSpeech(text: string, signal: AbortSignal): Prom
     const ttsTimer = window.setTimeout(() => ttsController.abort(), 26000);
 
     try {
-      const response = await fetch('/angela/speech', {
+      const response = await fetch('/api/ai/voice-agent?action=speech', {
         method: 'POST',
         signal: ttsController.signal,
         headers: { 'Content-Type': 'application/json' },
