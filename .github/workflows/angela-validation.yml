@@ -93,3 +93,5 @@ jobs:
           node --test tests/angela-public-worker-safety.test.mjs
           # [approved-production-change] guard frontend short-circuits and company-contact parsing
           node --experimental-strip-types --test tests/angela-frontend-safety.test.mjs
+          # [approved-production-change] verify TTS and Live-token requests use the configured gateway
+          node --experimental-strip-types --test tests/angela-speech-routing.test.mjs
