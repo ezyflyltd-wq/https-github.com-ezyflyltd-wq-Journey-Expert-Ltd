@@ -86,3 +86,4 @@ jobs:
           node tests/free-voice-widget-check.mjs
           node tests/angela-public-widget-check.mjs
           node tests/angela-responsive-brain-check.mjs
+          node --experimental-strip-types --test tests/angela-emergency-safety.test.mjs
