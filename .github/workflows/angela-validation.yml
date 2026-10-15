@@ -91,3 +91,5 @@ jobs:
           node --import tsx --test tests/angela-api-voice-safety.test.mjs
           # [approved-production-change] exercise the deployed custom worker's /angela/chat safety route
           node --test tests/angela-public-worker-safety.test.mjs
+          # [approved-production-change] guard frontend short-circuits and company-contact parsing
+          node --experimental-strip-types --test tests/angela-frontend-safety.test.mjs
