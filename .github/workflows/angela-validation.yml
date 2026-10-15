@@ -89,3 +89,5 @@ jobs:
           node --experimental-strip-types --test tests/angela-pages-chat-safety.test.mjs
           # [approved-production-change] validate the active voice API route before release
           node --import tsx --test tests/angela-api-voice-safety.test.mjs
+          # [approved-production-change] exercise the deployed custom worker's /angela/chat safety route
+          node --test tests/angela-public-worker-safety.test.mjs
