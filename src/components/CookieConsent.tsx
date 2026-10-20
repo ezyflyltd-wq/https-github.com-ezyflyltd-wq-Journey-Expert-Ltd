@@ -67,7 +67,7 @@ export function CookieConsent() {
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setPreferencesOpen(true)} aria-label="Open privacy settings" className="fixed bottom-4 right-4 z-[90] rounded-full border border-emerald-800/30 bg-white px-4 py-2 text-xs font-bold text-emerald-800 shadow-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-700">
+        <button type="button" onClick={() => setPreferencesOpen(true)} aria-label="Open privacy settings" className="fixed bottom-4 left-4 z-[55] rounded-full border border-emerald-800/30 bg-white px-4 py-2 text-xs font-bold text-emerald-800 shadow-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-700">
           Privacy settings
         </button>
       )}

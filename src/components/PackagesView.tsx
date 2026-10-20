@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { TourPackage } from '../types';
 import { MOCK_PACKAGES } from '../data/mockData';
+import { DemoNotice, JEL_WHATSAPP_NUMBER } from './DemoNotice';
 
 export const PackagesView: React.FC = () => {
   const [packages] = useState<TourPackage[]>(MOCK_PACKAGES);
@@ -21,6 +22,7 @@ export const PackagesView: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <DemoNotice subject="packages and prices" />
       {/* Header Banner */}
       <div className="bg-white border border-[#ECECEC] rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
         <div>
@@ -161,12 +163,16 @@ export const PackagesView: React.FC = () => {
 
               <button
                 onClick={() => {
-                  alert(`Inquiry submitted for ${activePackageModal.title}! A JEL Tour Expert will contact you shortly.`);
+                  const message = [
+                    'Package enquiry from journeyexpertltd.com (sample price shown on the website, please confirm availability and final price)',
+                    `Package: ${activePackageModal.title}`,
+                  ].join('\n');
+                  window.open(`https://wa.me/${JEL_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
                   setActivePackageModal(null);
                 }}
                 className="w-full py-3.5 bg-[#0B6B53] hover:bg-[#093F31] text-white font-extrabold rounded-2xl shadow-md transition-all"
               >
-                BOOK PACKAGE NOW (৳ {activePackageModal.priceBDT.toLocaleString()})
+                SEND ENQUIRY ON WHATSAPP (sample price ৳ {activePackageModal.priceBDT.toLocaleString()})
               </button>
             </div>
           </div>

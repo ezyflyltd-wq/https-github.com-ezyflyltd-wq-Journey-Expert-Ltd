@@ -9,12 +9,28 @@ import {
 } from 'lucide-react';
 import { Hotel } from '../types';
 import { MOCK_HOTELS } from '../data/mockData';
+import { DemoNotice, JEL_WHATSAPP_DISPLAY, JEL_WHATSAPP_NUMBER } from './DemoNotice';
 
 export const HotelBookingView: React.FC = () => {
   const [hotels] = useState<Hotel[]>(MOCK_HOTELS);
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [checkIn, setCheckIn] = useState('');
+  const [guestName, setGuestName] = useState('');
+
+  // Nothing is reserved or paid on this page. The request goes to a consultant on WhatsApp.
+  const handleSendRequest = () => {
+    if (!selectedHotel) return;
+    const message = [
+      'Hotel enquiry from journeyexpertltd.com (sample rates shown on the website, please confirm live availability and price)',
+      `Hotel: ${selectedHotel.name}`,
+      `Check-in: ${checkIn || '(not provided)'}`,
+      `Guest name: ${guestName.trim() || '(not provided)'}`,
+    ].join('\n');
+    window.open(`https://wa.me/${JEL_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+    setBookingConfirmed(true);
+  };
 
   const handleBookHotel = (hotel: Hotel) => {
     setSelectedHotel(hotel);
@@ -24,6 +40,7 @@ export const HotelBookingView: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <DemoNotice subject="hotels and prices" />
       {/* Header Banner */}
       <div className="bg-white border border-[#ECECEC] rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
         <div>
@@ -128,7 +145,7 @@ export const HotelBookingView: React.FC = () => {
             <div className="flex justify-between items-center border-b border-[#ECECEC] pb-4">
               <div>
                 <span className="text-[10px] font-black text-[#0B6B53] uppercase tracking-widest">
-                  Instant Hotel Confirmation
+                  Hotel reservation request (sample rates)
                 </span>
                 <h3 className="text-lg font-black text-[#093F31] font-serif">{selectedHotel.name}</h3>
               </div>
@@ -143,7 +160,7 @@ export const HotelBookingView: React.FC = () => {
             {!bookingConfirmed ? (
               <div className="space-y-4 text-xs">
                 <div className="bg-[#F8FAF9] p-4 rounded-2xl border border-[#ECECEC] space-y-3">
-                  <h4 className="font-extrabold text-[#093F31] text-sm">Available Room Types</h4>
+                  <h4 className="font-extrabold text-[#093F31] text-sm">Room Types (sample rates)</h4>
                   {selectedHotel.rooms.map((room) => (
                     <div key={room.id} className="bg-white p-3.5 rounded-xl border border-[#ECECEC] flex justify-between items-center">
                       <div>
@@ -161,27 +178,28 @@ export const HotelBookingView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[#666666] font-semibold mb-1">Check-in Date</label>
-                    <input type="date" defaultValue="2026-09-20" className="w-full bg-[#F8FAF9] border border-[#ECECEC] rounded-xl p-2.5 text-[#111111] font-bold" />
+                    <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className="w-full bg-[#F8FAF9] border border-[#ECECEC] rounded-xl p-2.5 text-[#111111] font-bold" />
                   </div>
                   <div>
                     <label className="block text-[#666666] font-semibold mb-1">Guest Name</label>
-                    <input type="text" defaultValue="Tariqul Islam" className="w-full bg-[#F8FAF9] border border-[#ECECEC] rounded-xl p-2.5 text-[#111111] font-bold" />
+                    <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} className="w-full bg-[#F8FAF9] border border-[#ECECEC] rounded-xl p-2.5 text-[#111111] font-bold" />
                   </div>
                 </div>
 
                 <button
-                  onClick={() => setBookingConfirmed(true)}
+                  onClick={handleSendRequest}
                   className="w-full py-3.5 bg-[#0B6B53] hover:bg-[#093F31] text-white font-extrabold rounded-2xl shadow-md transition-all"
                 >
-                  Confirm Reservation & Pay via bKash / Card
+                  SEND REQUEST ON WHATSAPP
                 </button>
               </div>
             ) : (
               <div className="text-center py-6 space-y-3">
-                <CheckCircle2 className="w-12 h-12 text-[#0B6B53] mx-auto animate-bounce" />
-                <h4 className="text-xl font-black text-[#093F31] font-serif">Hotel Booking Confirmed!</h4>
+                <CheckCircle2 className="w-12 h-12 text-[#C7A44D] mx-auto" aria-hidden="true" />
+                <h4 className="text-xl font-black text-[#093F31] font-serif">Your request is ready in WhatsApp</h4>
                 <p className="text-xs text-[#666666]">
-                  Voucher sent to your email. Reservation Reference: <span className="text-[#0B6B53] font-mono font-bold">JEL-HT-88219</span>
+                  Nothing is reserved or paid yet. Press send in WhatsApp; a consultant will confirm availability and the
+                  final price. If WhatsApp did not open, message us on {JEL_WHATSAPP_DISPLAY}.
                 </p>
                 <button
                   onClick={() => setShowBookingModal(false)}

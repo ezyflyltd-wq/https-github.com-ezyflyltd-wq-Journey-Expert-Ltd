@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Flight } from '../types';
 import { MOCK_FLIGHTS } from '../data/mockData';
+import { DemoNotice, JEL_WHATSAPP_DISPLAY, JEL_WHATSAPP_NUMBER } from './DemoNotice';
 
 interface FlightBookingViewProps {
   initialOrigin?: string;
@@ -35,13 +36,7 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
   const [selectedSeat, setSelectedSeat] = useState<string>('14A');
 
   // Passenger details
-  const [passengerName, setPassengerName] = useState('Tariqul Islam');
-  const [passportNumber, setPassportNumber] = useState('A08912345');
-  const [passportExpiry, setPassportExpiry] = useState('2030-11-20');
-  const [paymentMethod, setPaymentMethod] = useState<'bKash' | 'Nagad' | 'SSLCommerz' | 'Card'>('bKash');
-
-  // Generated Ticket Info
-  const [pnrCode, setPnrCode] = useState<string>('');
+  const [passengerName, setPassengerName] = useState('');
 
   const filteredFlights = flights.filter((f) => {
     if (selectedGDSFilter !== 'Auto' && selectedGDSFilter !== 'All') {
@@ -56,32 +51,43 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
     setShowBookingModal(true);
   };
 
-  const handleConfirmPayment = () => {
-    const randomPNR = 'JEL' + Math.floor(100000 + Math.random() * 900000);
-    setPnrCode(randomPNR);
+  // Nothing is booked or paid on this page. The request goes to a consultant on WhatsApp,
+  // without passport, card or bank details.
+  const handleSendRequest = () => {
+    if (!selectedFlight) return;
+    const message = [
+      'Flight enquiry from journeyexpertltd.com (sample fare shown on the website, please confirm live fare and availability)',
+      `Flight: ${selectedFlight.airline} ${selectedFlight.flightNumber}`,
+      `Route: ${selectedFlight.originCode} → ${selectedFlight.destinationCode}, departing ${selectedFlight.departureTime}`,
+      `Seat preference: ${selectedSeat}`,
+      `Passenger name: ${passengerName.trim() || '(not provided)'}`,
+    ].join('\n');
+    window.open(`https://wa.me/${JEL_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
     setBookingStep('confirmation');
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <DemoNotice subject="fares" />
+
       {/* Top Section Header */}
       <div className="bg-white border border-[#ECECEC] rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
         <div>
           <div className="flex items-center space-x-2 text-xs font-bold text-[#0B6B53] mb-1 tracking-wider uppercase">
             <Plane className="w-4 h-4 text-[#C7A44D]" />
-            <span>Multi-GDS Flight Aggregator Engine</span>
+            <span>Flight enquiry</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-[#093F31] font-serif">
             {initialOrigin} <span className="text-[#C7A44D]">→</span> {initialDestination}
           </h2>
           <p className="text-xs text-[#666666] mt-1 font-medium">
-            Comparing live fares from Sabre (1S), Amadeus (1A), and Travelport Galileo (1G).
+            Sample fares shown for illustration. A consultant confirms the live fare before anything is booked.
           </p>
         </div>
 
         {/* GDS Filter Tabs */}
         <div className="flex flex-wrap items-center gap-2 bg-[#F8FAF9] p-1.5 rounded-2xl border border-[#ECECEC]">
-          <span className="text-xs text-[#666666] font-bold px-2">GDS Engine:</span>
+          <span className="text-xs text-[#666666] font-bold px-2">Sample source:</span>
           {['Auto', 'Sabre', 'Amadeus', 'Travelport Galileo'].map((gds) => (
             <button
               key={gds}
@@ -179,7 +185,7 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                 onClick={() => handleStartBooking(flight)}
                 className="w-full sm:w-auto px-6 py-2.5 bg-[#0B6B53] hover:bg-[#093F31] text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-1.5"
               >
-                <span>Book Flight</span>
+                <span>Request Booking</span>
                 <ChevronRight className="w-4 h-4 text-[#C7A44D]" />
               </button>
             </div>
@@ -195,7 +201,7 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
             <div className="flex items-center justify-between border-b border-[#ECECEC] pb-4">
               <div>
                 <span className="text-[10px] font-black text-[#0B6B53] uppercase tracking-widest">
-                  Instant Multi-GDS Ticketing Engine
+                  Flight booking request (sample fare)
                 </span>
                 <h3 className="text-lg font-black text-[#093F31] font-serif">
                   {selectedFlight.airline} ({selectedFlight.flightNumber})
@@ -217,13 +223,13 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                 1. Passenger Info
               </span>
               <span className={bookingStep === 'seat' ? 'text-[#0B6B53] border-b-2 border-[#0B6B53] pb-1' : 'text-[#666666]'}>
-                2. Seat Map
+                2. Seat Preference
               </span>
               <span className={bookingStep === 'payment' ? 'text-[#0B6B53] border-b-2 border-[#0B6B53] pb-1' : 'text-[#666666]'}>
-                3. Payment
+                3. Send Request
               </span>
               <span className={bookingStep === 'confirmation' ? 'text-[#0B6B53] border-b-2 border-[#0B6B53] pb-1' : 'text-[#666666]'}>
-                4. E-Ticket Issued
+                4. Next Steps
               </span>
             </div>
 
@@ -242,28 +248,6 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                         type="text"
                         value={passengerName}
                         onChange={(e) => setPassengerName(e.target.value)}
-                        className="w-full bg-white border border-[#ECECEC] rounded-xl p-2.5 text-[#111111] font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="flight-passport-number" className="block text-[#666666] font-semibold mb-1">Passport Number</label>
-                      <input
-                        id="flight-passport-number"
-                        name="passportNumber"
-                        type="text"
-                        value={passportNumber}
-                        onChange={(e) => setPassportNumber(e.target.value)}
-                        className="w-full bg-white border border-[#ECECEC] rounded-xl p-2.5 text-[#111111] font-mono font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="flight-passport-expiry" className="block text-[#666666] font-semibold mb-1">Passport Expiry Date</label>
-                      <input
-                        id="flight-passport-expiry"
-                        name="passportExpiry"
-                        type="date"
-                        value={passportExpiry}
-                        onChange={(e) => setPassportExpiry(e.target.value)}
                         className="w-full bg-white border border-[#ECECEC] rounded-xl p-2.5 text-[#111111] font-bold"
                       />
                     </div>
@@ -369,96 +353,30 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                     onClick={() => setBookingStep('payment')}
                     className="w-2/3 py-3 bg-[#0B6B53] hover:bg-[#093F31] text-white font-extrabold rounded-2xl shadow-md"
                   >
-                    Proceed to Payment →
+                    Next: Send Request →
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 3: PAYMENT METHOD */}
+            {/* STEP 3: SEND REQUEST (no payment is taken on this site) */}
             {bookingStep === 'payment' && (
               <div className="space-y-4 text-xs">
-                <div className="bg-[#F8FAF9] p-5 rounded-2xl border border-[#ECECEC] space-y-4">
+                <div className="bg-[#F8FAF9] p-5 rounded-2xl border border-[#ECECEC] space-y-3">
                   <div className="flex justify-between items-center border-b border-[#ECECEC] pb-3">
-                    <span className="text-[#666666] font-semibold">Total Ticket Fare:</span>
+                    <span className="text-[#666666] font-semibold">Sample fare (not a quotation):</span>
                     <span className="text-xl font-black text-[#0B6B53]">৳ {selectedFlight.priceBDT.toLocaleString()}</span>
                   </div>
-
-                  <p className="font-extrabold text-[#093F31] text-sm">Select Local Payment Gateway</p>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      aria-pressed={paymentMethod === 'bKash'}
-                      onClick={() => setPaymentMethod('bKash')}
-                      className={`p-3 rounded-2xl border text-left flex items-center space-x-2 transition-all ${
-                        paymentMethod === 'bKash'
-                          ? 'bg-pink-50 border-pink-500 text-pink-900 font-bold'
-                          : 'bg-white border-[#ECECEC] text-[#111111]'
-                      }`}
-                    >
-                      <div className="w-8 h-8 bg-pink-600 rounded-xl flex items-center justify-center font-bold text-white shrink-0">
-                        ৳
-                      </div>
-                      <div>
-                        <div className="font-bold">bKash Direct</div>
-                        <div className="text-[10px] text-[#666666]">Automated Confirmation</div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      aria-pressed={paymentMethod === 'Nagad'}
-                      onClick={() => setPaymentMethod('Nagad')}
-                      className={`p-3 rounded-2xl border text-left flex items-center space-x-2 transition-all ${
-                        paymentMethod === 'Nagad'
-                          ? 'bg-orange-50 border-orange-500 text-orange-900 font-bold'
-                          : 'bg-white border-[#ECECEC] text-[#111111]'
-                      }`}
-                    >
-                      <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center font-bold text-white shrink-0">
-                        ৳
-                      </div>
-                      <div>
-                        <div className="font-bold">Nagad Pay</div>
-                        <div className="text-[10px] text-[#666666]">Zero Charge Cashback</div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      aria-pressed={paymentMethod === 'SSLCommerz'}
-                      onClick={() => setPaymentMethod('SSLCommerz')}
-                      className={`p-3 rounded-2xl border text-left flex items-center space-x-2 transition-all ${
-                        paymentMethod === 'SSLCommerz'
-                          ? 'bg-blue-50 border-blue-500 text-blue-900 font-bold'
-                          : 'bg-white border-[#ECECEC] text-[#111111]'
-                      }`}
-                    >
-                      <CreditCard className="w-6 h-6 text-blue-600 shrink-0" />
-                      <div>
-                        <div className="font-bold">Cards (SSL)</div>
-                        <div className="text-[10px] text-[#666666]">Visa, Mastercard, AMEX</div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      aria-pressed={paymentMethod === 'Card'}
-                      onClick={() => setPaymentMethod('Card')}
-                      className={`p-3 rounded-2xl border text-left flex items-center space-x-2 transition-all ${
-                        paymentMethod === 'Card'
-                          ? 'bg-emerald-50 border-[#0B6B53] text-[#093F31] font-bold'
-                          : 'bg-white border-[#ECECEC] text-[#111111]'
-                      }`}
-                    >
-                      <ShieldCheck className="w-6 h-6 text-[#0B6B53] shrink-0" />
-                      <div>
-                        <div className="font-bold">JEL Wallet</div>
-                        <div className="text-[10px] text-[#666666]">Balance: ৳ 1,50,000</div>
-                      </div>
-                    </button>
-                  </div>
+                  <p className="text-[#111111] leading-relaxed">
+                    No payment is taken here and no ticket is issued. We will send your flight details to a Journey Expert
+                    consultant on WhatsApp, who will confirm the live fare, seat availability and payment options with you.
+                  </p>
+                  <p lang="bn" className="text-[#666666] leading-relaxed">
+                    এখানে কোনো পেমেন্ট নেওয়া হয় না এবং টিকেট ইস্যু হয় না। আপনার ফ্লাইটের তথ্য WhatsApp-এ আমাদের কনসালট্যান্টের কাছে যাবে; তিনি সঠিক ভাড়া, সিট ও পেমেন্টের উপায় নিশ্চিত করবেন।
+                  </p>
+                  <p className="text-[10px] text-[#666666]">
+                    Do not share passport, card or bank details in chat. A consultant will tell you the secure way to submit documents.
+                  </p>
                 </div>
 
                 <div className="flex gap-3">
@@ -469,89 +387,32 @@ export const FlightBookingView: React.FC<FlightBookingViewProps> = ({
                     ← Back
                   </button>
                   <button
-                    onClick={handleConfirmPayment}
+                    onClick={handleSendRequest}
                     className="w-2/3 py-3.5 bg-[#0B6B53] hover:bg-[#093F31] text-white font-extrabold rounded-2xl shadow-md"
                   >
-                    PAY & ISSUE E-TICKET (৳ {selectedFlight.priceBDT.toLocaleString()})
+                    SEND REQUEST ON WHATSAPP
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 4: E-TICKET ISSUED */}
+            {/* STEP 4: NEXT STEPS */}
             {bookingStep === 'confirmation' && (
               <div className="space-y-4 text-xs">
-                <div className="bg-[#0B6B53]/10 border border-[#0B6B53]/30 p-5 rounded-2xl text-center space-y-2">
-                  <CheckCircle2 className="w-10 h-10 text-[#0B6B53] mx-auto animate-bounce" />
-                  <h4 className="text-lg font-black text-[#093F31] font-serif">Flight E-Ticket Successfully Issued!</h4>
+                <div className="bg-[#FFFBEA] border border-[#C7A44D]/50 p-5 rounded-2xl text-center space-y-2">
+                  <CheckCircle2 className="w-10 h-10 text-[#C7A44D] mx-auto" aria-hidden="true" />
+                  <h4 className="text-lg font-black text-[#093F31] font-serif">Your request is ready in WhatsApp</h4>
                   <p className="text-[#666666]">
-                    GDS PNR Reference: <span className="font-mono font-black text-[#0B6B53] text-base">{pnrCode}</span>
+                    Nothing is booked or paid yet. Press send in WhatsApp; a consultant will confirm the live fare and seats.
+                    If WhatsApp did not open, message us on {JEL_WHATSAPP_DISPLAY}.
                   </p>
                 </div>
-
-                {/* E-Ticket Preview Card */}
-                <div className="bg-white border border-[#ECECEC] rounded-2xl p-5 space-y-4 shadow-sm">
-                  <div className="flex justify-between items-center border-b border-[#ECECEC] pb-3">
-                    <div className="flex items-center space-x-2">
-                      <Plane className="w-5 h-5 text-[#0B6B53]" />
-                      <div>
-                        <span className="font-extrabold text-[#111111]">{selectedFlight.airline}</span>
-                        <p className="text-[10px] text-[#666666]">Official e-Ticket Receipt & Itinerary</p>
-                      </div>
-                    </div>
-                    <QrCode className="w-10 h-10 text-[#093F31]" />
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[#111111]">
-                    <div>
-                      <span className="text-[10px] text-[#666666] block font-semibold">Passenger</span>
-                      <span className="font-bold text-[#111111]">{passengerName}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-[#666666] block font-semibold">Passport</span>
-                      <span className="font-mono font-bold text-[#111111]">{passportNumber}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-[#666666] block font-semibold">Seat</span>
-                      <span className="font-bold text-[#C7A44D]">{selectedSeat}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-[#666666] block font-semibold">Baggage</span>
-                      <span className="font-bold text-[#0B6B53]">{selectedFlight.baggage}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#F8FAF9] p-3 rounded-xl flex justify-between items-center border border-[#ECECEC]">
-                    <div>
-                      <p className="font-extrabold text-[#093F31]">
-                        {selectedFlight.originCode} → {selectedFlight.destinationCode}
-                      </p>
-                      <p className="text-[10px] text-[#666666]">
-                        {selectedFlight.departureTime} Departure • Flight {selectedFlight.flightNumber}
-                      </p>
-                    </div>
-                    <span className="bg-[#0B6B53] text-white font-bold px-2.5 py-1 rounded-full text-[10px]">
-                      CONFIRMED (OK)
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => alert(`Downloading PDF e-Ticket with PNR ${pnrCode}...`)}
-                    className="w-1/2 py-3 bg-[#0B6B53] hover:bg-[#093F31] text-white font-extrabold rounded-2xl flex items-center justify-center space-x-2 shadow-md"
-                  >
-                    <Download className="w-4 h-4 text-[#C7A44D]" />
-                    <span>Download PDF Ticket</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowBookingModal(false)}
-                    className="w-1/2 py-3 bg-[#F8FAF9] text-[#111111] font-bold rounded-2xl border border-[#ECECEC]"
-                  >
-                    Close Window
-                  </button>
-                </div>
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="w-full py-3 bg-[#F8FAF9] text-[#111111] font-bold rounded-2xl border border-[#ECECEC]"
+                >
+                  Close Window
+                </button>
               </div>
             )}
           </div>
