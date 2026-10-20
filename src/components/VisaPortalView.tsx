@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { VisaCountry } from '../types';
 import { MOCK_VISA_COUNTRIES } from '../data/mockData';
+import { DemoNotice } from './DemoNotice';
 
 const RELATED_LINKS = [
   { href: '/', label: 'Journey Expert Ltd. home' },
@@ -34,6 +35,7 @@ export const VisaPortalView: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <DemoNotice subject="visa information" />
       <section className="bg-white border border-[#ECECEC] rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
         <div>
           <div className="flex items-center space-x-2 text-xs font-bold text-[#0B6B53] mb-1 tracking-wider uppercase">

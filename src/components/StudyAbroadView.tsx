@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { University, StudentProfile } from '../types';
 import { MOCK_UNIVERSITIES } from '../data/mockData';
+import { DemoNotice, JEL_WHATSAPP_NUMBER } from './DemoNotice';
 
 export const StudyAbroadView: React.FC = () => {
   const [universities] = useState<University[]>(MOCK_UNIVERSITIES);
@@ -14,9 +15,9 @@ export const StudyAbroadView: React.FC = () => {
 
   // Profile Assessment Tool States
   const [profile, setProfile] = useState<StudentProfile>({
-    fullName: 'Tariqul Islam',
-    email: 'tariqul@gmail.com',
-    phone: '+880 1711-000000',
+    fullName: '',
+    email: '',
+    phone: '',
     highestDegree: 'Bachelor of Science (BSc)',
     gpa: 3.4,
     ieltsScore: 6.5,
@@ -43,7 +44,7 @@ export const StudyAbroadView: React.FC = () => {
     );
 
     setAssessmentResult({
-      matchRating: eligible.length > 0 ? 'HIGH ELIGIBILITY MATCH (94%)' : 'MODERATE MATCH - IELTS WAIVER NEEDED',
+      matchRating: eligible.length > 0 ? 'POSSIBLE MATCH (indicative only, not an admission decision)' : 'COUNSELLOR REVIEW NEEDED (IELTS/GPA gap)',
       eligibleUniversities: eligible,
       scholarshipEstimateBDT: profile.gpa >= 3.5 ? 350000 : 180000,
     });
@@ -51,6 +52,7 @@ export const StudyAbroadView: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <DemoNotice subject="universities and courses" />
       {/* Header Banner */}
       <div className="bg-white border border-[#ECECEC] rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
         <div>
@@ -157,7 +159,7 @@ export const StudyAbroadView: React.FC = () => {
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
               <span className="font-extrabold text-[#C7A44D] text-sm">{assessmentResult.matchRating}</span>
               <span className="text-white font-bold text-xs">
-                Estimated Scholarship: ৳ {assessmentResult.scholarshipEstimateBDT.toLocaleString()}
+                Scholarship eligibility is decided by each university; a counsellor can advise.
               </span>
             </div>
 
@@ -236,10 +238,17 @@ export const StudyAbroadView: React.FC = () => {
               </div>
 
               <button
-                onClick={() => alert(`Free consultation request submitted for ${uni.name}! JEL Senior Study Counselor will reach out on WhatsApp.`)}
+                onClick={() => {
+                  const message = [
+                    'Study abroad enquiry from journeyexpertltd.com',
+                    `University: ${uni.name}`,
+                    'Please advise on admission and visa guidance.',
+                  ].join('\n');
+                  window.open(`https://wa.me/${JEL_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+                }}
                 className="w-full py-3 bg-[#0B6B53] hover:bg-[#093F31] text-white font-extrabold text-xs rounded-xl shadow-md transition-all"
               >
-                APPLY FOR FREE ADMISSION & VISA GUIDANCE
+                ASK A COUNSELLOR ON WHATSAPP
               </button>
             </div>
           ))}
