@@ -171,7 +171,7 @@ async function sendReply(env, event, reply) {
     if (!token) return 'skipped_no_token';
     const allowedRecipients = RECIPIENT_ALLOWLIST(env.META_ALLOWED_RECIPIENT_IDS);
     if (!event.recipientId || !allowedRecipients.has(event.recipientId)) return 'skipped_unapproved_recipient';
-    url = `https://graph.facebook.com/${version}/me/messages`;
+    url = `https://graph.facebook.com/${version}/${encodeURIComponent(event.recipientId)}/messages`;
     payload = { recipient: { id: event.senderId }, messaging_type: 'RESPONSE', message: { text: body } };
   }
   const response = await fetch(url, {
