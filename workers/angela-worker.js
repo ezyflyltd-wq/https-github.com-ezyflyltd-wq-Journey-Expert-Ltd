@@ -1,3 +1,5 @@
+import { handleMetaWebhook } from './meta-webhook.js';
+
 const ALLOWED_ORIGIN = 'https://journeyexpertltd.com';
 const PRIMARY_MODEL = 'gemini-3.8-flash';
 const FALLBACK_MODEL = 'gemini-3.5-flash';
@@ -290,6 +292,35 @@ async function handleLiveToken(request, env) {
     : json({ error: 'live_voice_unavailable', providerStatuses }, 502);
 }
 
+// Adapter that lets the Meta webhook reuse Angela's brain, safety rules and handoff.
+function metaBrain(env) {
+  return {
+    languageOf,
+    safetyIntent,
+    safetyReply,
+    async ask(message, language, history) {
+      let payload = null;
+      if (env.GEMINI_API_KEY) {
+        for (const model of [env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL]) {
+          try { payload = await callGemini(env, model, message, language, history); break; } catch (error) { console.error(`Angela Meta model failed: ${model}`, error); }
+        }
+      }
+      return payload || fallback(message, language);
+    },
+    async handoff(event) {
+      if (!env.HANDOFF_WEBHOOK_URL) return;
+      await fetchWithTimeout(env.HANDOFF_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(env.HANDOFF_WEBHOOK_SECRET ? { 'x-angela-webhook-secret': env.HANDOFF_WEBHOOK_SECRET } : {}),
+        },
+        body: JSON.stringify(event),
+      }, 5000).catch((error) => console.error('Meta handoff webhook failed', error));
+    },
+  };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -297,6 +328,7 @@ export default {
     if (url.pathname === '/api/health' || url.pathname === '/api/healthz' || url.pathname === '/api/ai/health') return json({ status: 'online', service: 'Angela API Gateway', version: '4.2.0-final-female', aiConfigured: Boolean(env.GEMINI_API_KEY), femaleTtsConfigured: Boolean(env.GEMINI_API_KEY), models: [env.GEMINI_MODEL || PRIMARY_MODEL, env.GEMINI_FALLBACK_MODEL || FALLBACK_MODEL], timestamp: new Date().toISOString() });
     if (url.pathname === '/api/voice/gemini') return handleFemaleTts(request, env);
     if (url.pathname === '/api/gemini/live-token') return handleLiveToken(request, env);
+    if (url.pathname === '/api/meta/webhook') return handleMetaWebhook(request, env, ctx, metaBrain(env));
     if (url.pathname !== '/api/ai-assistant' && url.pathname !== '/api/ai/voice-agent') return json({ error: 'Not found' }, 404);
     const action = url.searchParams.get('action');
     if (action === 'speech') return handleFemaleTts(request, env);
