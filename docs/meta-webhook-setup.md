@@ -17,7 +17,8 @@ Add each as a **Secret**. Never paste these into chat, GitHub or the repo.
 | `META_APP_SECRET` | yes | Meta app -> Settings -> Basic -> App secret. Used to verify every request. Without it all POSTs are rejected. |
 | `META_PAGE_ACCESS_TOKEN` | for Messenger/Instagram replies | Page access token (long-lived / system-user token). |
 | `META_WHATSAPP_TOKEN` | for WhatsApp replies | WhatsApp Cloud API token (system-user token). |
-| `META_AUTO_REPLY` | optional | Defaults to disabled. Set to `true` only after an explicit decision to let Angela process and answer messages. |\n| `META_ALLOWED_RECIPIENT_IDS` | required for Messenger/Instagram/WhatsApp replies | Comma-separated approved Page ID, Instagram professional account ID and WhatsApp phone-number ID. Replies to other assets are rejected. |
+| `META_AUTO_REPLY` | optional | Defaults to disabled. Set to `true` only after an explicit decision to let Angela process and answer messages. |
+| `META_ALLOWED_RECIPIENT_IDS` | required for Messenger/Instagram/WhatsApp replies | Comma-separated approved Page ID, Instagram professional account ID and WhatsApp phone-number ID. Replies to other assets are rejected. |
 | `HANDOFF_WEBHOOK_URL` | optional | Already used by Angela. Receives `angela.meta_handoff` events when a human must follow up. |
 
 ## 2. Meta for Developers
@@ -31,8 +32,7 @@ Add each as a **Secret**. Never paste these into chat, GitHub or the repo.
 
 ## 3. Storing leads in D1 (optional)
 
-If a D1 binding named `META_DB` exists, every message is stored in `meta_message_events`
-(the table is created automatically). The existing database is `jel-meta-message-events`.
+If a D1 binding named `META_DB` exists, inbound message content and sender IDs are stored in `meta_message_events` (the table is created automatically). No database is bound by this integration. Do not bind one until the privacy notice, retention and deletion process have been reviewed. Without D1 and with auto-reply disabled, webhook events are acknowledged and discarded.
 
 Bind it in the dashboard: Worker -> Settings -> Bindings -> Add -> D1 database -> variable name `META_DB`.
 
@@ -45,9 +45,11 @@ production-sensitive file and needs your explicit review.
 
 - Every POST must carry a valid `X-Hub-Signature-256`; otherwise 401.
 - Meta re-deliveries are de-duplicated by message id (needs `META_DB`).
-- Medical emergencies and document-fraud requests get the fixed safety reply, never a generated one.
-- Replies reuse Angela's verified-knowledge rules: no invented prices, visa outcomes or bookings.\n- Auto-reply is off by default. While off, message text is not sent to Gemini or the handoff destination.\n- Before enabling replies, set `META_ALLOWED_RECIPIENT_IDS` to the exact approved receiving asset IDs.
-- Attachments/non-text messages get a short holding reply and are flagged for human follow-up.
+- Medical emergencies and document-fraud requests get a fixed safety response only when auto-reply is explicitly enabled.
+- Replies reuse Angela's verified-knowledge rules: no invented prices, visa outcomes or bookings.
+- Auto-reply is off by default. While off, message text is not sent to Gemini or the handoff destination.
+- Before enabling replies, set `META_ALLOWED_RECIPIENT_IDS` to the exact approved receiving asset IDs.
+- Attachments/non-text messages are handled only when auto-reply is explicitly enabled.
 - A sender is rate-limited to 12 messages per minute (needs `META_DB`).
 - When explicitly enabled, replies are sent after the customer's message, inside Meta's 24-hour reply window.
 - Customer messages are personal data. Keep the privacy policy and data-deletion page accurate for Meta review.
