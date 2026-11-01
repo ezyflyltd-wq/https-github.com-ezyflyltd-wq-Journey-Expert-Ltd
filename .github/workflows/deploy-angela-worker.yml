@@ -1,4 +1,5 @@
 name: Deploy Angela API Worker
+# Authorized workflow update: deploy when the Meta webhook module changes.
 
 on:
   push:
