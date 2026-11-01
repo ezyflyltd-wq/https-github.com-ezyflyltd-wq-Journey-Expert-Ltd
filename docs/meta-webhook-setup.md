@@ -1,7 +1,7 @@
 # Meta webhook setup (Messenger, Instagram, WhatsApp)
 
 Angela answers customer messages from Facebook Messenger, Instagram DMs and WhatsApp.
-One webhook URL covers every page/number linked to the same Meta app:
+This setup is scoped to the user-approved Journey Expert BD Facebook Page (ID 1183671364826520), its linked @journeyexpertltd Instagram account, and the approved Journey Expert WhatsApp number. Do not attach other pages or phone numbers without updating the recipient allowlist and reviewing permissions.
 
     https://journeyexpertltd.com/api/meta/webhook
 
@@ -17,7 +17,7 @@ Add each as a **Secret**. Never paste these into chat, GitHub or the repo.
 | `META_APP_SECRET` | yes | Meta app -> Settings -> Basic -> App secret. Used to verify every request. Without it all POSTs are rejected. |
 | `META_PAGE_ACCESS_TOKEN` | for Messenger/Instagram replies | Page access token (long-lived / system-user token). |
 | `META_WHATSAPP_TOKEN` | for WhatsApp replies | WhatsApp Cloud API token (system-user token). |
-| `META_AUTO_REPLY` | optional | Set to `false` to record messages but never reply. |
+| `META_AUTO_REPLY` | optional | Defaults to disabled. Set to `true` only after an explicit decision to let Angela process and answer messages. |\n| `META_ALLOWED_RECIPIENT_IDS` | required for Messenger/Instagram/WhatsApp replies | Comma-separated approved Page ID, Instagram professional account ID and WhatsApp phone-number ID. Replies to other assets are rejected. |
 | `HANDOFF_WEBHOOK_URL` | optional | Already used by Angela. Receives `angela.meta_handoff` events when a human must follow up. |
 
 ## 2. Meta for Developers
@@ -46,8 +46,8 @@ production-sensitive file and needs your explicit review.
 - Every POST must carry a valid `X-Hub-Signature-256`; otherwise 401.
 - Meta re-deliveries are de-duplicated by message id (needs `META_DB`).
 - Medical emergencies and document-fraud requests get the fixed safety reply, never a generated one.
-- Replies reuse Angela's verified-knowledge rules: no invented prices, visa outcomes or bookings.
+- Replies reuse Angela's verified-knowledge rules: no invented prices, visa outcomes or bookings.\n- Auto-reply is off by default. While off, message text is not sent to Gemini or the handoff destination.\n- Before enabling replies, set `META_ALLOWED_RECIPIENT_IDS` to the exact approved receiving asset IDs.
 - Attachments/non-text messages get a short holding reply and are flagged for human follow-up.
 - A sender is rate-limited to 12 messages per minute (needs `META_DB`).
-- Replies are sent immediately after the customer's message, inside Meta's 24-hour reply window.
+- When explicitly enabled, replies are sent after the customer's message, inside Meta's 24-hour reply window.
 - Customer messages are personal data. Keep the privacy policy and data-deletion page accurate for Meta review.
