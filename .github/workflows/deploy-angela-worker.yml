@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "workers/angela-worker.js"
+      - "workers/meta-webhook.js"
       - ".github/workflows/deploy-angela-worker.yml"
   workflow_dispatch:
 
