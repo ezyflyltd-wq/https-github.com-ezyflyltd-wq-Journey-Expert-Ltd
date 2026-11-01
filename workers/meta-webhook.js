@@ -1,5 +1,5 @@
 // Meta (Messenger, Instagram, WhatsApp) webhook for Angela.
-// One webhook URL serves every Journey Expert page/number connected to the same Meta app:
+// This webhook is intended only for the approved Journey Expert BD Page, its linked @journeyexpertltd Instagram account, and the approved Journey Expert WhatsApp number. Do not connect additional assets without adding recipient-ID allowlisting and reviewing this code.
 //   https://journeyexpertltd.com/api/meta/webhook
 //
 // Required secrets (Cloudflare Worker -> Settings -> Variables and Secrets):
@@ -8,16 +8,17 @@
 // Optional secrets:
 //   META_PAGE_ACCESS_TOKEN   Messenger + Instagram replies
 //   META_WHATSAPP_TOKEN      WhatsApp Cloud API replies
-//   META_AUTO_REPLY          set to "false" to store events but never reply
+//   META_AUTO_REPLY          set to "true" only after approval; defaults to no processing/reply
 //   META_GRAPH_VERSION       defaults to v23.0
 // Optional binding:
-//   META_DB                  a D1 database; events are stored in meta_message_events
+//   META_DB                  optional D1 database; message content is stored only when explicitly bound
 
 const DEFAULT_GRAPH_VERSION = 'v23.0';
 const MAX_TEXT = 1000;
 const MAX_REPLY = 1800; // Messenger/Instagram text limit is 2000 characters
 const THROTTLE_WINDOW_SECONDS = 60;
 const THROTTLE_MAX_EVENTS = 12;
+const RECIPIENT_ALLOWLIST = (value) => new Set(String(value || '').split(',').map((id) => id.trim()).filter(Boolean));
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta_message_events (
@@ -161,11 +162,15 @@ async function sendReply(env, event, reply) {
   if (event.channel === 'whatsapp') {
     token = env.META_WHATSAPP_TOKEN;
     if (!token || !event.recipientId) return 'skipped_no_token';
+    const allowedRecipients = RECIPIENT_ALLOWLIST(env.META_ALLOWED_RECIPIENT_IDS);
+    if (!allowedRecipients.has(event.recipientId)) return 'skipped_unapproved_recipient';
     url = `https://graph.facebook.com/${version}/${encodeURIComponent(event.recipientId)}/messages`;
     payload = { messaging_product: 'whatsapp', to: event.senderId, type: 'text', text: { body } };
   } else {
     token = env.META_PAGE_ACCESS_TOKEN;
     if (!token) return 'skipped_no_token';
+    const allowedRecipients = RECIPIENT_ALLOWLIST(env.META_ALLOWED_RECIPIENT_IDS);
+    if (!event.recipientId || !allowedRecipients.has(event.recipientId)) return 'skipped_unapproved_recipient';
     url = `https://graph.facebook.com/${version}/me/messages`;
     payload = { recipient: { id: event.senderId }, messaging_type: 'RESPONSE', message: { text: body } };
   }
@@ -187,6 +192,10 @@ async function handleEvent(event, env, brain) {
       return;
     }
   }
+
+  // With auto-replies disabled, only an explicitly configured D1 binding may retain the event.
+  // Do not send message content to Angela/Gemini or to a handoff destination in this default mode.
+  if (env.META_AUTO_REPLY !== 'true') return;
 
   const language = brain.languageOf(event.text || '', undefined);
   let outcome;
@@ -220,7 +229,7 @@ async function handleEvent(event, env, brain) {
   }
 
   let status = 'not_sent';
-  if (env.META_AUTO_REPLY !== 'false' && outcome.reply) {
+  if (env.META_AUTO_REPLY === 'true' && outcome.reply) {
     try {
       status = await sendReply(env, event, outcome.reply);
     } catch (error) {
