@@ -1,10 +1,12 @@
 name: Deploy Angela API Worker
+# Authorized workflow update: deploy when the Meta webhook module changes.
 
 on:
   push:
     branches: [main]
     paths:
       - "workers/angela-worker.js"
+      - "workers/meta-webhook.js"
       - ".github/workflows/deploy-angela-worker.yml"
   workflow_dispatch:
 
